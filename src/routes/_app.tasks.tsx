@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, TechLabel } from "@/components/nexus/primitives";
 import { Toolbar, SearchInput, FilterSelect, ResultCount, Segmented } from "@/components/nexus/toolbar";
@@ -22,11 +22,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useOps } from "@/lib/ops-store";
 import { dateShort, relative, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { OpsTask, TaskPriority, TaskStatus } from "@/lib/ops-types";
+import type { OpsTask, StaffMember, TaskPriority, TaskStatus } from "@/lib/ops-types";
 
 export const Route = createFileRoute("/_app/tasks")({
   head: () => ({
@@ -76,20 +87,193 @@ function TaskLink({ task }: { task: OpsTask }) {
   );
 }
 
+function TaskEditorDialog({
+  open,
+  onOpenChange,
+  staff,
+  task,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  staff: StaffMember[];
+  task?: OpsTask | undefined;
+}) {
+  const { createTask, updateTask } = useOps();
+  const isEdit = Boolean(task);
+  const [title, setTitle] = useState("");
+  const [detail, setDetail] = useState("");
+  const [newAssignee, setNewAssignee] = useState("");
+  const [newPriority, setNewPriority] = useState<TaskPriority>("normal");
+  const [dueAt, setDueAt] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(task?.title ?? "");
+    setDetail(task?.detail ?? "");
+    setNewAssignee(task?.assignee ?? "");
+    setNewPriority(task?.priority ?? "normal");
+    setDueAt(task ? new Date(task.dueAt).toISOString().slice(0, 10) : "");
+  }, [open, task]);
+
+  const submit = () => {
+    if (!title.trim()) {
+      toast.error("Task title is required.");
+      return;
+    }
+    if (!newAssignee) {
+      toast.error("Pick an assignee.");
+      return;
+    }
+    const due = dueAt ? new Date(dueAt).toISOString() : new Date(Date.now() + 864e5).toISOString();
+    const payload = {
+      title: title.trim(),
+      detail: detail.trim() ? detail.trim() : undefined,
+      assignee: newAssignee,
+      priority: newPriority,
+      dueAt: due,
+    };
+    if (isEdit && task) {
+      updateTask(task.id, payload);
+      toast.success(`${task.id} updated.`);
+    } else {
+      const created = createTask(payload);
+      toast.success(`${created.id} assigned to ${newAssignee}.`);
+    }
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {!task && (
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="size-4" /> New task
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Edit task" : "New task"}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? "Update the title, detail, assignment or schedule." : "Assign operational work to a team member."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="task-title">Title</Label>
+            <Input
+              id="task-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Cable-manage BUILD-10488"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="task-detail">Detail</Label>
+            <Textarea
+              id="task-detail"
+              rows={3}
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder="Optional notes or acceptance criteria"
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label>Assignee</Label>
+              <Select value={newAssignee} onValueChange={setNewAssignee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={newPriority} onValueChange={(v) => setNewPriority(v as TaskPriority)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {titleCase(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="task-due">Due</Label>
+              <Input id="task-due" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={submit}>{isEdit ? "Save changes" : "Create task"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteTaskButton({ task }: { task: OpsTask }) {
+  const { deleteTask } = useOps();
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-destructive"
+          aria-label="Delete task"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {task.id}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            "{task.title}" will be removed from the board. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep task</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              deleteTask(task.id);
+              toast.success(`${task.id} deleted.`);
+            }}
+          >
+            Delete task
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function TasksPage() {
-  const { tasks, staff, createTask, setTaskStatus, assignTask } = useOps();
+  const { tasks, staff, setTaskStatus, assignTask } = useOps();
 
   const [view, setView] = useState<"board" | "list">("board");
   const [q, setQ] = useState("");
   const [assignee, setAssignee] = useState("all");
   const [priority, setPriority] = useState("all");
   const [open, setOpen] = useState(false);
-
-  const [title, setTitle] = useState("");
-  const [detail, setDetail] = useState("");
-  const [newAssignee, setNewAssignee] = useState("");
-  const [newPriority, setNewPriority] = useState<TaskPriority>("normal");
-  const [dueAt, setDueAt] = useState("");
+  const [editing, setEditing] = useState<OpsTask | null>(null);
 
   const assignees = useMemo(
     () => Array.from(new Set([...staff.map((s) => s.name), ...tasks.map((t) => t.assignee)])).sort(),
@@ -120,36 +304,6 @@ function TasksPage() {
     }),
     [tasks],
   );
-
-  const resetForm = () => {
-    setTitle("");
-    setDetail("");
-    setNewAssignee("");
-    setNewPriority("normal");
-    setDueAt("");
-  };
-
-  const handleCreate = () => {
-    if (!title.trim()) {
-      toast.error("Task title is required.");
-      return;
-    }
-    if (!newAssignee) {
-      toast.error("Pick an assignee.");
-      return;
-    }
-    const due = dueAt ? new Date(dueAt).toISOString() : new Date(Date.now() + 864e5).toISOString();
-    const created = createTask({
-      title: title.trim(),
-      detail: detail.trim() ? detail.trim() : undefined,
-      assignee: newAssignee,
-      priority: newPriority,
-      dueAt: due,
-    });
-    toast.success(`${created.id} assigned to ${newAssignee}.`);
-    resetForm();
-    setOpen(false);
-  };
 
   const advance = (t: OpsTask) => {
     const next: TaskStatus = t.status === "todo" ? "in_progress" : t.status === "in_progress" ? "done" : "in_progress";
@@ -197,21 +351,37 @@ function TasksPage() {
       key: "actions",
       header: "",
       align: "right",
-      cell: (t) =>
-        t.status === "done" ? (
-          <span className="mono text-[11px] text-subtle">{relative(t.dueAt)}</span>
-        ) : (
+      cell: (t) => (
+        <div className="flex items-center justify-end gap-1">
           <Button
-            size="sm"
-            variant="outline"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground"
+            aria-label="Edit task"
             onClick={(e) => {
               e.stopPropagation();
-              advance(t);
+              setEditing(t);
             }}
           >
-            {t.status === "todo" ? "Start" : t.status === "in_progress" ? "Complete" : "Unblock"}
+            <Pencil className="size-3.5" />
           </Button>
-        ),
+          {t.status === "done" ? (
+            <span className="mono text-[11px] text-subtle">{relative(t.dueAt)}</span>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                advance(t);
+              }}
+            >
+              {t.status === "todo" ? "Start" : t.status === "in_progress" ? "Complete" : "Unblock"}
+            </Button>
+          )}
+          <DeleteTaskButton task={t} />
+        </div>
+      ),
     },
   ];
 
@@ -221,82 +391,7 @@ function TasksPage() {
         title="Tasks"
         description="Operational tasks across builds, services and receiving."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="size-4" /> New task
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New task</DialogTitle>
-                <DialogDescription>Assign operational work to a team member.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="task-title">Title</Label>
-                  <Input
-                    id="task-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Cable-manage BUILD-10488"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="task-detail">Detail</Label>
-                  <Textarea
-                    id="task-detail"
-                    rows={3}
-                    value={detail}
-                    onChange={(e) => setDetail(e.target.value)}
-                    placeholder="Optional notes or acceptance criteria"
-                  />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <Label>Assignee</Label>
-                    <Select value={newAssignee} onValueChange={setNewAssignee}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select staff" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {staff.map((s) => (
-                          <SelectItem key={s.id} value={s.name}>
-                            {s.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Priority</Label>
-                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v as TaskPriority)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRIORITIES.map((p) => (
-                          <SelectItem key={p} value={p}>
-                            {titleCase(p)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="task-due">Due</Label>
-                    <Input id="task-due" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreate}>Create task</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <TaskEditorDialog open={open} onOpenChange={setOpen} staff={staff} />
         }
       />
 
@@ -378,11 +473,21 @@ function TasksPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 shrink-0 text-muted-foreground"
+                            aria-label="Edit task"
+                            onClick={() => setEditing(t)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
                           {t.status !== "done" && (
-                            <Button size="sm" variant="outline" className="h-7" onClick={() => advance(t)}>
+                            <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={() => advance(t)}>
                               {t.status === "todo" ? "Start" : t.status === "in_progress" ? "Done" : "Unblock"}
                             </Button>
                           )}
+                          <DeleteTaskButton task={t} />
                         </div>
                       </article>
                     ))}
@@ -397,6 +502,13 @@ function TasksPage() {
       <DemoNote>
         Task changes update local demo state only — no notifications, calendar sync or assignment emails are sent.
       </DemoNote>
+
+      <TaskEditorDialog
+        open={Boolean(editing)}
+        onOpenChange={(v) => !v && setEditing(null)}
+        staff={staff}
+        task={editing ?? undefined}
+      />
     </div>
   );
 }

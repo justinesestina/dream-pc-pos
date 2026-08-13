@@ -6,6 +6,18 @@ import { DemoNote } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { DocumentPreview, PrintButton } from "@/components/nexus/document";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { dateShort, daysUntil } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -103,9 +115,27 @@ function QuotesQuoteidPage() {
               </Button>
             )}
             {canReject && (
-              <Button size="sm" variant="outline" onClick={() => handleSetStatus("rejected")}>
-                Reject
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    Reject
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reject {quote.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The quote will be marked rejected and can no longer be converted to an order.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep quote</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleSetStatus("rejected")}>
+                      Reject quote
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {canConvert && (
               <Button size="sm" onClick={handleConvert}>

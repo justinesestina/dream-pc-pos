@@ -27,6 +27,7 @@ import type {
   BuildSlot,
   BuildStatus,
   CartLine,
+  ClaimEvent,
   Customer,
   InventoryItem,
   InventoryMovement,
@@ -203,6 +204,13 @@ interface StoreValue extends Snapshot {
   removeServicePart: (ticketId: string, productId: string) => void;
   adjustStock: (productId: string, delta: number, note: string) => void;
   createClaim: (warrantyId: string, reason: string) => WarrantyClaim;
+  updateClaim: (
+    claimId: string,
+    patch: { status?: WarrantyClaim["status"]; resolution?: string; resolutionNote?: string },
+    label?: string,
+  ) => void;
+  /** Write a demo audit entry (used for ops-store actions that lack their own audit). */
+  audit: (action: string, entity: string) => void;
   markAllNotificationsRead: () => void;
   resetDemoData: () => void;
 }
@@ -294,13 +302,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreValue = useMemo(() => {
     const lineFor = (l: CartLine) => {
-      const p = productById(l.productId)!;
+      const p = productById(l.productId);
       return {
         productId: l.productId,
-        name: p.name,
-        sku: p.sku,
+        name: p?.name ?? "Unknown product",
+        sku: p?.sku ?? "N/A",
         qty: l.qty,
-        unitPrice: p.price,
+        unitPrice: p?.price ?? 0,
         serials: l.serials,
       };
     };
@@ -476,16 +484,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...items
               .filter((i) => (productById(i.productId)?.warrantyMonths ?? 0) > 0)
               .map((i) => {
-                const p = productById(i.productId)!;
+                const p = productById(i.productId);
                 const exp = new Date();
-                exp.setMonth(exp.getMonth() + p.warrantyMonths);
+                exp.setMonth(exp.getMonth() + (p?.warrantyMonths ?? 0));
                 return {
                   id: `WR-${Math.floor(Math.random() * 9000 + 21000)}`,
                   customerId: state.cartCustomerId ?? "walk-in",
                   customerName: customer?.name ?? "Walk-in Customer",
-                  productId: p.id,
-                  productName: p.name,
-                  serial: soldSerials.get(p.id)?.[0]?.ser,
+                  productId: p?.id ?? i.productId,
+                  productName: p?.name ?? i.name,
+                  serial: soldSerials.get(i.productId)?.[0]?.ser,
                   orderId: id,
                   purchasedAt: at,
                   expiresAt: exp.toISOString(),
@@ -625,13 +633,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       createQuote: ({ customerId, items, discount, serviceTotal, notes, expiresInDays }) => {
         const lines = items.map((i) => {
-          const p = productById(i.productId)!;
+          const p = productById(i.productId);
           return {
             productId: i.productId,
-            name: p.name,
-            sku: p.sku,
+            name: p?.name ?? "Unknown product",
+            sku: p?.sku ?? "N/A",
             qty: i.qty,
-            unitPrice: p.price,
+            unitPrice: p?.price ?? 0,
           };
         });
         const t = computeTotals(lines, discount, serviceTotal);
@@ -877,13 +885,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const build = state.builds.find((b) => b.id === buildId);
         if (!build) return null;
         const lines = build.components.map((c) => {
-          const p = productById(c.productId)!;
+          const p = productById(c.productId);
           return {
             productId: c.productId,
-            name: p.name,
-            sku: p.sku,
+            name: p?.name ?? "Unknown component",
+            sku: p?.sku ?? "N/A",
             qty: c.qty,
-            unitPrice: p.price,
+            unitPrice: p?.price ?? 0,
           };
         });
         const serviceTotal = build.services.reduce((s, x) => s + x.amount, 0);
@@ -1087,6 +1095,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           reason,
           status: "open",
           createdAt: new Date().toISOString(),
+          timeline: [
+            { label: `Claim opened — ${reason}`, at: new Date().toISOString(), actor: state.user?.name },
+          ],
         };
         patch((s) => ({
           ...s,
@@ -1095,6 +1106,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
         return claim;
       },
+
+      updateClaim: (claimId, p, label) =>
+        patch((s) => {
+          const existing = s.claims.find((c) => c.id === claimId);
+          if (!existing) return s;
+          const at = new Date().toISOString();
+          const event: ClaimEvent = {
+            label:
+              label ??
+              (p.status ? `Status set to ${p.status.replace(/_/g, " ")}` : "Claim updated"),
+            at,
+            actor: s.user?.name,
+          };
+          return {
+            ...s,
+            claims: s.claims.map((c) =>
+              c.id === claimId
+                ? { ...c, ...p, timeline: [...c.timeline, event] }
+                : c,
+            ),
+            auditLogs: log(s, `updated warranty claim ${claimId}`, claimId),
+          };
+        }),
+
+      audit: (action, entity) => patch((s) => ({ ...s, auditLogs: log(s, action, entity) })),
 
       markAllNotificationsRead: () =>
         patch((s) => ({

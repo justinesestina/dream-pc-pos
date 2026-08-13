@@ -1,13 +1,27 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
 import { StatCard } from "@/components/nexus/stat-card";
 import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useOps } from "@/lib/ops-store";
 import { useSimulatedLoad } from "@/lib/store";
+import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 import { num } from "@/lib/format";
 import type { Supplier } from "@/lib/ops-types";
 
@@ -26,12 +40,13 @@ export const Route = createFileRoute("/_app/suppliers/")({
 });
 
 function SuppliersIndexPage() {
-  const { suppliers, purchaseOrders } = useOps();
+  const { suppliers, purchaseOrders, updateSupplier } = useOps();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("all");
+  const [dialog, setDialog] = useState<{ open: boolean; supplier?: Supplier }>({ open: false });
 
   const categories = useMemo(
     () => Array.from(new Set(suppliers.flatMap((s) => s.categories))).sort(),
@@ -112,11 +127,82 @@ function SuppliersIndexPage() {
       align: "right",
     },
     { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} />, align: "right" },
+    {
+      key: "actions",
+      header: "",
+      cell: (r) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDialog({ open: true, supplier: r });
+            }}
+          >
+            Edit
+          </Button>
+          {r.status === "active" ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Deactivate
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Deactivate {r.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {r.name} will be hidden from new purchase orders but its history stays intact.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep active</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      updateSupplier(r.id, { status: "inactive" });
+                      toast.success(`${r.name} deactivated.`);
+                    }}
+                  >
+                    Deactivate supplier
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                updateSupplier(r.id, { status: "active" });
+                toast.success(`${r.name} reactivated.`);
+              }}
+            >
+              Activate
+            </Button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Suppliers" description="Supplier directory, terms and lead times." />
+      <PageHeader
+        title="Suppliers"
+        description="Supplier directory, terms and lead times."
+        actions={
+          <Button size="sm" onClick={() => setDialog({ open: true })}>
+            New supplier
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Active suppliers" numericValue={stats.active} format={(n) => num(Math.round(n))} accent="success" />
@@ -140,6 +226,12 @@ function SuppliersIndexPage() {
           empty={<EmptyState title="No suppliers match" description="Try clearing the search or filters." />}
         />
       </Panel>
+
+      <SupplierFormDialog
+        open={dialog.open}
+        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
+        supplier={dialog.supplier}
+      />
     </div>
   );
 }

@@ -51,6 +51,7 @@ import { Route as AppSuppliersIndexRouteImport } from './routes/_app.suppliers.i
 import { Route as AppSuppliersSupplierIdRouteImport } from './routes/_app.suppliers.$supplierId'
 import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
 import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
+import { Route as AppWarrantyClaimsClaimIdRouteImport } from './routes/_app.warranty.claims.$claimId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -262,6 +263,12 @@ const AppWarrantyWarrantyIdRoute = AppWarrantyWarrantyIdRouteImport.update({
   path: '/warranty/$warrantyId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWarrantyClaimsClaimIdRoute =
+  AppWarrantyClaimsClaimIdRouteImport.update({
+    id: '/warranty/claims/$claimId',
+    path: '/warranty/claims/$claimId',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/shifts/': typeof AppShiftsIndexRoute
   '/suppliers/': typeof AppSuppliersIndexRoute
   '/warranty/': typeof AppWarrantyIndexRoute
+  '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -348,6 +356,7 @@ export interface FileRoutesByTo {
   '/shifts': typeof AppShiftsIndexRoute
   '/suppliers': typeof AppSuppliersIndexRoute
   '/warranty': typeof AppWarrantyIndexRoute
+  '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -393,6 +402,7 @@ export interface FileRoutesById {
   '/_app/shifts/': typeof AppShiftsIndexRoute
   '/_app/suppliers/': typeof AppSuppliersIndexRoute
   '/_app/warranty/': typeof AppWarrantyIndexRoute
+  '/_app/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -438,6 +448,7 @@ export interface FileRouteTypes {
     | '/shifts/'
     | '/suppliers/'
     | '/warranty/'
+    | '/warranty/claims/$claimId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -481,6 +492,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/suppliers'
     | '/warranty'
+    | '/warranty/claims/$claimId'
   id:
     | '__root__'
     | '/'
@@ -525,6 +537,7 @@ export interface FileRouteTypes {
     | '/_app/shifts/'
     | '/_app/suppliers/'
     | '/_app/warranty/'
+    | '/_app/warranty/claims/$claimId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -828,6 +841,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWarrantyWarrantyIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/warranty/claims/$claimId': {
+      id: '/_app/warranty/claims/$claimId'
+      path: '/warranty/claims/$claimId'
+      fullPath: '/warranty/claims/$claimId'
+      preLoaderRoute: typeof AppWarrantyClaimsClaimIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -883,6 +903,7 @@ interface AppRouteChildren {
   AppShiftsIndexRoute: typeof AppShiftsIndexRoute
   AppSuppliersIndexRoute: typeof AppSuppliersIndexRoute
   AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
+  AppWarrantyClaimsClaimIdRoute: typeof AppWarrantyClaimsClaimIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -925,6 +946,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppShiftsIndexRoute: AppShiftsIndexRoute,
   AppSuppliersIndexRoute: AppSuppliersIndexRoute,
   AppWarrantyIndexRoute: AppWarrantyIndexRoute,
+  AppWarrantyClaimsClaimIdRoute: AppWarrantyClaimsClaimIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

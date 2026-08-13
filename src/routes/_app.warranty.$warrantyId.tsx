@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
-import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
+import { Panel, EmptyState, IdLink } from "@/components/nexus/primitives";
 import { KeyValueGrid, Section, ProgressBar } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { DataTable, type Column } from "@/components/nexus/data-table";
@@ -70,7 +70,7 @@ function WarrantyDetailPage() {
   const usedPct = Math.max(0, Math.min(100, 100 - (remaining / totalDays) * 100));
 
   const claimColumns: Column<WarrantyClaim>[] = [
-    { key: "id", header: "Claim", cell: (c) => <Mono>{c.id}</Mono> },
+    { key: "id", header: "Claim", cell: (c) => <IdLink to="/warranty/claims/$claimId" params={{ claimId: c.id }}>{c.id}</IdLink> },
     { key: "created", header: "Filed", cell: (c) => dateShort(c.createdAt) },
     { key: "reason", header: "Reason", cell: (c) => <span className="max-w-[280px] truncate block">{c.reason}</span> },
     { key: "resolution", header: "Resolution", cell: (c) => c.resolution || "—" },

@@ -285,4 +285,15 @@
   .no-print {
     display: none !important;
   }
+
+  /* Print just the page content — hide app shell chrome. */
+  aside,
+  .app-topbar,
+  header[class*="sticky top-0 z-30"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
 }

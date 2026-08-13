@@ -296,6 +296,12 @@ export interface ServiceTicket {
 
 export type WarrantyStatus = "active" | "expiring" | "expired" | "void";
 
+export interface ClaimEvent {
+  label: string;
+  at: string;
+  actor?: string | undefined;
+}
+
 export interface WarrantyClaim {
   id: string;
   warrantyId: string;
@@ -303,6 +309,8 @@ export interface WarrantyClaim {
   status: "open" | "in_review" | "approved" | "rejected" | "closed";
   createdAt: string;
   resolution?: string | undefined;
+  resolutionNote?: string | undefined;
+  timeline: ClaimEvent[];
 }
 
 export interface Warranty {

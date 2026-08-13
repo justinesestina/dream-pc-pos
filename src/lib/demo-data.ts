@@ -1357,6 +1357,10 @@ export const warrantyClaims = [
     reason: "PSU fails to power on intermittently.",
     status: "in_review" as const,
     createdAt: daysAgo(1, 13),
+    timeline: [
+      { label: "Claim opened — PSU fails to power on intermittently.", at: daysAgo(1, 13), actor: "Paolo Cruz" },
+      { label: "Status set to in review", at: daysAgo(1, 9), actor: "Mika Santos" },
+    ],
   },
   {
     id: "WC-3011",
@@ -1365,6 +1369,11 @@ export const warrantyClaims = [
     status: "approved" as const,
     createdAt: daysAgo(6, 10),
     resolution: "Approved for supplier RMA replacement.",
+    timeline: [
+      { label: "Claim opened — Dead pixel cluster on lower-right quadrant.", at: daysAgo(6, 10), actor: "Kevin Villanueva" },
+      { label: "Status set to in review", at: daysAgo(5, 11), actor: "Mika Santos" },
+      { label: "Status set to approved — Approved for supplier RMA replacement.", at: daysAgo(3, 14), actor: "Justine Ramos" },
+    ],
   },
 ];
 

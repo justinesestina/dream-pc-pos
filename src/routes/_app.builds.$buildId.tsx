@@ -27,6 +27,17 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -214,6 +225,8 @@ function BuildsBuildidPage() {
   const ops = useOps();
   const navigate = useNavigate();
   const build = store.builds.find((b) => b.id === buildId);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const issues = useMemo(
     () => (build ? checkCompatibility(build.components, store.products) : []),
@@ -283,6 +296,10 @@ function BuildsBuildidPage() {
               value={build.status}
               onValueChange={(v) => {
                 const status = v as BuildStatus;
+                if (status === "cancelled") {
+                  setConfirmCancel(true);
+                  return;
+                }
                 store.setBuildStatus(build.id, status);
                 ops.setBuildStage(build.id, stageForStatus(status, o.stage));
               }}
@@ -422,10 +439,7 @@ function BuildsBuildidPage() {
                           size="sm"
                           variant="ghost"
                           className="h-7 w-7 p-0 text-subtle hover:text-destructive"
-                          onClick={() => {
-                            store.removeBuildComponent(build.id, c.productId);
-                            toast.success(`Removed ${p?.name ?? c.productId}.`);
-                          }}
+                          onClick={() => setRemoving(c.productId)}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -647,6 +661,56 @@ function BuildsBuildidPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel {build.id}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The build will be marked cancelled and dropped from the active pipeline. Parts stay reserved until
+              released elsewhere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep build</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                store.setBuildStatus(build.id, "cancelled");
+                toast.success(`${build.id} cancelled.`);
+              }}
+            >
+              Cancel build
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove component?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removing
+                ? `${store.productById(removing)?.name ?? removing} will be removed from ${build.id}.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep part</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (removing) {
+                  store.removeBuildComponent(build.id, removing);
+                  toast.success(`Removed from ${build.id}.`);
+                }
+                setRemoving(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

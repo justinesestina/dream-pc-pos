@@ -22,7 +22,7 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { Reveal } from "@/components/nexus/motion";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
-import { money, num, greeting, relative, timeOnly, dateShort } from "@/lib/format";
+import { money, num, greeting, relative, dateShort } from "@/lib/format";
 import { SalesChart } from "@/components/nexus/sales-chart";
 import { ASSEMBLY_STAGES } from "@/lib/ops-types";
 import { cn } from "@/lib/utils";
@@ -91,13 +91,22 @@ function DashboardPage() {
   const openBuilds = store.builds.filter((b) => !["released", "cancelled"].includes(b.status));
   const openServices = store.services.filter((s) => !["released", "cancelled"].includes(s.status));
   const daily = last14Days(store.orders);
-  const hourly = daily.slice(-1).length
-    ? Array.from({ length: 12 }).map((_, i) => ({
-        label: `${(i + 8).toString().padStart(2, "0")}:00`,
-        revenue: 0,
-        orders: 0,
-      }))
-    : [];
+  const hourly = Array.from({ length: 12 }).map((_, i) => {
+    const start = new Date();
+    start.setHours(i + 8, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(i + 9, 0, 0, 0);
+    const bucketOrders = store.orders.filter((o) => {
+      if (!o.payment) return false;
+      const t = new Date(o.createdAt).getTime();
+      return t >= start.getTime() && t < end.getTime();
+    });
+    return {
+      label: `${(i + 8).toString().padStart(2, "0")}:00`,
+      revenue: bucketOrders.reduce((s, o) => s + o.total, 0),
+      orders: bucketOrders.length,
+    };
+  });
 
   const tasksToday = ops.tasks.filter((t) => {
     const due = new Date(t.dueAt).toDateString();
@@ -131,7 +140,7 @@ function DashboardPage() {
               description={new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
               meta={
                 <>
-                  <span className="label-tech">LAST SYNC <span className="text-muted-foreground">{timeOnly(new Date().toISOString())}</span></span>
+                  <span className="label-tech">SYNC <span className="text-muted-foreground">Local demo</span></span>
                   <span className="label-tech">DATA <span className="text-warning">DEMO</span></span>
                 </>
               }

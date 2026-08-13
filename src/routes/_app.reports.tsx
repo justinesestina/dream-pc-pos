@@ -9,6 +9,7 @@ import { Panel, PanelHeader, EmptyState } from "@/components/nexus/primitives";
 import { Segmented } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/detail";
+import { PrintButton } from "@/components/nexus/document";
 import { StatCard } from "@/components/nexus/stat-card";
 import { useStore } from "@/lib/store";
 import { can } from "@/lib/permissions";
@@ -274,6 +275,7 @@ function ReportsPage() {
             <Button size="sm" variant="outline" onClick={() => { exportJSON(); toast.success("JSON report downloaded."); }}>
               <Download className="size-3.5" /> Export JSON
             </Button>
+            <PrintButton label="Print" />
             <Segmented value={range} onChange={setRange} options={RANGES.map((r) => ({ value: r.value, label: r.label }))} />
           </>
         }

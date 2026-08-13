@@ -112,6 +112,8 @@ interface OpsValue extends OpsSnapshot {
   openShift: Shift | undefined;
   /* purchasing */
   setPoStatus: (id: string, status: PurchaseStatus) => void;
+  createSupplier: (data: Omit<Supplier, "id" | "rating" | "status">) => Supplier;
+  updateSupplier: (id: string, patch: Partial<Supplier>) => void;
   createPurchaseOrder: (data: {
     supplierId: string;
     lines: { productId: string; name: string; sku: string; qty: number; unitCost: number }[];
@@ -154,6 +156,11 @@ interface OpsValue extends OpsSnapshot {
   createTask: (data: Omit<OpsTask, "id" | "createdAt" | "status"> & { status?: TaskStatus }) => OpsTask;
   setTaskStatus: (id: string, status: TaskStatus) => void;
   assignTask: (id: string, assignee: string) => void;
+  updateTask: (id: string, patch: Partial<Omit<OpsTask, "id" | "createdAt">>) => void;
+  deleteTask: (id: string) => void;
+  /* staff */
+  createStaff: (data: Omit<StaffMember, "id" | "status" | "completed">) => StaffMember;
+  updateStaff: (id: string, patch: Partial<StaffMember>) => void;
   /* build ops */
   setBuildStage: (buildId: string, stage: AssemblyStageId) => void;
   toggleAssemblyStep: (buildId: string, label: string, done: boolean) => void;
@@ -231,6 +238,23 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
           ),
         })),
 
+      createSupplier: (data) => {
+        const supplier: Supplier = {
+          ...data,
+          id: `sup-${Math.random().toString(36).slice(2, 9)}`,
+          rating: 0,
+          status: "active",
+        };
+        patch((s) => ({ ...s, suppliers: [supplier, ...s.suppliers] }));
+        return supplier;
+      },
+
+      updateSupplier: (id, p) =>
+        patch((s) => ({
+          ...s,
+          suppliers: s.suppliers.map((sp) => (sp.id === id ? { ...sp, ...p } : sp)),
+        })),
+
       createPurchaseOrder: ({ supplierId, lines, expectedAt, notes }) => {
         const supplier = find(state.suppliers, supplierId);
         if (!supplier || lines.length === 0) return null;
@@ -296,7 +320,18 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
             r.id === receiptId
               ? {
                   ...r,
-                  lines: r.lines.map((l) => (l.productId === productId ? { ...l, ...p } : l)),
+                  lines: r.lines.map((l) =>
+                    l.productId === productId
+                      ? {
+                          ...l,
+                          ...p,
+                          received:
+                            p.received !== undefined
+                              ? Math.max(0, Math.min(l.expected, p.received))
+                              : l.received,
+                        }
+                      : l,
+                  ),
                 }
               : r,
           ),
@@ -466,6 +501,26 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
 
       assignTask: (id, assignee) =>
         patch((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, assignee } : t)) })),
+
+      updateTask: (id, p) =>
+        patch((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...p } : t)) })),
+
+      deleteTask: (id) =>
+        patch((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) })),
+
+      createStaff: (data) => {
+        const staff: StaffMember = {
+          ...data,
+          id: `st-${Math.random().toString(36).slice(2, 9)}`,
+          status: "available",
+          completed: 0,
+        };
+        patch((s) => ({ ...s, staff: [staff, ...s.staff] }));
+        return staff;
+      },
+
+      updateStaff: (id, p) =>
+        patch((s) => ({ ...s, staff: s.staff.map((m) => (m.id === id ? { ...m, ...p } : m)) })),
 
       setBuildStage: (buildId, stage) =>
         patch((s) => ({ ...s, buildOps: upsertOps(s.buildOps, buildId, (o) => ({ ...o, stage })) })),

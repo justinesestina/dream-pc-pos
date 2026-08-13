@@ -25,6 +25,13 @@ export const Route = createFileRoute("/_app/warranty/")({
 });
 
 const WARRANTY_STATUSES: WarrantyStatus[] = ["active", "expiring", "expired", "void"];
+const CLAIM_STATUSES: Array<WarrantyClaim["status"]> = [
+  "open",
+  "in_review",
+  "approved",
+  "rejected",
+  "closed",
+];
 
 function WarrantyPage() {
   const { warranties, claims } = useStore();
@@ -32,6 +39,8 @@ function WarrantyPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
+  const [claimQ, setClaimQ] = useState("");
+  const [claimStatus, setClaimStatus] = useState("all");
 
   const stats = useMemo(() => {
     const active = warranties.filter((w) => w.status === "active").length;
@@ -82,10 +91,34 @@ function WarrantyPage() {
     { key: "status", header: "Status", cell: (w) => <StatusBadge status={w.status} />, sortValue: (w) => w.status },
   ];
 
+  const filteredClaims = useMemo(() => {
+    const term = claimQ.trim().toLowerCase();
+    return claims.filter((c) => {
+      if (claimStatus !== "all" && c.status !== claimStatus) return false;
+      if (!term) return true;
+      const w = warranties.find((x) => x.id === c.warrantyId);
+      const haystack = [
+        c.id,
+        c.warrantyId,
+        c.reason,
+        c.resolution ?? "",
+        c.resolutionNote ?? "",
+        w?.serial ?? "",
+        w?.productName ?? "",
+        w?.customerName ?? "",
+        w?.orderId ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [claims, warranties, claimQ, claimStatus]);
 
   const claimCols: Column<WarrantyClaim>[] = [
-    { key: "id", header: "Claim", cell: (c) => <IdLink to="/warranty/$warrantyId" params={{ warrantyId: c.warrantyId }}>{c.id}</IdLink> },
-    { key: "warranty", header: "Warranty", cell: (c) => <Mono>{c.warrantyId}</Mono> },
+    { key: "id", header: "Claim", cell: (c) => <IdLink to="/warranty/claims/$claimId" params={{ claimId: c.id }}>{c.id}</IdLink> },
+    { key: "warranty", header: "Warranty", cell: (c) => <IdLink to="/warranty/$warrantyId" params={{ warrantyId: c.warrantyId }}>{c.warrantyId}</IdLink> },
+    { key: "serial", header: "Serial", cell: (c) => { const w = warranties.find((x) => x.id === c.warrantyId); return <Mono>{w?.serial ?? "—"}</Mono>; } },
+    { key: "product", header: "Product", cell: (c) => { const w = warranties.find((x) => x.id === c.warrantyId); return w?.productName ?? "—"; } },
     { key: "reason", header: "Reason", cell: (c) => <span className="max-w-[280px] truncate block text-muted-foreground">{c.reason}</span> },
     { key: "created", header: "Filed", cell: (c) => dateShort(c.createdAt) },
     { key: "status", header: "Status", cell: (c) => <StatusBadge status={c.status} /> },
@@ -118,12 +151,28 @@ function WarrantyPage() {
         />
       </Panel>
 
-      <Section title="Warranty claims" hint={`${claims.length} total`}>
+      <Section
+        title="Warranty claims"
+        hint={`${claims.length} total`}
+        action={
+          <div className="flex items-center gap-2 pr-2">
+            <SearchInput value={claimQ} onChange={setClaimQ} placeholder="Search claim, serial, order, product…" />
+            <FilterSelect
+              value={claimStatus}
+              onChange={setClaimStatus}
+              options={CLAIM_STATUSES}
+              label="Claim status"
+            />
+            <ResultCount shown={filteredClaims.length} total={claims.length} noun="claims" />
+          </div>
+        }
+      >
         <DataTable
-          rows={claims}
+          rows={filteredClaims}
           columns={claimCols}
           pageSize={8}
-          empty={<EmptyState title="No claims filed" description="No warranty claims have been recorded." />}
+          onRowClick={(c) => navigate({ to: "/warranty/claims/$claimId", params: { claimId: c.id } })}
+          empty={<EmptyState title="No claims match" description="No claims match the current search or filter." />}
         />
       </Section>
     </div>

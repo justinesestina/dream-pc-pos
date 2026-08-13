@@ -14,6 +14,7 @@ import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
 import { dateShort, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { StaffFormDialog } from "@/components/staff/staff-form-dialog";
 import type { StaffMember } from "@/lib/ops-types";
 
 export const Route = createFileRoute("/_app/staff")({
@@ -45,12 +46,13 @@ interface Assignment {
 const KINDS = ["Task", "Build", "QA", "Service", "Shift"];
 
 function StaffPage() {
-  const { staff, tasks, buildOps, shifts } = useOps();
+  const { staff, tasks, buildOps, shifts, updateStaff } = useOps();
   const { builds, services, user } = useStore();
 
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("all");
   const [focus, setFocus] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ open: boolean; staff?: StaffMember }>({ open: false });
 
   const assignments = useMemo<Assignment[]>(() => {
     const list: Assignment[] = [];
@@ -218,11 +220,16 @@ function StaffPage() {
         title="Staff & Assignments"
         description="Technician workload and operational assignments."
         actions={
-          focus ? (
-            <Button size="sm" variant="outline" onClick={() => setFocus(null)}>
-              Clear focus — {focus}
+          <>
+            {focus ? (
+              <Button size="sm" variant="outline" onClick={() => setFocus(null)}>
+                Clear focus — {focus}
+              </Button>
+            ) : null}
+            <Button size="sm" onClick={() => setDialog({ open: true })}>
+              Add staff
             </Button>
-          ) : null
+          </>
         }
       />
 
@@ -238,59 +245,98 @@ function StaffPage() {
           const load = loadByStaff.get(s.name) ?? 0;
           const active = focus === s.name;
           return (
-            <button
+            <div
               key={s.id}
-              type="button"
-              onClick={() => {
-                setFocus(active ? null : s.name);
-                if (!active) toast.info(`Filtered assignments for ${s.name}.`);
-              }}
-              aria-pressed={active}
               className={cn(
-                "rounded-lg border bg-surface p-3.5 text-left transition-colors",
-                active ? "border-border-strong ring-1 ring-info/40" : "border-border hover:border-border-strong",
+                "rounded-lg border bg-surface transition-colors",
+                active ? "border-border-strong ring-1 ring-info/40" : "border-border",
               )}
             >
-              <div className="flex items-start gap-3">
-                <span className="mono flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[12px] text-foreground">
-                  {s.initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-[13.5px] font-medium text-foreground">{s.name}</p>
-                    <StatusBadge status={s.status} tone={staffTone[s.status]} />
-                  </div>
-                  <p className="text-[11.5px] text-muted-foreground">
-                    {s.role} · {s.shift}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <div className="flex items-center justify-between">
-                  <TechLabel>Workload</TechLabel>
-                  <span className="mono text-[11px] text-subtle">{load} open</span>
-                </div>
-                <ProgressBar
-                  className="mt-1.5"
-                  value={(load / maxLoad) * 100}
-                  tone={load > maxLoad * 0.66 ? "warning" : "info"}
-                />
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {s.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded border border-border bg-elevated px-1.5 py-0.5 text-[10.5px] text-muted-foreground"
-                  >
-                    {skill}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setFocus(active ? null : s.name);
+                  if (!active) toast.info(`Filtered assignments for ${s.name}.`);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setFocus(active ? null : s.name);
+                  }
+                }}
+                aria-pressed={active}
+                className="cursor-pointer p-3.5 text-left"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="mono flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[12px] text-foreground">
+                    {s.initials}
                   </span>
-                ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-[13.5px] font-medium text-foreground">{s.name}</p>
+                      <StatusBadge status={s.status} tone={staffTone[s.status]} />
+                    </div>
+                    <p className="text-[11.5px] text-muted-foreground">
+                      {s.role} · {s.shift}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="flex items-center justify-between">
+                    <TechLabel>Workload</TechLabel>
+                    <span className="mono text-[11px] text-subtle">{load} open</span>
+                  </div>
+                  <ProgressBar
+                    className="mt-1.5"
+                    value={(load / maxLoad) * 100}
+                    tone={load > maxLoad * 0.66 ? "warning" : "info"}
+                  />
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {s.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded border border-border bg-elevated px-1.5 py-0.5 text-[10.5px] text-muted-foreground"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="mono mt-3 text-[10.5px] text-subtle">{s.completed} jobs completed all-time</p>
               </div>
 
-              <p className="mono mt-3 text-[10.5px] text-subtle">{s.completed} jobs completed all-time</p>
-            </button>
+              <div className="flex items-center justify-between gap-2 border-t border-border px-2 py-1.5">
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDialog({ open: true, staff: s })}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={s.status === "off" ? "" : "text-destructive hover:text-destructive"}
+                    onClick={() => {
+                      if (s.status === "off") {
+                        updateStaff(s.id, { status: "available" });
+                        toast.success(`${s.name} marked available.`);
+                      } else {
+                        updateStaff(s.id, { status: "off" });
+                        toast.success(`${s.name} set off duty.`);
+                      }
+                    }}
+                  >
+                    {s.status === "off" ? "Set available" : "Set off duty"}
+                  </Button>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -319,6 +365,12 @@ function StaffPage() {
         Workload is derived from local demo tasks, builds, services and shifts. Rosters, payroll and time tracking are
         not simulated.
       </DemoNote>
+
+      <StaffFormDialog
+        open={dialog.open}
+        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
+        staff={dialog.staff}
+      />
     </div>
   );
 }
