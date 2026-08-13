@@ -151,7 +151,13 @@ function DocumentsPage() {
       const order = r.kind === "order" ? orders.find((o) => o.id === r.refId) : undefined;
       const build = r.kind === "build" ? builds.find((b) => b.id === r.refId) : undefined;
       const ticket = r.kind === "service" ? services.find((s) => s.id === r.refId) : undefined;
-      const amount = order ? order.total : ticket ? (ticket.actualCost ?? ticket.estimatedCost) : 0;
+      const buildOrder = build?.orderId ? orders.find((o) => o.id === build.orderId) : undefined;
+      const buildQuote = build?.quoteId ? quotes.find((x) => x.id === build.quoteId) : undefined;
+      const amount = order
+        ? order.total
+        : ticket
+          ? (ticket.actualCost ?? ticket.estimatedCost)
+          : (buildOrder?.total ?? buildQuote?.total ?? build?.budget ?? 0);
       list.push({
         id: `doc-${r.id}`,
         kind: "Delivery / Release",
