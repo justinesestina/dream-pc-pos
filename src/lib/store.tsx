@@ -24,6 +24,7 @@ import type {
   AppNotification,
   AuditLog,
   Build,
+  BuildSlot,
   BuildStatus,
   CartLine,
   Customer,
@@ -170,6 +171,8 @@ interface StoreValue extends Snapshot {
   }) => Build;
   updateBuild: (buildId: string, patch: Partial<Build>) => void;
   setBuildStatus: (buildId: string, status: BuildStatus) => void;
+  addBuildComponent: (buildId: string, slot: BuildSlot, productId: string, qty?: number) => void;
+  removeBuildComponent: (buildId: string, productId: string) => void;
   toggleQaCheck: (buildId: string, label: string, value: boolean | null) => void;
   finalizeQa: (buildId: string, result: "pass" | "fail") => void;
   quoteFromBuild: (buildId: string) => Quote | null;
@@ -630,6 +633,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         patch((s) => ({
           ...s,
           builds: s.builds.map((b) => (b.id === buildId ? { ...b, ...p } : b)),
+        })),
+
+      addBuildComponent: (buildId, slot, pid, qty = 1) =>
+        patch((s) => ({
+          ...s,
+          builds: s.builds.map((b) => {
+            if (b.id !== buildId) return b;
+            const existing = b.components.find((c) => c.productId === pid);
+            return {
+              ...b,
+              components: existing
+                ? b.components.map((c) =>
+                    c.productId === pid ? { ...c, qty: c.qty + qty } : c,
+                  )
+                : [...b.components, { slot, productId: pid, qty }],
+            };
+          }),
+          auditLogs: log(s, `added component ${pid} to ${buildId}`, buildId),
+        })),
+
+      removeBuildComponent: (buildId, pid) =>
+        patch((s) => ({
+          ...s,
+          builds: s.builds.map((b) =>
+            b.id === buildId
+              ? { ...b, components: b.components.filter((c) => c.productId !== pid) }
+              : b,
+          ),
+          auditLogs: log(s, `removed component ${pid} from ${buildId}`, buildId),
         })),
 
       setBuildStatus: (buildId, status) =>

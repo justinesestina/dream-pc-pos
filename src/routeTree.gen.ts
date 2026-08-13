@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppAssemblyRouteImport } from './routes/_app.assembly'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
@@ -58,6 +59,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAssemblyRoute = AppAssemblyRouteImport.update({
+  id: '/assembly',
+  path: '/assembly',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAuditRoute = AppAuditRouteImport.update({
   id: '/audit',
@@ -253,6 +259,7 @@ const AppWarrantyWarrantyIdRoute = AppWarrantyWarrantyIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assembly': typeof AppAssemblyRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
@@ -294,6 +301,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assembly': typeof AppAssemblyRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/assembly': typeof AppAssemblyRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
@@ -380,6 +389,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/assembly'
     | '/audit'
     | '/dashboard'
     | '/documents'
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/assembly'
     | '/audit'
     | '/dashboard'
     | '/documents'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/assembly'
     | '/_app/audit'
     | '/_app/dashboard'
     | '/_app/documents'
@@ -523,6 +535,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/assembly': {
+      id: '/_app/assembly'
+      path: '/assembly'
+      fullPath: '/assembly'
+      preLoaderRoute: typeof AppAssemblyRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/audit': {
       id: '/_app/audit'
@@ -794,6 +813,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAssemblyRoute: typeof AppAssemblyRoute
   AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
@@ -835,6 +855,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAssemblyRoute: AppAssemblyRoute,
   AppAuditRoute: AppAuditRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,

@@ -1,7 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Check, CircleDashed, FlaskConical, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CircleDashed,
+  FlaskConical,
+  Info,
+  Plus,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, PanelHeader, EmptyState, Mono, IdLink, TechLabel } from "@/components/nexus/primitives";
 import { Section, KeyValueGrid, TotalsRows, DemoNote, ProgressBar } from "@/components/nexus/detail";
@@ -9,6 +18,15 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,7 +39,8 @@ import { useStore } from "@/lib/store";
 import { useOps, stageProgress } from "@/lib/ops-store";
 import { ASSEMBLY_STAGES, type AssemblyStageId } from "@/lib/ops-types";
 import { money, dateTime, titleCase } from "@/lib/format";
-import type { BuildStatus } from "@/lib/types";
+import { checkCompatibility, type CompatibilityIssue, type IssueSeverity } from "@/lib/compatibility";
+import type { BuildSlot, BuildStatus, ProductCategory } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/builds/$buildId")({
   head: () => ({
@@ -50,13 +69,148 @@ const BUILD_STATUSES: BuildStatus[] = [
 
 const TECHS = ["Unassigned", "Marco Reyes", "Angelo Cruz", "Bea Santos", "Jun Dela Cruz"];
 
+const SLOT_CATEGORY_MAP: Record<BuildSlot, ProductCategory> = {
+  CPU: "CPU",
+  Motherboard: "Motherboard",
+  RAM: "RAM",
+  GPU: "GPU",
+  Storage: "Storage",
+  PSU: "PSU",
+  Case: "Case",
+  Cooling: "Cooling",
+  Fans: "Fans",
+  Software: "Software",
+  Accessories: "Accessories",
+};
+
+const ALL_SLOTS: BuildSlot[] = [
+  "CPU", "Motherboard", "RAM", "GPU", "Storage", "PSU", "Case", "Cooling", "Fans", "Software", "Accessories",
+];
+
+const SEVERITY_CONFIG: Record<IssueSeverity, { icon: typeof AlertTriangle; className: string }> = {
+  error: { icon: XCircle, className: "text-destructive bg-destructive/10 border-destructive/30" },
+  warning: { icon: AlertTriangle, className: "text-warning bg-warning/10 border-warning/30" },
+  info: { icon: Info, className: "text-info bg-info/10 border-info/30" },
+};
+
+/* ───────────────────────────────── Add Component Dialog ──── */
+
+function AddComponentDialog({ buildId }: { buildId: string }) {
+  const store = useStore();
+  const [open, setOpen] = useState(false);
+  const [slot, setSlot] = useState<BuildSlot>("CPU");
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [qty, setQty] = useState("1");
+
+  const category = SLOT_CATEGORY_MAP[slot];
+  const availableProducts = useMemo(
+    () =>
+      store.products.filter((p) => {
+        if (p.category !== category) return false;
+        if (p.isService) return false;
+        return true;
+      }),
+    [store.products, category],
+  );
+
+  const submit = () => {
+    if (!selectedProduct) {
+      toast.error("Select a product.");
+      return;
+    }
+    const n = Number(qty) || 1;
+    store.addBuildComponent(buildId, slot, selectedProduct, n);
+    toast.success("Component added to build.");
+    setOpen(false);
+    setSelectedProduct("");
+    setQty("1");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Plus className="size-3.5" /> Add part
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add component</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Slot</Label>
+            <Select value={slot} onValueChange={(v) => { setSlot(v as BuildSlot); setSelectedProduct(""); }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_SLOTS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Product</Label>
+            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a product…" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableProducts.length === 0 ? (
+                  <SelectItem value="_none" disabled>
+                    No products in this category
+                  </SelectItem>
+                ) : (
+                  availableProducts.map((p) => {
+                    const avail = store.availableOf(p.id);
+                    return (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          <span className="truncate">{p.name}</span>
+                          <span className="mono text-[10px] text-subtle">{money(p.price)}</span>
+                          <span className="mono text-[10px] text-subtle">({avail} avail)</span>
+                        </span>
+                      </SelectItem>
+                    );
+                  })
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Qty</Label>
+            <Input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="w-24"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={submit}>Add</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ───────────────────────────────── Main Page ──── */
+
 function BuildsBuildidPage() {
   const { buildId } = Route.useParams();
   const store = useStore();
   const ops = useOps();
   const navigate = useNavigate();
   const build = store.builds.find((b) => b.id === buildId);
-  const [checklistLoading, setChecklistLoading] = useState(false);
 
   if (!build) {
     return (
@@ -77,6 +231,14 @@ function BuildsBuildidPage() {
     return s + (p ? p.price * c.qty : 0);
   }, 0);
   const servicesTotal = build.services.reduce((s, x) => s + x.amount, 0);
+
+  const issues = useMemo(
+    () => checkCompatibility(build.components, store.products),
+    [build.components, store.products],
+  );
+
+  const errorCount = issues.filter((i) => i.severity === "error").length;
+  const warningCount = issues.filter((i) => i.severity === "warning").length;
 
   const handleGenerateQuote = () => {
     const quote = store.quoteFromBuild(build.id);
@@ -161,9 +323,46 @@ function BuildsBuildidPage() {
         </div>
       </Section>
 
+      {/* ── Compatibility issues ───────────────────────────────── */}
+      {issues.length > 0 && (
+        <Section
+          title="Compatibility check"
+          hint={
+            errorCount > 0
+              ? `${errorCount} error${errorCount > 1 ? "s" : ""}`
+              : warningCount > 0
+                ? `${warningCount} warning${warningCount > 1 ? "s" : ""}`
+                : "All checks passed"
+          }
+        >
+          <div className="space-y-1.5 p-3">
+            {issues.map((issue, i) => {
+              const cfg = SEVERITY_CONFIG[issue.severity];
+              const Icon = cfg.icon;
+              return (
+                <div
+                  key={`${issue.title}-${i}`}
+                  className={cn("flex items-start gap-2.5 rounded-md border px-3 py-2", cfg.className)}
+                >
+                  <Icon className="mt-0.5 size-3.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium">{issue.title}</p>
+                    <p className="text-[11.5px] opacity-80">{issue.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          <Section title="Parts list" hint={`${build.components.length} components`}>
+          <Section
+            title="Parts list"
+            hint={`${build.components.length} components`}
+            action={<AddComponentDialog buildId={build.id} />}
+          >
             {build.components.length === 0 ? (
               <EmptyState title="No parts assigned yet" description="Add components before generating a quote." />
             ) : (
@@ -176,9 +375,22 @@ function BuildsBuildidPage() {
                         <TechLabel>{c.slot}</TechLabel>
                         <p className="truncate text-[13px] text-foreground">{p?.name ?? c.productId}</p>
                       </div>
-                      <div className="shrink-0 text-right text-[13px]">
-                        <p className="text-muted-foreground">×{c.qty}</p>
-                        <p className="mono text-foreground">{money((p?.price ?? 0) * c.qty)}</p>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <div className="text-right text-[13px]">
+                          <p className="text-muted-foreground">×{c.qty}</p>
+                          <p className="mono text-foreground">{money((p?.price ?? 0) * c.qty)}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-subtle hover:text-destructive"
+                          onClick={() => {
+                            store.removeBuildComponent(build.id, c.productId);
+                            toast.success(`Removed ${p?.name ?? c.productId}.`);
+                          }}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </div>
                   );
