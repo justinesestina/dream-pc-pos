@@ -17,6 +17,7 @@ import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppPosRouteImport } from './routes/_app.pos'
 import { Route as AppReleasesRouteImport } from './routes/_app.releases'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppSerialsRouteImport } from './routes/_app.serials'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppStaffRouteImport } from './routes/_app.staff'
 import { Route as AppTasksRouteImport } from './routes/_app.tasks'
@@ -86,6 +87,11 @@ const AppReleasesRoute = AppReleasesRouteImport.update({
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSerialsRoute = AppSerialsRouteImport.update({
+  id: '/serials',
+  path: '/serials',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/pos': typeof AppPosRoute
   '/releases': typeof AppReleasesRoute
   '/reports': typeof AppReportsRoute
+  '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
   '/staff': typeof AppStaffRoute
   '/tasks': typeof AppTasksRoute
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/pos': typeof AppPosRoute
   '/releases': typeof AppReleasesRoute
   '/reports': typeof AppReportsRoute
+  '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
   '/staff': typeof AppStaffRoute
   '/tasks': typeof AppTasksRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/_app/pos': typeof AppPosRoute
   '/_app/releases': typeof AppReleasesRoute
   '/_app/reports': typeof AppReportsRoute
+  '/_app/serials': typeof AppSerialsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/staff': typeof AppStaffRoute
   '/_app/tasks': typeof AppTasksRoute
@@ -377,6 +386,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/releases'
     | '/reports'
+    | '/serials'
     | '/settings'
     | '/staff'
     | '/tasks'
@@ -417,6 +427,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/releases'
     | '/reports'
+    | '/serials'
     | '/settings'
     | '/staff'
     | '/tasks'
@@ -458,6 +469,7 @@ export interface FileRouteTypes {
     | '/_app/pos'
     | '/_app/releases'
     | '/_app/reports'
+    | '/_app/serials'
     | '/_app/settings'
     | '/_app/staff'
     | '/_app/tasks'
@@ -552,6 +564,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/serials': {
+      id: '/_app/serials'
+      path: '/serials'
+      fullPath: '/serials'
+      preLoaderRoute: typeof AppSerialsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -781,6 +800,7 @@ interface AppRouteChildren {
   AppPosRoute: typeof AppPosRoute
   AppReleasesRoute: typeof AppReleasesRoute
   AppReportsRoute: typeof AppReportsRoute
+  AppSerialsRoute: typeof AppSerialsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStaffRoute: typeof AppStaffRoute
   AppTasksRoute: typeof AppTasksRoute
@@ -821,6 +841,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPosRoute: AppPosRoute,
   AppReleasesRoute: AppReleasesRoute,
   AppReportsRoute: AppReportsRoute,
+  AppSerialsRoute: AppSerialsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStaffRoute: AppStaffRoute,
   AppTasksRoute: AppTasksRoute,
