@@ -227,10 +227,12 @@ function ReturnDetailPage() {
       <PageHeader
         title={rma.id}
         description={`${rma.productName} · ${rma.customerName}`}
-        backTo="/returns"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={rma.status} />
+            <Button size="sm" variant="outline" onClick={() => navigate({ to: "/returns" })}>
+              <ArrowLeft className="mr-1.5 size-3.5" /> Returns
+            </Button>
             {closed ? (
               <Button size="sm" variant="outline" onClick={reopen}>
                 <Undo2 className="mr-1.5 size-3.5" /> Reopen
@@ -448,8 +450,12 @@ function ReturnDetailPage() {
                 { label: "Line value", value: money(maxRefund) },
                 { label: "Requested refund", value: money(rma.refundAmount || refundValue) },
                 { label: "Method", value: rma.refundMethod ? titleCase(rma.refundMethod) : "—" },
+                {
+                  label: "Settled",
+                  value: rma.status === "refunded" ? money(rma.refundAmount) : money(0),
+                  strong: true,
+                },
               ]}
-              total={{ label: "Settled", value: rma.status === "refunded" ? money(rma.refundAmount) : money(0) }}
             />
           </Section>
 

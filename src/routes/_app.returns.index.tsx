@@ -67,7 +67,7 @@ function ReturnsIndexPage() {
       key: "order",
       header: "Order",
       cell: (r) => (
-        <IdLink to="/sales/$orderId" params={{ orderId: r.orderId }}>
+        <IdLink to="/orders/$orderId" params={{ orderId: r.orderId }}>
           {r.orderId}
         </IdLink>
       ),
