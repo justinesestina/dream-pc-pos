@@ -1,12 +1,22 @@
 import {
+  Activity,
   BadgeCheck,
   BarChart3,
   Boxes,
   Cpu,
   FileText,
   LayoutDashboard,
+  ClipboardList,
   Package,
   Receipt,
+  RotateCcw,
+  Banknote,
+  Truck,
+  UserCog,
+  MessagesSquare,
+  FileStack,
+  PackagePlus,
+  Building2,
   Settings,
   ShoppingCart,
   Users,
@@ -38,6 +48,9 @@ export const navGroups: NavGroup[] = [
       { label: "Point of Sale", to: "/pos", icon: ShoppingCart, cap: "pos" },
       { label: "Orders", to: "/orders", icon: Receipt, cap: "orders" },
       { label: "Quotes", to: "/quotes", icon: FileText, cap: "quotes" },
+      { label: "Consultations", to: "/consultations", icon: MessagesSquare, cap: "consultations" },
+      { label: "Returns", to: "/returns", icon: RotateCcw, cap: "returns" },
+      { label: "Cash Drawer", to: "/shifts", icon: Banknote, cap: "shifts" },
     ],
   },
   {
@@ -46,6 +59,9 @@ export const navGroups: NavGroup[] = [
       { label: "Products", to: "/products", icon: Package, cap: "products" },
       { label: "Inventory", to: "/inventory", icon: Boxes, cap: "inventory" },
       { label: "Custom Builds", to: "/builds", icon: Cpu, cap: "builds" },
+      { label: "Purchasing", to: "/purchasing", icon: ClipboardList, cap: "purchasing" },
+      { label: "Suppliers", to: "/suppliers", icon: Building2, cap: "purchasing" },
+      { label: "Receiving", to: "/receiving", icon: PackagePlus, cap: "receiving" },
     ],
   },
   {
@@ -54,6 +70,15 @@ export const navGroups: NavGroup[] = [
       { label: "Customers", to: "/customers", icon: Users, cap: "customers" },
       { label: "Services", to: "/services", icon: Wrench, cap: "services" },
       { label: "Warranty", to: "/warranty", icon: BadgeCheck, cap: "warranty" },
+      { label: "Releases", to: "/releases", icon: Truck, cap: "releases" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Tasks", to: "/tasks", icon: ClipboardList, cap: "tasks" },
+      { label: "Staff", to: "/staff", icon: UserCog, cap: "staff" },
+      { label: "Documents", to: "/documents", icon: FileStack, cap: "documents" },
     ],
   },
   {
@@ -62,6 +87,9 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "System",
-    items: [{ label: "Settings", to: "/settings", icon: Settings, cap: "settings" }],
+    items: [
+      { label: "Settings", to: "/settings", icon: Settings, cap: "settings" },
+      { label: "Audit Log", to: "/audit", icon: Activity, cap: "audit" },
+    ],
   },
 ];

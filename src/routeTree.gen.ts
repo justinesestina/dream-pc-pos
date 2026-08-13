@@ -11,24 +11,43 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
+import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppPosRouteImport } from './routes/_app.pos'
+import { Route as AppReleasesRouteImport } from './routes/_app.releases'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppWarrantyRouteImport } from './routes/_app.warranty'
+import { Route as AppStaffRouteImport } from './routes/_app.staff'
+import { Route as AppTasksRouteImport } from './routes/_app.tasks'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
 import { Route as AppBuildsBuildIdRouteImport } from './routes/_app.builds.$buildId'
+import { Route as AppConsultationsIndexRouteImport } from './routes/_app.consultations.index'
+import { Route as AppConsultationsConsultationIdRouteImport } from './routes/_app.consultations.$consultationId'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
 import { Route as AppCustomersCustomerIdRouteImport } from './routes/_app.customers.$customerId'
+import { Route as AppInventoryIndexRouteImport } from './routes/_app.inventory.index'
+import { Route as AppInventoryProductIdRouteImport } from './routes/_app.inventory.$productId'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app.orders.$orderId'
 import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
 import { Route as AppProductsProductIdRouteImport } from './routes/_app.products.$productId'
+import { Route as AppPurchasingIndexRouteImport } from './routes/_app.purchasing.index'
+import { Route as AppPurchasingPoIdRouteImport } from './routes/_app.purchasing.$poId'
 import { Route as AppQuotesIndexRouteImport } from './routes/_app.quotes.index'
 import { Route as AppQuotesQuoteIdRouteImport } from './routes/_app.quotes.$quoteId'
+import { Route as AppReceivingIndexRouteImport } from './routes/_app.receiving.index'
+import { Route as AppReceivingReceiptIdRouteImport } from './routes/_app.receiving.$receiptId'
+import { Route as AppReturnsIndexRouteImport } from './routes/_app.returns.index'
+import { Route as AppReturnsReturnIdRouteImport } from './routes/_app.returns.$returnId'
 import { Route as AppServicesIndexRouteImport } from './routes/_app.services.index'
 import { Route as AppServicesTicketIdRouteImport } from './routes/_app.services.$ticketId'
+import { Route as AppShiftsIndexRouteImport } from './routes/_app.shifts.index'
+import { Route as AppShiftsShiftIdRouteImport } from './routes/_app.shifts.$shiftId'
+import { Route as AppSuppliersIndexRouteImport } from './routes/_app.suppliers.index'
+import { Route as AppSuppliersSupplierIdRouteImport } from './routes/_app.suppliers.$supplierId'
+import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
+import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,19 +58,29 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const AppInventoryRoute = AppInventoryRouteImport.update({
-  id: '/inventory',
-  path: '/inventory',
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPosRoute = AppPosRouteImport.update({
   id: '/pos',
   path: '/pos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReleasesRoute = AppReleasesRouteImport.update({
+  id: '/releases',
+  path: '/releases',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
@@ -64,9 +93,14 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
-const AppWarrantyRoute = AppWarrantyRouteImport.update({
-  id: '/warranty',
-  path: '/warranty',
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTasksRoute = AppTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBuildsIndexRoute = AppBuildsIndexRouteImport.update({
@@ -79,6 +113,17 @@ const AppBuildsBuildIdRoute = AppBuildsBuildIdRouteImport.update({
   path: '/builds/$buildId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConsultationsIndexRoute = AppConsultationsIndexRouteImport.update({
+  id: '/consultations/',
+  path: '/consultations/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConsultationsConsultationIdRoute =
+  AppConsultationsConsultationIdRouteImport.update({
+    id: '/consultations/$consultationId',
+    path: '/consultations/$consultationId',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
   id: '/customers/',
   path: '/customers/',
@@ -87,6 +132,16 @@ const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
 const AppCustomersCustomerIdRoute = AppCustomersCustomerIdRouteImport.update({
   id: '/customers/$customerId',
   path: '/customers/$customerId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryIndexRoute = AppInventoryIndexRouteImport.update({
+  id: '/inventory/',
+  path: '/inventory/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryProductIdRoute = AppInventoryProductIdRouteImport.update({
+  id: '/inventory/$productId',
+  path: '/inventory/$productId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOrdersIndexRoute = AppOrdersIndexRouteImport.update({
@@ -109,6 +164,16 @@ const AppProductsProductIdRoute = AppProductsProductIdRouteImport.update({
   path: '/products/$productId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPurchasingIndexRoute = AppPurchasingIndexRouteImport.update({
+  id: '/purchasing/',
+  path: '/purchasing/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPurchasingPoIdRoute = AppPurchasingPoIdRouteImport.update({
+  id: '/purchasing/$poId',
+  path: '/purchasing/$poId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
   id: '/quotes/',
   path: '/quotes/',
@@ -117,6 +182,26 @@ const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
 const AppQuotesQuoteIdRoute = AppQuotesQuoteIdRouteImport.update({
   id: '/quotes/$quoteId',
   path: '/quotes/$quoteId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReceivingIndexRoute = AppReceivingIndexRouteImport.update({
+  id: '/receiving/',
+  path: '/receiving/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReceivingReceiptIdRoute = AppReceivingReceiptIdRouteImport.update({
+  id: '/receiving/$receiptId',
+  path: '/receiving/$receiptId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReturnsIndexRoute = AppReturnsIndexRouteImport.update({
+  id: '/returns/',
+  path: '/returns/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReturnsReturnIdRoute = AppReturnsReturnIdRouteImport.update({
+  id: '/returns/$returnId',
+  path: '/returns/$returnId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppServicesIndexRoute = AppServicesIndexRouteImport.update({
@@ -129,137 +214,281 @@ const AppServicesTicketIdRoute = AppServicesTicketIdRouteImport.update({
   path: '/services/$ticketId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppShiftsIndexRoute = AppShiftsIndexRouteImport.update({
+  id: '/shifts/',
+  path: '/shifts/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShiftsShiftIdRoute = AppShiftsShiftIdRouteImport.update({
+  id: '/shifts/$shiftId',
+  path: '/shifts/$shiftId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuppliersIndexRoute = AppSuppliersIndexRouteImport.update({
+  id: '/suppliers/',
+  path: '/suppliers/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuppliersSupplierIdRoute = AppSuppliersSupplierIdRouteImport.update({
+  id: '/suppliers/$supplierId',
+  path: '/suppliers/$supplierId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWarrantyIndexRoute = AppWarrantyIndexRouteImport.update({
+  id: '/warranty/',
+  path: '/warranty/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWarrantyWarrantyIdRoute = AppWarrantyWarrantyIdRouteImport.update({
+  id: '/warranty/$warrantyId',
+  path: '/warranty/$warrantyId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
-  '/inventory': typeof AppInventoryRoute
+  '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
+  '/releases': typeof AppReleasesRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
-  '/warranty': typeof AppWarrantyRoute
+  '/staff': typeof AppStaffRoute
+  '/tasks': typeof AppTasksRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
+  '/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
+  '/inventory/$productId': typeof AppInventoryProductIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/products/$productId': typeof AppProductsProductIdRoute
+  '/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
+  '/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/services/$ticketId': typeof AppServicesTicketIdRoute
+  '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
+  '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
+  '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/builds/': typeof AppBuildsIndexRoute
+  '/consultations/': typeof AppConsultationsIndexRoute
   '/customers/': typeof AppCustomersIndexRoute
+  '/inventory/': typeof AppInventoryIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
   '/products/': typeof AppProductsIndexRoute
+  '/purchasing/': typeof AppPurchasingIndexRoute
   '/quotes/': typeof AppQuotesIndexRoute
+  '/receiving/': typeof AppReceivingIndexRoute
+  '/returns/': typeof AppReturnsIndexRoute
   '/services/': typeof AppServicesIndexRoute
+  '/shifts/': typeof AppShiftsIndexRoute
+  '/suppliers/': typeof AppSuppliersIndexRoute
+  '/warranty/': typeof AppWarrantyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
-  '/inventory': typeof AppInventoryRoute
+  '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
+  '/releases': typeof AppReleasesRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
-  '/warranty': typeof AppWarrantyRoute
+  '/staff': typeof AppStaffRoute
+  '/tasks': typeof AppTasksRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
+  '/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
+  '/inventory/$productId': typeof AppInventoryProductIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/products/$productId': typeof AppProductsProductIdRoute
+  '/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
+  '/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/services/$ticketId': typeof AppServicesTicketIdRoute
+  '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
+  '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
+  '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/builds': typeof AppBuildsIndexRoute
+  '/consultations': typeof AppConsultationsIndexRoute
   '/customers': typeof AppCustomersIndexRoute
+  '/inventory': typeof AppInventoryIndexRoute
   '/orders': typeof AppOrdersIndexRoute
   '/products': typeof AppProductsIndexRoute
+  '/purchasing': typeof AppPurchasingIndexRoute
   '/quotes': typeof AppQuotesIndexRoute
+  '/receiving': typeof AppReceivingIndexRoute
+  '/returns': typeof AppReturnsIndexRoute
   '/services': typeof AppServicesIndexRoute
+  '/shifts': typeof AppShiftsIndexRoute
+  '/suppliers': typeof AppSuppliersIndexRoute
+  '/warranty': typeof AppWarrantyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/audit': typeof AppAuditRoute
   '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/inventory': typeof AppInventoryRoute
+  '/_app/documents': typeof AppDocumentsRoute
   '/_app/pos': typeof AppPosRoute
+  '/_app/releases': typeof AppReleasesRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_app/warranty': typeof AppWarrantyRoute
+  '/_app/staff': typeof AppStaffRoute
+  '/_app/tasks': typeof AppTasksRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
+  '/_app/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
+  '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/products/$productId': typeof AppProductsProductIdRoute
+  '/_app/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/_app/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
+  '/_app/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/_app/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/_app/services/$ticketId': typeof AppServicesTicketIdRoute
+  '/_app/shifts/$shiftId': typeof AppShiftsShiftIdRoute
+  '/_app/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
+  '/_app/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/_app/builds/': typeof AppBuildsIndexRoute
+  '/_app/consultations/': typeof AppConsultationsIndexRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
+  '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
+  '/_app/purchasing/': typeof AppPurchasingIndexRoute
   '/_app/quotes/': typeof AppQuotesIndexRoute
+  '/_app/receiving/': typeof AppReceivingIndexRoute
+  '/_app/returns/': typeof AppReturnsIndexRoute
   '/_app/services/': typeof AppServicesIndexRoute
+  '/_app/shifts/': typeof AppShiftsIndexRoute
+  '/_app/suppliers/': typeof AppSuppliersIndexRoute
+  '/_app/warranty/': typeof AppWarrantyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/audit'
     | '/dashboard'
-    | '/inventory'
+    | '/documents'
     | '/pos'
+    | '/releases'
     | '/reports'
     | '/settings'
-    | '/warranty'
+    | '/staff'
+    | '/tasks'
     | '/builds/$buildId'
+    | '/consultations/$consultationId'
     | '/customers/$customerId'
+    | '/inventory/$productId'
     | '/orders/$orderId'
     | '/products/$productId'
+    | '/purchasing/$poId'
     | '/quotes/$quoteId'
+    | '/receiving/$receiptId'
+    | '/returns/$returnId'
     | '/services/$ticketId'
+    | '/shifts/$shiftId'
+    | '/suppliers/$supplierId'
+    | '/warranty/$warrantyId'
     | '/builds/'
+    | '/consultations/'
     | '/customers/'
+    | '/inventory/'
     | '/orders/'
     | '/products/'
+    | '/purchasing/'
     | '/quotes/'
+    | '/receiving/'
+    | '/returns/'
     | '/services/'
+    | '/shifts/'
+    | '/suppliers/'
+    | '/warranty/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/audit'
     | '/dashboard'
-    | '/inventory'
+    | '/documents'
     | '/pos'
+    | '/releases'
     | '/reports'
     | '/settings'
-    | '/warranty'
+    | '/staff'
+    | '/tasks'
     | '/builds/$buildId'
+    | '/consultations/$consultationId'
     | '/customers/$customerId'
+    | '/inventory/$productId'
     | '/orders/$orderId'
     | '/products/$productId'
+    | '/purchasing/$poId'
     | '/quotes/$quoteId'
+    | '/receiving/$receiptId'
+    | '/returns/$returnId'
     | '/services/$ticketId'
+    | '/shifts/$shiftId'
+    | '/suppliers/$supplierId'
+    | '/warranty/$warrantyId'
     | '/builds'
+    | '/consultations'
     | '/customers'
+    | '/inventory'
     | '/orders'
     | '/products'
+    | '/purchasing'
     | '/quotes'
+    | '/receiving'
+    | '/returns'
     | '/services'
+    | '/shifts'
+    | '/suppliers'
+    | '/warranty'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/audit'
     | '/_app/dashboard'
-    | '/_app/inventory'
+    | '/_app/documents'
     | '/_app/pos'
+    | '/_app/releases'
     | '/_app/reports'
     | '/_app/settings'
-    | '/_app/warranty'
+    | '/_app/staff'
+    | '/_app/tasks'
     | '/_app/builds/$buildId'
+    | '/_app/consultations/$consultationId'
     | '/_app/customers/$customerId'
+    | '/_app/inventory/$productId'
     | '/_app/orders/$orderId'
     | '/_app/products/$productId'
+    | '/_app/purchasing/$poId'
     | '/_app/quotes/$quoteId'
+    | '/_app/receiving/$receiptId'
+    | '/_app/returns/$returnId'
     | '/_app/services/$ticketId'
+    | '/_app/shifts/$shiftId'
+    | '/_app/suppliers/$supplierId'
+    | '/_app/warranty/$warrantyId'
     | '/_app/builds/'
+    | '/_app/consultations/'
     | '/_app/customers/'
+    | '/_app/inventory/'
     | '/_app/orders/'
     | '/_app/products/'
+    | '/_app/purchasing/'
     | '/_app/quotes/'
+    | '/_app/receiving/'
+    | '/_app/returns/'
     | '/_app/services/'
+    | '/_app/shifts/'
+    | '/_app/suppliers/'
+    | '/_app/warranty/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -283,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -290,11 +526,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/inventory': {
-      id: '/_app/inventory'
-      path: '/inventory'
-      fullPath: '/inventory'
-      preLoaderRoute: typeof AppInventoryRouteImport
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/pos': {
@@ -302,6 +538,13 @@ declare module '@tanstack/react-router' {
       path: '/pos'
       fullPath: '/pos'
       preLoaderRoute: typeof AppPosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/releases': {
+      id: '/_app/releases'
+      path: '/releases'
+      fullPath: '/releases'
+      preLoaderRoute: typeof AppReleasesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/reports': {
@@ -318,11 +561,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/warranty': {
-      id: '/_app/warranty'
-      path: '/warranty'
-      fullPath: '/warranty'
-      preLoaderRoute: typeof AppWarrantyRouteImport
+    '/_app/staff': {
+      id: '/_app/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tasks': {
+      id: '/_app/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AppTasksRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/builds/': {
@@ -339,6 +589,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuildsBuildIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/consultations/': {
+      id: '/_app/consultations/'
+      path: '/consultations'
+      fullPath: '/consultations/'
+      preLoaderRoute: typeof AppConsultationsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/consultations/$consultationId': {
+      id: '/_app/consultations/$consultationId'
+      path: '/consultations/$consultationId'
+      fullPath: '/consultations/$consultationId'
+      preLoaderRoute: typeof AppConsultationsConsultationIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/customers/': {
       id: '/_app/customers/'
       path: '/customers'
@@ -351,6 +615,20 @@ declare module '@tanstack/react-router' {
       path: '/customers/$customerId'
       fullPath: '/customers/$customerId'
       preLoaderRoute: typeof AppCustomersCustomerIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory/': {
+      id: '/_app/inventory/'
+      path: '/inventory'
+      fullPath: '/inventory/'
+      preLoaderRoute: typeof AppInventoryIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory/$productId': {
+      id: '/_app/inventory/$productId'
+      path: '/inventory/$productId'
+      fullPath: '/inventory/$productId'
+      preLoaderRoute: typeof AppInventoryProductIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/orders/': {
@@ -381,6 +659,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsProductIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/purchasing/': {
+      id: '/_app/purchasing/'
+      path: '/purchasing'
+      fullPath: '/purchasing/'
+      preLoaderRoute: typeof AppPurchasingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/purchasing/$poId': {
+      id: '/_app/purchasing/$poId'
+      path: '/purchasing/$poId'
+      fullPath: '/purchasing/$poId'
+      preLoaderRoute: typeof AppPurchasingPoIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/quotes/': {
       id: '/_app/quotes/'
       path: '/quotes'
@@ -393,6 +685,34 @@ declare module '@tanstack/react-router' {
       path: '/quotes/$quoteId'
       fullPath: '/quotes/$quoteId'
       preLoaderRoute: typeof AppQuotesQuoteIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/receiving/': {
+      id: '/_app/receiving/'
+      path: '/receiving'
+      fullPath: '/receiving/'
+      preLoaderRoute: typeof AppReceivingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/receiving/$receiptId': {
+      id: '/_app/receiving/$receiptId'
+      path: '/receiving/$receiptId'
+      fullPath: '/receiving/$receiptId'
+      preLoaderRoute: typeof AppReceivingReceiptIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/returns/': {
+      id: '/_app/returns/'
+      path: '/returns'
+      fullPath: '/returns/'
+      preLoaderRoute: typeof AppReturnsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/returns/$returnId': {
+      id: '/_app/returns/$returnId'
+      path: '/returns/$returnId'
+      fullPath: '/returns/$returnId'
+      preLoaderRoute: typeof AppReturnsReturnIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/services/': {
@@ -409,49 +729,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppServicesTicketIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/shifts/': {
+      id: '/_app/shifts/'
+      path: '/shifts'
+      fullPath: '/shifts/'
+      preLoaderRoute: typeof AppShiftsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shifts/$shiftId': {
+      id: '/_app/shifts/$shiftId'
+      path: '/shifts/$shiftId'
+      fullPath: '/shifts/$shiftId'
+      preLoaderRoute: typeof AppShiftsShiftIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/suppliers/': {
+      id: '/_app/suppliers/'
+      path: '/suppliers'
+      fullPath: '/suppliers/'
+      preLoaderRoute: typeof AppSuppliersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/suppliers/$supplierId': {
+      id: '/_app/suppliers/$supplierId'
+      path: '/suppliers/$supplierId'
+      fullPath: '/suppliers/$supplierId'
+      preLoaderRoute: typeof AppSuppliersSupplierIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/warranty/': {
+      id: '/_app/warranty/'
+      path: '/warranty'
+      fullPath: '/warranty/'
+      preLoaderRoute: typeof AppWarrantyIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/warranty/$warrantyId': {
+      id: '/_app/warranty/$warrantyId'
+      path: '/warranty/$warrantyId'
+      fullPath: '/warranty/$warrantyId'
+      preLoaderRoute: typeof AppWarrantyWarrantyIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
-  AppInventoryRoute: typeof AppInventoryRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
   AppPosRoute: typeof AppPosRoute
+  AppReleasesRoute: typeof AppReleasesRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
-  AppWarrantyRoute: typeof AppWarrantyRoute
+  AppStaffRoute: typeof AppStaffRoute
+  AppTasksRoute: typeof AppTasksRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
+  AppConsultationsConsultationIdRoute: typeof AppConsultationsConsultationIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
+  AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppProductsProductIdRoute: typeof AppProductsProductIdRoute
+  AppPurchasingPoIdRoute: typeof AppPurchasingPoIdRoute
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRoute
+  AppReceivingReceiptIdRoute: typeof AppReceivingReceiptIdRoute
+  AppReturnsReturnIdRoute: typeof AppReturnsReturnIdRoute
   AppServicesTicketIdRoute: typeof AppServicesTicketIdRoute
+  AppShiftsShiftIdRoute: typeof AppShiftsShiftIdRoute
+  AppSuppliersSupplierIdRoute: typeof AppSuppliersSupplierIdRoute
+  AppWarrantyWarrantyIdRoute: typeof AppWarrantyWarrantyIdRoute
   AppBuildsIndexRoute: typeof AppBuildsIndexRoute
+  AppConsultationsIndexRoute: typeof AppConsultationsIndexRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
+  AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
+  AppPurchasingIndexRoute: typeof AppPurchasingIndexRoute
   AppQuotesIndexRoute: typeof AppQuotesIndexRoute
+  AppReceivingIndexRoute: typeof AppReceivingIndexRoute
+  AppReturnsIndexRoute: typeof AppReturnsIndexRoute
   AppServicesIndexRoute: typeof AppServicesIndexRoute
+  AppShiftsIndexRoute: typeof AppShiftsIndexRoute
+  AppSuppliersIndexRoute: typeof AppSuppliersIndexRoute
+  AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAuditRoute: AppAuditRoute,
   AppDashboardRoute: AppDashboardRoute,
-  AppInventoryRoute: AppInventoryRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
   AppPosRoute: AppPosRoute,
+  AppReleasesRoute: AppReleasesRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
-  AppWarrantyRoute: AppWarrantyRoute,
+  AppStaffRoute: AppStaffRoute,
+  AppTasksRoute: AppTasksRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
+  AppConsultationsConsultationIdRoute: AppConsultationsConsultationIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
+  AppInventoryProductIdRoute: AppInventoryProductIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppProductsProductIdRoute: AppProductsProductIdRoute,
+  AppPurchasingPoIdRoute: AppPurchasingPoIdRoute,
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRoute,
+  AppReceivingReceiptIdRoute: AppReceivingReceiptIdRoute,
+  AppReturnsReturnIdRoute: AppReturnsReturnIdRoute,
   AppServicesTicketIdRoute: AppServicesTicketIdRoute,
+  AppShiftsShiftIdRoute: AppShiftsShiftIdRoute,
+  AppSuppliersSupplierIdRoute: AppSuppliersSupplierIdRoute,
+  AppWarrantyWarrantyIdRoute: AppWarrantyWarrantyIdRoute,
   AppBuildsIndexRoute: AppBuildsIndexRoute,
+  AppConsultationsIndexRoute: AppConsultationsIndexRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
+  AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
+  AppPurchasingIndexRoute: AppPurchasingIndexRoute,
   AppQuotesIndexRoute: AppQuotesIndexRoute,
+  AppReceivingIndexRoute: AppReceivingIndexRoute,
+  AppReturnsIndexRoute: AppReturnsIndexRoute,
   AppServicesIndexRoute: AppServicesIndexRoute,
+  AppShiftsIndexRoute: AppShiftsIndexRoute,
+  AppSuppliersIndexRoute: AppSuppliersIndexRoute,
+  AppWarrantyIndexRoute: AppWarrantyIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

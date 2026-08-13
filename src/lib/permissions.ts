@@ -19,7 +19,17 @@ export type Capability =
   | "warranty"
   | "reports"
   | "settings"
-  | "costs";
+  | "costs"
+  | "purchasing"
+  | "receiving"
+  | "returns"
+  | "shifts"
+  | "consultations"
+  | "tasks"
+  | "staff"
+  | "audit"
+  | "releases"
+  | "documents";
 
 const matrix: Record<Role, Capability[]> = {
   owner: [
@@ -37,6 +47,16 @@ const matrix: Record<Role, Capability[]> = {
     "reports",
     "settings",
     "costs",
+    "purchasing",
+    "receiving",
+    "returns",
+    "shifts",
+    "consultations",
+    "tasks",
+    "staff",
+    "audit",
+    "releases",
+    "documents",
   ],
   admin: [
     "pos",
@@ -53,10 +73,55 @@ const matrix: Record<Role, Capability[]> = {
     "reports",
     "settings",
     "costs",
+    "purchasing",
+    "receiving",
+    "returns",
+    "shifts",
+    "consultations",
+    "tasks",
+    "staff",
+    "audit",
+    "releases",
+    "documents",
   ],
-  cashier: ["pos", "orders", "quotes", "customers", "products"],
-  technician: ["builds", "builds.qa", "services", "products", "inventory", "warranty", "orders"],
-  inventory: ["products", "inventory", "inventory.adjust", "orders", "costs"],
+  cashier: [
+    "pos",
+    "orders",
+    "quotes",
+    "customers",
+    "products",
+    "returns",
+    "shifts",
+    "consultations",
+    "tasks",
+    "documents",
+    "releases",
+  ],
+  technician: [
+    "builds",
+    "builds.qa",
+    "services",
+    "products",
+    "inventory",
+    "warranty",
+    "orders",
+    "tasks",
+    "staff",
+    "releases",
+    "consultations",
+  ],
+  inventory: [
+    "products",
+    "inventory",
+    "inventory.adjust",
+    "orders",
+    "costs",
+    "purchasing",
+    "receiving",
+    "returns",
+    "tasks",
+    "documents",
+  ],
 };
 
 export function can(role: Role, cap: Capability) {

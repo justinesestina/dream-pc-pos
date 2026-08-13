@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "@/lib/store";
+import { OpsProvider } from "@/lib/ops-store";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -128,11 +129,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
+        <OpsProvider>
         <TooltipProvider delayDuration={200}>
           {/* Required: nested routes render here. */}
           <Outlet />
           <Toaster position="bottom-right" />
         </TooltipProvider>
+      </OpsProvider>
       </StoreProvider>
     </QueryClientProvider>
   );
