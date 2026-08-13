@@ -33,14 +33,23 @@ export const demoUsers: User[] = [
     email: "demo@dpcnexus.local",
     role: "owner",
     initials: "JR",
+    password: "demo1234",
   },
-  { id: "u-2", name: "Mika Santos", email: "admin@dpcnexus.local", role: "admin", initials: "MS" },
+  {
+    id: "u-2",
+    name: "Mika Santos",
+    email: "admin@dpcnexus.local",
+    role: "admin",
+    initials: "MS",
+    password: "admin1234",
+  },
   {
     id: "u-3",
     name: "Paolo Cruz",
     email: "cashier@dpcnexus.local",
     role: "cashier",
     initials: "PC",
+    password: "cashier1234",
   },
   {
     id: "u-4",
@@ -48,6 +57,7 @@ export const demoUsers: User[] = [
     email: "tech@dpcnexus.local",
     role: "technician",
     initials: "KV",
+    password: "tech1234",
   },
   {
     id: "u-5",
@@ -55,6 +65,7 @@ export const demoUsers: User[] = [
     email: "stock@dpcnexus.local",
     role: "inventory",
     initials: "DL",
+    password: "stock1234",
   },
 ];
 
@@ -593,9 +604,7 @@ const stockTable: Record<string, [number, number, number, number, number]> = {
 export const inventory: InventoryItem[] = products
   .filter((p) => !p.isService)
   .map((p) => {
-    const [onHand, reserved, damaged, sold, reorderPoint] = stockTable[p.id] ?? [
-      10, 0, 0, 0, 4,
-    ];
+    const [onHand, reserved, damaged, sold, reorderPoint] = stockTable[p.id] ?? [10, 0, 0, 0, 4];
     return { productId: p.id, onHand, reserved, damaged, sold, reorderPoint };
   });
 
@@ -724,11 +733,7 @@ const item = (productId: string, qty = 1) => {
   return { productId, name: p.name, sku: p.sku, qty, unitPrice: p.price };
 };
 
-function totals(
-  items: { qty: number; unitPrice: number }[],
-  discount = 0,
-  serviceTotal = 0,
-) {
+function totals(items: { qty: number; unitPrice: number }[], discount = 0, serviceTotal = 0) {
   const gross = items.reduce((s, i) => s + i.qty * i.unitPrice, 0) + serviceTotal;
   const net = gross - discount;
   const subtotal = Math.round((net / 1.12) * 100) / 100;
@@ -1547,5 +1552,10 @@ export const hourlySeries = Array.from({ length: 11 }, (_, i) => {
   const hour = 9 + i;
   const table = [4200, 8600, 12400, 9800, 7400, 15200, 18600, 12800, 16400, 14200, 8900];
   const rev = table[i] ?? 8000;
-  return { label: `${hour}:00`, date: "", revenue: rev, orders: Math.max(1, Math.round(rev / 5200)) };
+  return {
+    label: `${hour}:00`,
+    date: "",
+    revenue: rev,
+    orders: Math.max(1, Math.round(rev / 5200)),
+  };
 });

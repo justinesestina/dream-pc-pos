@@ -1,5 +1,17 @@
 import { cn } from "@/lib/utils";
 
+/** Company logo from /public — Dream PC Build & IT Solutions. */
+export function DreamLogo({ className }: { className?: string }) {
+  return (
+    <img
+      src="/dpc-logo.png"
+      alt="Dream PC Build & IT Solutions"
+      draggable={false}
+      className={cn("shrink-0 object-contain select-none", className)}
+    />
+  );
+}
+
 /** Minimal DPC monogram — technical mark, no gaming aesthetics. */
 export function NexusMark({ className }: { className?: string }) {
   return (
@@ -41,7 +53,7 @@ export function NexusWordmark({
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <NexusMark className="text-foreground" />
+      <DreamLogo className="size-8 rounded-md" />
       <div className="leading-none">
         <div className="text-[15px] font-semibold tracking-tight">
           DPC <span className="text-muted-foreground">NEXUS</span>

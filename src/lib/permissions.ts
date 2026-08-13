@@ -83,7 +83,6 @@ const matrix: Record<Role, Capability[]> = {
     "consultations",
     "tasks",
     "staff",
-    "audit",
     "releases",
     "documents",
   ],
@@ -119,7 +118,6 @@ const matrix: Record<Role, Capability[]> = {
     "inventory",
     "inventory.adjust",
     "orders",
-    "costs",
     "purchasing",
     "receiving",
     "returns",
@@ -130,6 +128,54 @@ const matrix: Record<Role, Capability[]> = {
 
 export function can(role: Role, cap: Capability) {
   return (matrix[role] ?? []).includes(cap);
+}
+
+/** Landing page after sign-in — where each role actually works. */
+export function homeFor(role: Role): "/pos" | "/inventory" | "/dashboard" {
+  if (role === "cashier") return "/pos";
+  if (role === "inventory") return "/inventory";
+  return "/dashboard";
+}
+
+/**
+ * Maps a URL path to the capability it belongs to, so direct URL access can be
+ * checked against the signed-in role. Longest prefixes first; dynamic segments
+ * (e.g. /builds/BLD-1001) match their section.
+ */
+const PATH_CAPS: Array<[RegExp, Capability]> = [
+  [/^\/dashboard/, "orders"],
+  [/^\/pos/, "pos"],
+  [/^\/orders/, "orders"],
+  [/^\/quotes/, "quotes"],
+  [/^\/consultations/, "consultations"],
+  [/^\/returns/, "returns"],
+  [/^\/shifts/, "shifts"],
+  [/^\/products/, "products"],
+  [/^\/inventory/, "inventory"],
+  [/^\/serials/, "inventory"],
+  [/^\/builds/, "builds"],
+  [/^\/assembly/, "assembly"],
+  [/^\/purchasing/, "purchasing"],
+  [/^\/suppliers/, "purchasing"],
+  [/^\/receiving/, "receiving"],
+  [/^\/customers/, "customers"],
+  [/^\/services/, "services"],
+  [/^\/warranty/, "warranty"],
+  [/^\/releases/, "releases"],
+  [/^\/tasks/, "tasks"],
+  [/^\/staff/, "staff"],
+  [/^\/documents/, "documents"],
+  [/^\/reports/, "reports"],
+  [/^\/settings/, "settings"],
+  [/^\/audit/, "audit"],
+];
+
+/** Returns the capability required to open a path, or null for unrestricted paths. */
+export function capForPath(pathname: string): Capability | null {
+  for (const [re, cap] of PATH_CAPS) {
+    if (re.test(pathname)) return cap;
+  }
+  return null;
 }
 
 export const roleLabels: Record<Role, string> = {

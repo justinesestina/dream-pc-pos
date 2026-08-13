@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronsLeft, LogOut, Repeat, Settings, ShieldCheck } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,16 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NexusMark, NexusWordmark } from "@/components/brand/nexus-logo";
+import { NexusWordmark } from "@/components/brand/nexus-logo";
 import { navGroups } from "./nav-config";
 import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
-import type { Role } from "@/lib/types";
 
 export function AppSidebar() {
   const store = useStore();
@@ -29,18 +25,39 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out lg:flex",
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out lg:flex",
         collapsed ? "w-[68px]" : "w-[236px]",
       )}
     >
       <div
         className={cn(
           "flex h-14 items-center border-b border-sidebar-border",
-          collapsed ? "justify-center px-2" : "justify-between px-4",
+          collapsed ? "justify-between gap-1 px-2" : "justify-between px-4",
         )}
       >
         {collapsed ? (
-          <NexusMark />
+          <>
+            <Link
+              to="/dashboard"
+              aria-label="DPC Nexus home"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <img
+                src="/dpc-logo.png"
+                alt="Dream PC Build & IT Solutions"
+                className="size-6 rounded object-contain"
+              />
+            </Link>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-6 shrink-0 text-muted-foreground"
+              aria-label="Expand sidebar"
+              onClick={() => store.setSidebarCollapsed(false)}
+            >
+              <ChevronsRight className="size-4" />
+            </Button>
+          </>
         ) : (
           <>
             <Link to="/dashboard" aria-label="DPC Nexus home">
@@ -68,8 +85,7 @@ export function AppSidebar() {
               {!collapsed && <p className="label-tech px-2 pb-1.5">{group.label}</p>}
               <ul className="space-y-0.5">
                 {items.map((item) => {
-                  const active =
-                    pathname === item.to || pathname.startsWith(`${item.to}/`);
+                  const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
                   const link = (
                     <Link
                       to={item.to}
@@ -109,17 +125,6 @@ export function AppSidebar() {
       </nav>
 
       <div className="border-t border-sidebar-border p-2">
-        {collapsed && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="mb-1 w-full text-muted-foreground"
-            aria-label="Expand sidebar"
-            onClick={() => store.setSidebarCollapsed(false)}
-          >
-            <ChevronsLeft className="size-4 rotate-180" />
-          </Button>
-        )}
         <UserMenu collapsed={collapsed} />
       </div>
     </aside>
@@ -159,21 +164,6 @@ export function UserMenu({ collapsed = false }: { collapsed?: boolean }) {
           <p className="mono mt-0.5 text-[11px] text-subtle">{user.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Repeat className="size-4" /> Switch demo role
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            {(Object.keys(roleLabels) as Role[]).map((r) => (
-              <DropdownMenuItem key={r} onSelect={() => store.switchRole(r)}>
-                <ShieldCheck
-                  className={cn("size-4", r === user.role ? "text-info" : "text-subtle")}
-                />
-                {roleLabels[r]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
         <DropdownMenuItem asChild>
           <Link to="/settings">
             <Settings className="size-4" /> Settings

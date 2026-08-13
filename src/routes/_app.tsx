@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
 import { CommandPalette } from "@/components/app/command-palette";
+import { ScrollProgress } from "@/components/nexus/motion";
 import { useStore } from "@/lib/store";
+import { can, capForPath, homeFor } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -19,6 +22,25 @@ function AppLayout() {
   useEffect(() => {
     if (store.hydrated && !store.user) void navigate({ to: "/", replace: true });
   }, [store.hydrated, store.user, navigate]);
+
+  // Per-role access control: block direct URLs to sections the role cannot use.
+  useEffect(() => {
+    if (!store.hydrated || !store.user) return;
+    const cap = capForPath(pathname);
+    if (cap && !can(store.user.role, cap)) {
+      toast.error(
+        `${store.user.name}, that page is outside the ${homeFor(store.user.role)} scope.`,
+      );
+      void navigate({ to: homeFor(store.user.role), replace: true });
+    }
+  }, [store.hydrated, store.user, pathname, navigate]);
+
+  // Smooth scroll to top on navigation.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  }, [pathname]);
 
   // Keyboard-first operation
   useEffect(() => {
@@ -53,6 +75,7 @@ function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <ScrollProgress />
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar onOpenPalette={() => setPaletteOpen(true)} />

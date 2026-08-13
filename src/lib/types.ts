@@ -14,6 +14,8 @@ export interface User {
   email: string;
   role: Role;
   initials: string;
+  /** DEMO ONLY: plaintext placeholder credential until a real auth backend exists. */
+  password?: string;
 }
 
 export type ProductCategory =
@@ -82,13 +84,7 @@ export interface SerialNumber {
   warrantyUntil?: string | undefined;
 }
 
-export type MovementType =
-  | "received"
-  | "reserved"
-  | "sold"
-  | "adjusted"
-  | "damaged"
-  | "returned";
+export type MovementType = "received" | "reserved" | "sold" | "adjusted" | "damaged" | "returned";
 
 export interface InventoryMovement {
   id: string;
@@ -174,13 +170,7 @@ export interface Order {
 }
 
 export type QuoteStatus =
-  | "draft"
-  | "sent"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "converted";
+  "draft" | "sent" | "pending" | "approved" | "rejected" | "expired" | "converted";
 
 export interface QuoteItem {
   productId: string;

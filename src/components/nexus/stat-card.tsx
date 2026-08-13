@@ -37,6 +37,7 @@ export function StatCard({
   delta,
   hint,
   accent = "neutral",
+  icon: Icon,
   footer,
   className,
 }: {
@@ -47,6 +48,7 @@ export function StatCard({
   delta?: number;
   hint?: string;
   accent?: "neutral" | "info" | "success" | "warning" | "danger";
+  icon?: React.ComponentType<{ className?: string }>;
   footer?: ReactNode;
   className?: string;
 }) {
@@ -72,7 +74,11 @@ export function StatCard({
       <span className={cn("absolute inset-x-0 top-0 h-px opacity-60", accentLine)} />
       <div className="flex items-start justify-between gap-2">
         <p className="label-tech">{label}</p>
-        {delta !== undefined && (
+        {Icon ? (
+          <span className="flex size-6 shrink-0 items-center justify-center rounded border border-border bg-elevated text-muted-foreground transition-colors group-hover:text-foreground">
+            <Icon className="size-3.5" />
+          </span>
+        ) : delta !== undefined ? (
           <span
             className={cn(
               "mono inline-flex items-center gap-0.5 text-[11px]",
@@ -86,7 +92,7 @@ export function StatCard({
             )}
             {Math.abs(delta).toFixed(1)}%
           </span>
-        )}
+        ) : null}
       </div>
       <p className="mt-2.5 text-2xl leading-none font-semibold tracking-tight tabular-nums">
         {display}

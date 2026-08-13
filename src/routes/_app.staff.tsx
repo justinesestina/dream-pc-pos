@@ -205,7 +205,7 @@ function StaffPage() {
         <Panel>
           <EmptyState
             title="No access to staff"
-            description={`The ${roleLabels[user?.role ?? "owner"]} role does not include the staff capability. Switch to an Owner, Admin or Technician role to view workload and assignments.`}
+            description={`The ${roleLabels[user?.role ?? "owner"]} role does not include the staff capability. Sign in as an Owner, Admin or Technician role to view workload and assignments.`}
           />
         </Panel>
       </div>
