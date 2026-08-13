@@ -205,7 +205,7 @@ function ShiftDetailPage() {
           ) : (
             <Section title="Close details">
               <KeyValueGrid
-                cols={1}
+                cols={2}
                 items={[
                   { label: "Notes", value: shift.notes ?? "—" },
                 ]}
