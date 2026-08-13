@@ -1545,6 +1545,7 @@ export const salesSeries = Array.from({ length: 30 }, (_, i) => {
 
 export const hourlySeries = Array.from({ length: 11 }, (_, i) => {
   const hour = 9 + i;
-  const rev = [4200, 8600, 12400, 9800, 7400, 15200, 18600, 12800, 16400, 14200, 8900][i];
+  const table = [4200, 8600, 12400, 9800, 7400, 15200, 18600, 12800, 16400, 14200, 8900];
+  const rev = table[i] ?? 8000;
   return { label: `${hour}:00`, date: "", revenue: rev, orders: Math.max(1, Math.round(rev / 5200)) };
 });
