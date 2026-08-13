@@ -71,11 +71,12 @@ function NewBuildDialog() {
       toast.error("Purpose is required.");
       return;
     }
+    const trimmedNotes = notes.trim();
     const build = store.createBuild({
       customerId: customerId === "none" ? null : customerId,
       purpose: purpose.trim(),
       budget: Number(budget) || 0,
-      notes: notes.trim() || undefined,
+      ...(trimmedNotes ? { notes: trimmedNotes } : {}),
     });
     toast.success(`${build.id} created.`);
     setOpen(false);
