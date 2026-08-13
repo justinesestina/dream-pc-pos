@@ -37,14 +37,10 @@ function PosPage() {
   }, []);
 
   const checkout = () => {
-    const res = store.completeSale("cash", notes || undefined);
-    if (!res.ok || !res.order) {
-      toast.error(res.error ?? "Checkout failed");
-      return;
-    }
+    const order = store.completeSale("cash");
     setNotes("");
-    toast.success(`Sale ${res.order.id} completed`);
-    void navigate({ to: "/orders/$orderId", params: { orderId: res.order.id } });
+    toast.success(`Sale ${order.id} completed`);
+    void navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
   };
 
   return (
