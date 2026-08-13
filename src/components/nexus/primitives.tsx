@@ -67,8 +67,8 @@ type IdLinkProps = {
 export function IdLink({ children, className, to, params }: IdLinkProps) {
   const LinkAny = Link as unknown as (props: {
     to: string;
-    params?: Record<string, string>;
-    className?: string;
+    params?: Record<string, string> | undefined;
+    className?: string | undefined;
     children: ReactNode;
   }) => ReactNode;
   return (
