@@ -59,22 +59,32 @@ export function TechLabel({ className, ...props }: ComponentProps<"div">) {
 type IdLinkProps = {
   children: ReactNode;
   className?: string;
-} & Omit<ComponentProps<typeof Link>, "children" | "className">;
+  to: string;
+  params?: Record<string, string>;
+};
 
 /** Cross-linked technical identifier (order, build, serial, ticket...). */
-export function IdLink({ children, className, ...linkProps }: IdLinkProps) {
+export function IdLink({ children, className, to, params }: IdLinkProps) {
+  const LinkAny = Link as unknown as (props: {
+    to: string;
+    params?: Record<string, string>;
+    className?: string;
+    children: ReactNode;
+  }) => ReactNode;
   return (
-    <Link
-      {...linkProps}
+    <LinkAny
+      to={to}
+      params={params}
       className={cn(
         "mono text-xs text-info underline-offset-4 transition-colors hover:underline",
         className,
       )}
     >
       {children}
-    </Link>
+    </LinkAny>
   );
 }
+
 
 /* ------------------------------------------------------------------- states */
 
