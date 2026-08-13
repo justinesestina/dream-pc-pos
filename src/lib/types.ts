@@ -1,0 +1,355 @@
+/**
+ * DPC NEXUS — domain types.
+ *
+ * These mirror the intended backend schema (see mock-api.ts). All demo data
+ * conforms to these types so the data layer can be swapped for a real API
+ * without touching UI components.
+ */
+
+export type Role = "owner" | "admin" | "cashier" | "technician" | "inventory";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  initials: string;
+}
+
+export type ProductCategory =
+  | "CPU"
+  | "GPU"
+  | "Motherboard"
+  | "RAM"
+  | "Storage"
+  | "PSU"
+  | "Case"
+  | "Cooling"
+  | "Fans"
+  | "Monitor"
+  | "Keyboard"
+  | "Mouse"
+  | "Headset"
+  | "Networking"
+  | "Accessories"
+  | "Software"
+  | "Services";
+
+export interface ProductSpecs {
+  socket?: string;
+  memoryType?: "DDR4" | "DDR5";
+  wattage?: number;
+  tdp?: number;
+  formFactor?: string;
+  [key: string]: string | number | undefined;
+}
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  brand: string;
+  category: ProductCategory;
+  price: number;
+  cost: number;
+  serialTracked: boolean;
+  warrantyMonths: number;
+  location: string;
+  supplier: string;
+  specs: ProductSpecs;
+  isService?: boolean;
+}
+
+export interface InventoryItem {
+  productId: string;
+  onHand: number;
+  reserved: number;
+  damaged: number;
+  sold: number;
+  reorderPoint: number;
+}
+
+export type SerialStatus = "in_stock" | "reserved" | "installed" | "sold" | "rma";
+
+export interface SerialNumber {
+  id: string;
+  serial: string;
+  productId: string;
+  status: SerialStatus;
+  orderId?: string;
+  buildId?: string;
+  customerId?: string;
+  warrantyUntil?: string;
+}
+
+export type MovementType =
+  | "received"
+  | "reserved"
+  | "sold"
+  | "adjusted"
+  | "damaged"
+  | "returned";
+
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  type: MovementType;
+  qty: number;
+  at: string;
+  actor: string;
+  reference?: string;
+  note?: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  type: "individual" | "business";
+  address: string;
+  since: string;
+  status: "active" | "inactive";
+  notes?: string;
+}
+
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "processing"
+  | "assembly"
+  | "testing"
+  | "ready"
+  | "completed"
+  | "cancelled"
+  | "refunded";
+
+export type PaymentMethod = "cash" | "gcash" | "bank" | "card";
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  sku: string;
+  qty: number;
+  unitPrice: number;
+  serials?: string[];
+}
+
+export interface Payment {
+  id: string;
+  method: PaymentMethod;
+  amount: number;
+  at: string;
+  reference?: string;
+}
+
+export interface TimelineEvent {
+  label: string;
+  at: string;
+  actor?: string;
+  note?: string;
+  state: "done" | "active" | "pending";
+}
+
+export interface Order {
+  id: string;
+  customerId: string | null;
+  customerName: string;
+  type: "retail" | "custom_build" | "service";
+  status: OrderStatus;
+  items: OrderItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  serviceTotal: number;
+  total: number;
+  payment: Payment | null;
+  createdAt: string;
+  buildId?: string;
+  quoteId?: string;
+  notes?: string;
+  timeline: TimelineEvent[];
+  cashier: string;
+}
+
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "converted";
+
+export interface QuoteItem {
+  productId: string;
+  name: string;
+  sku: string;
+  qty: number;
+  unitPrice: number;
+}
+
+export interface Quote {
+  id: string;
+  customerId: string | null;
+  customerName: string;
+  status: QuoteStatus;
+  items: QuoteItem[];
+  discount: number;
+  serviceTotal: number;
+  subtotal: number;
+  tax: number;
+  total: number;
+  createdAt: string;
+  expiresAt: string;
+  notes?: string;
+  buildId?: string;
+  orderId?: string;
+  preparedBy: string;
+}
+
+export type BuildStatus =
+  | "draft"
+  | "consultation"
+  | "quoted"
+  | "approved"
+  | "parts_reserved"
+  | "assembly"
+  | "testing"
+  | "ready"
+  | "released"
+  | "cancelled";
+
+export type BuildSlot =
+  | "CPU"
+  | "Motherboard"
+  | "RAM"
+  | "GPU"
+  | "Storage"
+  | "PSU"
+  | "Case"
+  | "Cooling"
+  | "Fans"
+  | "Software"
+  | "Accessories";
+
+export interface BuildComponent {
+  slot: BuildSlot;
+  productId: string;
+  qty: number;
+}
+
+export interface BuildService {
+  label: string;
+  amount: number;
+}
+
+export interface QaCheck {
+  label: string;
+  group: "hardware" | "testing";
+  passed: boolean | null;
+}
+
+export interface Build {
+  id: string;
+  customerId: string | null;
+  customerName: string;
+  purpose: string;
+  budget: number;
+  status: BuildStatus;
+  components: BuildComponent[];
+  services: BuildService[];
+  technician: string;
+  createdAt: string;
+  notes?: string;
+  orderId?: string;
+  quoteId?: string;
+  qa: QaCheck[];
+  qaResult: "pass" | "fail" | null;
+}
+
+export type ServiceStatus =
+  | "received"
+  | "diagnosing"
+  | "waiting_customer"
+  | "waiting_parts"
+  | "in_repair"
+  | "ready"
+  | "released"
+  | "cancelled";
+
+export interface ServicePart {
+  productId: string;
+  name: string;
+  qty: number;
+  price: number;
+}
+
+export interface ServiceTicket {
+  id: string;
+  customerId: string;
+  customerName: string;
+  device: string;
+  issue: string;
+  diagnosis?: string;
+  status: ServiceStatus;
+  technician: string;
+  parts: ServicePart[];
+  labor: number;
+  estimatedCost: number;
+  actualCost: number | null;
+  createdAt: string;
+  notes?: string;
+  timeline: TimelineEvent[];
+}
+
+export type WarrantyStatus = "active" | "expiring" | "expired" | "void";
+
+export interface WarrantyClaim {
+  id: string;
+  warrantyId: string;
+  reason: string;
+  status: "open" | "in_review" | "approved" | "rejected" | "closed";
+  createdAt: string;
+  resolution?: string;
+}
+
+export interface Warranty {
+  id: string;
+  customerId: string;
+  customerName: string;
+  productId: string;
+  productName: string;
+  serial?: string;
+  orderId: string;
+  purchasedAt: string;
+  expiresAt: string;
+  status: WarrantyStatus;
+}
+
+export interface AuditLog {
+  id: string;
+  actor: string;
+  role: Role;
+  action: string;
+  entity: string;
+  at: string;
+}
+
+export type NotificationPriority = "critical" | "high" | "normal";
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  priority: NotificationPriority;
+  at: string;
+  read: boolean;
+  kind: "stock" | "quote" | "build" | "warranty" | "service" | "payment";
+}
+
+export interface CartLine {
+  productId: string;
+  qty: number;
+  serials?: string[];
+}
