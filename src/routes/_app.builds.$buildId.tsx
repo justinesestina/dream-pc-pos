@@ -1,7 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { Check, CircleDashed, FlaskConical, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
-import { Panel } from "@/components/nexus/primitives";
-import { EmptyState } from "@/components/nexus/primitives";
+import { Panel, PanelHeader, EmptyState, Mono, IdLink, TechLabel } from "@/components/nexus/primitives";
+import { Section, KeyValueGrid, TotalsRows, DemoNote, ProgressBar } from "@/components/nexus/detail";
+import { StatusBadge } from "@/components/nexus/status-badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { useStore } from "@/lib/store";
+import { useOps, stageProgress } from "@/lib/ops-store";
+import { ASSEMBLY_STAGES, type AssemblyStageId } from "@/lib/ops-types";
+import { money, dateTime, titleCase } from "@/lib/format";
+import type { BuildStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/builds/$buildId")({
   head: () => ({
@@ -15,13 +35,368 @@ export const Route = createFileRoute("/_app/builds/$buildId")({
   component: BuildsBuildidPage,
 });
 
+const BUILD_STATUSES: BuildStatus[] = [
+  "draft",
+  "consultation",
+  "quoted",
+  "approved",
+  "parts_reserved",
+  "assembly",
+  "testing",
+  "ready",
+  "released",
+  "cancelled",
+];
+
+const TECHS = ["Unassigned", "Marco Reyes", "Angelo Cruz", "Bea Santos", "Jun Dela Cruz"];
+
 function BuildsBuildidPage() {
+  const { buildId } = Route.useParams();
+  const store = useStore();
+  const ops = useOps();
+  const navigate = useNavigate();
+  const build = store.builds.find((b) => b.id === buildId);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+
+  if (!build) {
+    return (
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader title="Build detail" description="Parts list, compatibility checks, QA results and timeline." />
+        <Panel>
+          <EmptyState title="Build not found" description={`No build matches "${buildId}".`} />
+        </Panel>
+      </div>
+    );
+  }
+
+  const o = ops.opsForBuild(build.id);
+  const pct = stageProgress(o.stage);
+
+  const partsTotal = build.components.reduce((s, c) => {
+    const p = store.productById(c.productId);
+    return s + (p ? p.price * c.qty : 0);
+  }, 0);
+  const servicesTotal = build.services.reduce((s, x) => s + x.amount, 0);
+
+  const handleGenerateQuote = () => {
+    const quote = store.quoteFromBuild(build.id);
+    if (!quote) {
+      toast.error("Could not generate a quote for this build.");
+      return;
+    }
+    toast.success(`Quote ${quote.id} generated.`);
+    navigate({ to: "/quotes/$quoteId", params: { quoteId: quote.id } });
+  };
+
+  const canFinalizeQa = build.qa.length > 0 && build.qa.every((c) => c.passed !== null);
+  const allQaPassed = build.qa.every((c) => c.passed === true);
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Build detail" description="Parts list, compatibility checks, QA results and timeline." />
-      <Panel>
-        <EmptyState title="Build module coming next" description="This surface is scaffolded and routed. The interactive build experience is the next build step." />
-      </Panel>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            {build.id}
+            <StatusBadge status={build.status} />
+          </span>
+        }
+        description={build.purpose}
+        meta={
+          <>
+            <span className="text-xs text-muted-foreground">
+              Customer: <span className="text-foreground">{build.customerName}</span>
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Budget: <span className="mono text-foreground">{money(build.budget)}</span>
+            </span>
+            <span className="text-xs text-muted-foreground">Created {dateTime(build.createdAt)}</span>
+          </>
+        }
+        actions={
+          <>
+            <Select value={build.status} onValueChange={(v) => store.setBuildStatus(build.id, v as BuildStatus)}>
+              <SelectTrigger className="h-8 w-40 text-[13px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BUILD_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {titleCase(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={handleGenerateQuote} disabled={build.components.length === 0}>
+              Generate quote
+            </Button>
+          </>
+        }
+      />
+
+      <Section title="Assembly stage" hint={`${pct}% through pipeline`}>
+        <div className="space-y-3 p-4">
+          <ProgressBar value={pct} tone={pct === 100 ? "success" : "info"} />
+          <div className="flex flex-wrap gap-1.5">
+            {ASSEMBLY_STAGES.map((s) => {
+              const idx = ASSEMBLY_STAGES.findIndex((x) => x.id === o.stage);
+              const sIdx = ASSEMBLY_STAGES.findIndex((x) => x.id === s.id);
+              const state = sIdx < idx ? "done" : sIdx === idx ? "active" : "pending";
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => ops.setBuildStage(build.id, s.id)}
+                  className={cn(
+                    "rounded border px-2 py-1 text-[11px] transition-colors",
+                    state === "done" && "border-success/30 bg-success/10 text-success",
+                    state === "active" && "border-info/40 bg-info/10 text-info",
+                    state === "pending" && "border-border bg-elevated text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </Section>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <Section title="Parts list" hint={`${build.components.length} components`}>
+            {build.components.length === 0 ? (
+              <EmptyState title="No parts assigned yet" description="Add components before generating a quote." />
+            ) : (
+              <div className="divide-y divide-border/60">
+                {build.components.map((c) => {
+                  const p = store.productById(c.productId);
+                  return (
+                    <div key={c.productId} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <TechLabel>{c.slot}</TechLabel>
+                        <p className="truncate text-[13px] text-foreground">{p?.name ?? c.productId}</p>
+                      </div>
+                      <div className="shrink-0 text-right text-[13px]">
+                        <p className="text-muted-foreground">×{c.qty}</p>
+                        <p className="mono text-foreground">{money((p?.price ?? 0) * c.qty)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="border-t border-border p-4">
+              <TotalsRows
+                rows={[
+                  { label: "Parts subtotal", value: money(partsTotal) },
+                  { label: "Services", value: money(servicesTotal) },
+                  { label: "Total", value: money(partsTotal + servicesTotal), strong: true },
+                ]}
+              />
+            </div>
+          </Section>
+
+          <Section title="Assembly checklist" hint={`${o.assembly.filter((a) => a.done).length}/${o.assembly.length} complete`}>
+            <div className="divide-y divide-border/60">
+              {o.assembly.map((a) => (
+                <label key={a.label} className="flex cursor-pointer items-center gap-3 px-4 py-2.5">
+                  <Checkbox
+                    checked={a.done}
+                    onCheckedChange={(v) => ops.toggleAssemblyStep(build.id, a.label, v === true)}
+                  />
+                  <span className={cn("text-[13px]", a.done ? "text-foreground" : "text-muted-foreground")}>
+                    {a.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="Test results" hint={`${o.tests.filter((t) => t.result === "pass").length}/${o.tests.length} passing`}>
+            <div className="divide-y divide-border/60">
+              {o.tests.map((t) => (
+                <div key={t.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <FlaskConical className="size-3.5 text-subtle" />
+                    <span className="text-[13px] text-foreground">{t.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={t.reading ?? ""}
+                      placeholder="reading"
+                      onChange={(e) => ops.setTestResult(build.id, t.label, t.result, e.target.value)}
+                      className="h-7 w-32 text-xs"
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant={t.result === "pass" ? "default" : "outline"}
+                        className="h-7 px-2 text-xs"
+                        onClick={() => ops.setTestResult(build.id, t.label, "pass")}
+                      >
+                        Pass
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={t.result === "fail" ? "destructive" : "outline"}
+                        className="h-7 px-2 text-xs"
+                        onClick={() => ops.setTestResult(build.id, t.label, "fail")}
+                      >
+                        Fail
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section title="QA sign-off" hint={build.qaResult ? `Result: ${titleCase(build.qaResult)}` : "Pending"}>
+            <div className="divide-y divide-border/60">
+              {build.qa.map((c) => (
+                <div key={c.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span className="text-[13px] text-foreground">{c.label}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant={c.passed === true ? "default" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      onClick={() => store.toggleQaCheck(build.id, c.label, true)}
+                    >
+                      <Check className="size-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={c.passed === false ? "destructive" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      onClick={() => store.toggleQaCheck(build.id, c.label, false)}
+                    >
+                      Fail
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => store.toggleQaCheck(build.id, c.label, null)}
+                    >
+                      <CircleDashed className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-border p-4">
+              <DemoNote className="flex-1">
+                Finalizing QA records a pass/fail result and moves the build to "Ready" on pass.
+              </DemoNote>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canFinalizeQa}
+                  onClick={() => {
+                    store.finalizeQa(build.id, allQaPassed ? "pass" : "fail");
+                    ops.signQa(build.id, o.qaStaff !== "Unassigned" ? o.qaStaff : store.user?.name ?? "QA Staff");
+                    toast.success(`QA finalized: ${allQaPassed ? "pass" : "fail"}`);
+                  }}
+                >
+                  Finalize QA
+                </Button>
+              </div>
+            </div>
+          </Section>
+        </div>
+
+        <div className="space-y-5">
+          <Section title="Assignment">
+            <div className="space-y-3 p-4">
+              <div className="space-y-1.5">
+                <TechLabel>Technician</TechLabel>
+                <Select
+                  value={build.technician}
+                  onValueChange={(v) => {
+                    store.updateBuild(build.id, { technician: v });
+                    ops.assignBuildStaff(build.id, { technician: v });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-[13px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TECHS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <TechLabel>QA staff</TechLabel>
+                <Select value={o.qaStaff} onValueChange={(v) => ops.assignBuildStaff(build.id, { qaStaff: v })}>
+                  <SelectTrigger className="h-8 text-[13px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TECHS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {o.qaSignedAt && (
+                <p className="mono text-[11px] text-subtle">Signed {dateTime(o.qaSignedAt)}</p>
+              )}
+            </div>
+          </Section>
+
+          <Section title="Links">
+            <KeyValueGrid
+              cols={2}
+              items={[
+                {
+                  label: "Quote",
+                  value: build.quoteId ? (
+                    <IdLink to="/quotes/$quoteId" params={{ quoteId: build.quoteId }}>
+                      {build.quoteId}
+                    </IdLink>
+                  ) : (
+                    "—"
+                  ),
+                },
+                {
+                  label: "Order",
+                  value: build.orderId ? (
+                    <IdLink to="/orders/$orderId" params={{ orderId: build.orderId }}>
+                      {build.orderId}
+                    </IdLink>
+                  ) : (
+                    "—"
+                  ),
+                },
+                {
+                  label: "Customer",
+                  value: build.customerId ? (
+                    <IdLink to="/customers/$customerId" params={{ customerId: build.customerId }}>
+                      {build.customerName}
+                    </IdLink>
+                  ) : (
+                    build.customerName
+                  ),
+                },
+              ]}
+            />
+          </Section>
+
+          {build.notes && (
+            <Section title="Notes">
+              <p className="p-4 text-[13px] text-muted-foreground">{build.notes}</p>
+            </Section>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

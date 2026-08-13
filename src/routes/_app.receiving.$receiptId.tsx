@@ -1,6 +1,17 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
-import { Panel, EmptyState } from "@/components/nexus/primitives";
+import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
+import { StatusBadge } from "@/components/nexus/status-badge";
+import { KeyValueGrid, Section, DemoNote } from "@/components/nexus/detail";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useOps } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
+import { num, dateShort } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/receiving/$receiptId")({
   head: () => ({
@@ -17,12 +28,142 @@ export const Route = createFileRoute("/_app/receiving/$receiptId")({
 });
 
 function ReceiptDetailPage() {
+  const { receiptId } = Route.useParams();
+  const { receiptById, updateReceiptLine, setReceiptNotes, completeReceipt } = useOps();
+  const { adjustStock } = useStore();
+  const receipt = receiptById(receiptId);
+  const [notesDraft, setNotesDraft] = useState(receipt?.notes ?? "");
+
+  if (!receipt) {
+    return (
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader title="Goods Receipt" description="Receive items, record damage and capture serial numbers." />
+        <Panel>
+          <EmptyState title="Receipt not found" description={`No goods receipt matches ${receiptId}.`} />
+        </Panel>
+      </div>
+    );
+  }
+
+  const locked = receipt.status !== "in_progress";
+
+  const handleComplete = () => {
+    completeReceipt(receipt.id, (productId, qty, ref) => adjustStock(productId, qty, `Goods receipt ${ref}`));
+    toast.success(`Receipt ${receipt.id} completed and stock posted.`);
+  };
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Goods Receipt" description="Receive items, record damage and capture serial numbers." />
-      <Panel>
-        <EmptyState title="Not built yet" description="This surface is scaffolded and routed." />
-      </Panel>
+      <PageHeader
+        title={<Mono className="text-[19px] text-foreground">{receipt.id}</Mono>}
+        description="Receive items, record damage and capture serial numbers."
+        status={<StatusBadge status={receipt.status} />}
+        actions={
+          !locked && (
+            <Button size="sm" onClick={handleComplete}>
+              Complete receipt
+            </Button>
+          )
+        }
+      />
+
+      <Section title="Reference">
+        <KeyValueGrid
+          cols={4}
+          items={[
+            { label: "Purchase order", value: <IdLink to="/purchasing/$poId" params={{ poId: receipt.purchaseOrderId }}>{receipt.purchaseOrderId}</IdLink> },
+            { label: "Supplier", value: <IdLink to="/suppliers/$supplierId" params={{ supplierId: receipt.supplierId }}>{receipt.supplierName}</IdLink> },
+            { label: "Received by", value: receipt.receivedBy },
+            { label: "Date", value: dateShort(receipt.receivedAt) },
+          ]}
+        />
+      </Section>
+
+      <Section title="Lines" hint="Enter received and damaged quantities per line">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="label-tech px-4 py-2.5 font-normal">SKU</th>
+                <th className="label-tech px-4 py-2.5 font-normal">Product</th>
+                <th className="label-tech px-4 py-2.5 text-right font-normal">Expected</th>
+                <th className="label-tech px-4 py-2.5 text-right font-normal">Received</th>
+                <th className="label-tech px-4 py-2.5 text-right font-normal">Damaged</th>
+                <th className="label-tech px-4 py-2.5 font-normal">Serials</th>
+              </tr>
+            </thead>
+            <tbody>
+              {receipt.lines.map((l) => {
+                const mismatch = l.received !== l.expected || l.damaged > 0;
+                return (
+                  <tr key={l.productId} className={cn("border-b border-border/60 last:border-0", mismatch && "bg-warning/5")}>
+                    <td className="px-4 py-2.5"><Mono>{l.sku}</Mono></td>
+                    <td className="px-4 py-2.5 text-foreground">{l.name}</td>
+                    <td className="px-4 py-2.5 text-right"><span className="mono tabular-nums">{num(l.expected)}</span></td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        disabled={locked}
+                        value={l.received}
+                        onChange={(e) =>
+                          updateReceiptLine(receipt.id, l.productId, { received: Math.max(0, Number(e.target.value) || 0) })
+                        }
+                        className={cn("h-8 w-20 text-right", mismatch && "border-warning/50 text-warning")}
+                      />
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        disabled={locked}
+                        value={l.damaged}
+                        onChange={(e) =>
+                          updateReceiptLine(receipt.id, l.productId, { damaged: Math.max(0, Number(e.target.value) || 0) })
+                        }
+                        className="h-8 w-20 text-right"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Input
+                        disabled={locked}
+                        placeholder="Comma-separated serials"
+                        defaultValue={l.serials.join(", ")}
+                        onBlur={(e) =>
+                          updateReceiptLine(receipt.id, l.productId, {
+                            serials: e.target.value
+                              .split(",")
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        className="h-8 min-w-[12rem] text-xs"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section title="Notes">
+        <div className="space-y-2 p-4">
+          <Textarea
+            rows={3}
+            disabled={locked}
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={() => setReceiptNotes(receipt.id, notesDraft)}
+            placeholder="Notes about condition, shortages or supplier communication"
+          />
+        </div>
+      </Section>
+
+      <DemoNote>
+        Completing this receipt posts stock movements to inventory via the demo store — no warehouse scanner integration exists.
+      </DemoNote>
     </div>
   );
 }
