@@ -139,7 +139,7 @@ export function CartPanel({
                       variant="outline"
                       className="size-6"
                       aria-label="Increase quantity"
-                      disabled={!l.product.isService && l.qty >= store.availableOf(l.productId) + l.qty - l.qty + (store.availableOf(l.productId) === 0 ? 0 : 0) && store.availableOf(l.productId) <= 0}
+                      disabled={!l.product.isService && store.availableOf(l.productId) <= 0}
                       onClick={() => {
                         const res = store.addToCart(l.productId, 1);
                         if (!res.ok) toast.error(res.error ?? "Stock limit reached");

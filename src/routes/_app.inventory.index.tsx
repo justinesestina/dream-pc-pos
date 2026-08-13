@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/nexus/page-header";
 import { Panel } from "@/components/nexus/primitives";
 import { EmptyState } from "@/components/nexus/primitives";
 
-export const Route = createFileRoute("/_app/inventory")({
+export const Route = createFileRoute("/_app/inventory/")({
   head: () => ({
     meta: [
       { title: "Inventory — DPC Nexus" },
