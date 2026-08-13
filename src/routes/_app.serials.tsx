@@ -87,12 +87,6 @@ function SerialsPage() {
       className: "min-w-[12rem]",
     },
     {
-      key: "category",
-      header: "Category",
-      cell: (s) => <span className="text-xs text-muted-foreground">{productById(s.productId)?.category ?? "—"}</span>,
-      sortValue: (s) => productById(s.productId)?.category ?? "",
-    },
-    {
       key: "ref",
       header: "Reference",
       cell: (s) =>
