@@ -11,6 +11,7 @@ import { DemoNote, ProgressBar } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
 import { useOps } from "@/lib/ops-store";
 import { useStore } from "@/lib/store";
+import { can, roleLabels } from "@/lib/permissions";
 import { dateShort, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { StaffMember } from "@/lib/ops-types";
@@ -45,7 +46,7 @@ const KINDS = ["Task", "Build", "QA", "Service", "Shift"];
 
 function StaffPage() {
   const { staff, tasks, buildOps, shifts } = useOps();
-  const { builds, services } = useStore();
+  const { builds, services, user } = useStore();
 
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("all");
@@ -196,6 +197,20 @@ function StaffPage() {
     busy: "warning",
     off: "neutral",
   };
+
+  if (!can(user?.role ?? "owner", "staff")) {
+    return (
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader title="Staff & Assignments" description="Technician workload and operational assignments." />
+        <Panel>
+          <EmptyState
+            title="No access to staff"
+            description={`The ${roleLabels[user?.role ?? "owner"]} role does not include the staff capability. Switch to an Owner, Admin or Technician role to view workload and assignments.`}
+          />
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 p-4 sm:p-6">

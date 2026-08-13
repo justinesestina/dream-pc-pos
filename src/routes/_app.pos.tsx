@@ -6,6 +6,8 @@ import { DemoNote } from "@/components/nexus/detail";
 import { ProductBrowser } from "@/components/pos/product-browser";
 import { CartPanel } from "@/components/pos/cart-panel";
 import { useStore, useSimulatedLoad } from "@/lib/store";
+import { moneyExact } from "@/lib/format";
+import type { PaymentMethod } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/pos")({
   head: () => ({
@@ -36,10 +38,14 @@ function PosPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const checkout = () => {
-    const order = store.completeSale("cash");
+  const checkout = (method: PaymentMethod, change: number) => {
+    const trimmed = notes.trim();
+    const order = store.completeSale(method, {
+      ...(trimmed ? { notes: trimmed } : {}),
+      ...(change > 0 ? { change } : {}),
+    });
     setNotes("");
-    toast.success(`Sale ${order.id} completed`);
+    toast.success(`Sale ${order.id} completed${change > 0 ? ` · change ${moneyExact(change)}` : ""}`);
     void navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
   };
 

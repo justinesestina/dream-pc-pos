@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useOps } from "@/lib/ops-store";
+import { useOps, expectedCash } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
 import { money, dateTime, titleCase } from "@/lib/format";
 import type { PaymentMethod } from "@/lib/types";
 
@@ -39,12 +40,20 @@ const METHODS: PaymentMethod[] = ["cash", "gcash", "bank", "card"];
 function ShiftDetailPage() {
   const { shiftId } = Route.useParams();
   const ops = useOps();
+  const { orders } = useStore();
   const shift = ops.shifts.find((s) => s.id === shiftId);
   const [kind, setKind] = useState<"cash_in" | "cash_out">("cash_in");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [counted, setCounted] = useState("");
   const [notes, setNotes] = useState("");
+  const [tenders, setTenders] = useState<Record<PaymentMethod, string>>({
+    cash: "",
+    gcash: "",
+    bank: "",
+    card: "",
+  });
+  const [refunds, setRefunds] = useState("");
 
   if (!shift) {
     return (
@@ -58,7 +67,17 @@ function ShiftDetailPage() {
   }
 
   const adjTotal = shift.adjustments.reduce((s, a) => s + (a.kind === "cash_in" ? a.amount : -a.amount), 0);
-  const expected = shift.openingCash + adjTotal;
+  const openAt = +new Date(shift.openedAt);
+  const closeAt = shift.closedAt ? +new Date(shift.closedAt) : Date.now();
+  const cashSales = orders.reduce((sum, o) => {
+    if (!o.payment || o.payment.method !== "cash") return sum;
+    const at = +new Date(o.payment.at);
+    if (at < openAt || at > closeAt) return sum;
+    return sum + o.payment.amount;
+  }, 0);
+  const refundsNum = Number(refunds) || 0;
+  const refundsTotal = shift.status === "closed" ? (shift.refunds ?? 0) : refundsNum;
+  const expected = expectedCash(shift, cashSales, refundsTotal);
   const variance = shift.countedCash !== undefined ? shift.countedCash - expected : undefined;
   const tenderTotal = shift.tenders ? Object.values(shift.tenders).reduce((a, b) => a + b, 0) : 0;
 
@@ -87,6 +106,8 @@ function ShiftDetailPage() {
               className="p-4"
               rows={[
                 { label: "Opening cash", value: money(shift.openingCash) },
+                { label: "Cash sales (this shift)", value: money(cashSales) },
+                { label: "Cash refunds", value: money(shift.refunds ?? refundsTotal), muted: (shift.refunds ?? refundsTotal) === 0 },
                 { label: "Cash adjustments (net)", value: money(adjTotal) },
                 { label: "Expected cash", value: money(expected), strong: true },
                 ...(shift.countedCash !== undefined
@@ -182,7 +203,28 @@ function ShiftDetailPage() {
           {shift.status === "open" ? (
             <Section title="Close shift">
               <div className="space-y-3 p-4">
-                <DemoNote>Closing records counted cash and computes variance against expected cash.</DemoNote>
+                <DemoNote>
+                  Enter the per-method sales totals and the cashier's physical count. Expected cash includes cash
+                  sales and any refunds entered below.
+                </DemoNote>
+                <div className="grid grid-cols-2 gap-3">
+                  {METHODS.map((m) => (
+                    <div key={m} className="space-y-1.5">
+                      <Label>{titleCase(m)}</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={tenders[m]}
+                        onChange={(e) => setTenders((t) => ({ ...t, [m]: e.target.value }))}
+                        placeholder="0"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Cash refunds issued (PHP)</Label>
+                  <Input type="number" min={0} value={refunds} onChange={(e) => setRefunds(e.target.value)} placeholder="0" />
+                </div>
                 <div className="space-y-1.5">
                   <Label>Counted cash (PHP)</Label>
                   <Input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(expected)} />
@@ -194,7 +236,8 @@ function ShiftDetailPage() {
                 <Button
                   className="w-full"
                   onClick={() => {
-                    ops.closeShift(shift.id, Number(counted) || 0, notes.trim() || undefined);
+                    const parsed = Object.fromEntries(METHODS.map((m) => [m, Number(tenders[m]) || 0])) as Record<PaymentMethod, number>;
+                    ops.closeShift(shift.id, Number(counted) || 0, parsed, refundsNum, notes.trim() || undefined);
                     toast.success(`${shift.id} closed.`);
                   }}
                 >
@@ -208,6 +251,9 @@ function ShiftDetailPage() {
                 cols={2}
                 items={[
                   { label: "Notes", value: shift.notes ?? "—" },
+                  { label: "Counted cash", value: shift.countedCash !== undefined ? money(shift.countedCash) : "—", mono: true },
+                  { label: "Variance", value: variance !== undefined ? `${variance > 0 ? "+" : ""}${money(variance)}` : "—", mono: true },
+                  { label: "Cash refunds", value: shift.refunds ? money(shift.refunds) : "—", mono: true },
                 ]}
               />
             </Section>

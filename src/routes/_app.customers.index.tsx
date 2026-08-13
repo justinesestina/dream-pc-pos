@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
@@ -25,6 +25,7 @@ import type { Customer } from "@/lib/types";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_app/customers/")({
+  validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
       { title: "Customers — DPC Nexus" },
@@ -43,10 +44,15 @@ function CustomersIndexPage() {
   const { customers, orders, createCustomer } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
+  const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (openNew) setOpen(true);
+  }, [openNew]);
 
   const [form, setForm] = useState({
     name: "",

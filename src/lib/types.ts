@@ -141,6 +141,7 @@ export interface Payment {
   amount: number;
   at: string;
   reference?: string | undefined;
+  change?: number | undefined;
 }
 
 export interface TimelineEvent {

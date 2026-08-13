@@ -53,6 +53,9 @@ function DashboardPage() {
   const todays = store.orders.filter((o) => new Date(o.createdAt).toDateString() === today);
   const todaySales = todays.reduce((s, o) => s + (o.payment ? o.total : 0), 0);
   const lowStock = store.inventory.filter((i) => i.onHand - i.reserved <= i.reorderPoint);
+  const pendingReturns = ops.returns.filter((r) =>
+    ["requested", "inspection", "approved"].includes(r.status),
+  ).length;
   const openBuilds = store.builds.filter((b) => !["released", "cancelled"].includes(b.status));
   const openServices = store.services.filter((s) => !["released", "cancelled"].includes(s.status));
   const daily = last14Days(store.orders);
@@ -93,13 +96,14 @@ function DashboardPage() {
       />
 
       {loading ? (
-        <CardsSkeleton count={5} />
+        <CardsSkeleton count={6} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard label="Today's revenue" numericValue={todaySales} format={money} hint={`${todays.length} transactions today`} accent="info" />
           <StatCard label="Orders today" numericValue={todays.length} hint="Completed & pending" />
           <StatCard label="Open service tickets" numericValue={openServices.length} accent="warning" hint="In diagnosis / repair" />
           <StatCard label="Builds in progress" numericValue={openBuilds.length} accent="success" hint="Active pipeline" />
+          <StatCard label="Pending returns" numericValue={pendingReturns} accent="danger" hint="Requested / inspection / approved" />
           <StatCard label="Low-stock alerts" numericValue={lowStock.length} accent="danger" hint="At or below reorder point" />
         </div>
       )}
@@ -116,13 +120,13 @@ function DashboardPage() {
               <Link to="/pos"><ShoppingCart className="size-4" /> Point of Sale</Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex-col gap-1.5 text-xs">
-              <Link to="/products"><Package className="size-4" /> Products</Link>
+              <Link to="/products" search={{ openNew: false }}><Package className="size-4" /> Products</Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex-col gap-1.5 text-xs">
               <Link to="/purchasing"><ClipboardList className="size-4" /> Purchasing</Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex-col gap-1.5 text-xs">
-              <Link to="/services"><Wrench className="size-4" /> Services</Link>
+              <Link to="/services" search={{ openNew: false }}><Wrench className="size-4" /> Services</Link>
             </Button>
           </div>
           <div className="border-t border-border px-4 py-3">
@@ -151,7 +155,7 @@ function DashboardPage() {
             hint="Components at or below reorder point"
             action={
               <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
-                <Link to="/products">View products <ArrowRight className="size-3.5" /></Link>
+                <Link to="/products" search={{ openNew: false }}>View products <ArrowRight className="size-3.5" /></Link>
               </Button>
             }
           />
@@ -162,7 +166,8 @@ function DashboardPage() {
           ) : (
             <ul className="divide-y divide-border">
               {lowStock.slice(0, 6).map((i) => {
-                const p = store.productById(i.productId)!;
+                const p = store.productById(i.productId);
+                if (!p) return null;
                 const avail = i.onHand - i.reserved;
                 return (
                   <li key={i.productId} className="flex items-center gap-3 px-4 py-2.5">

@@ -15,6 +15,7 @@ export type Capability =
   | "inventory.adjust"
   | "builds"
   | "builds.qa"
+  | "assembly"
   | "services"
   | "warranty"
   | "reports"
@@ -42,6 +43,7 @@ const matrix: Record<Role, Capability[]> = {
     "inventory.adjust",
     "builds",
     "builds.qa",
+    "assembly",
     "services",
     "warranty",
     "reports",
@@ -68,6 +70,7 @@ const matrix: Record<Role, Capability[]> = {
     "inventory.adjust",
     "builds",
     "builds.qa",
+    "assembly",
     "services",
     "warranty",
     "reports",
@@ -100,6 +103,7 @@ const matrix: Record<Role, Capability[]> = {
   technician: [
     "builds",
     "builds.qa",
+    "assembly",
     "services",
     "products",
     "inventory",

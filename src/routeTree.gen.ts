@@ -40,6 +40,7 @@ import { Route as AppQuotesIndexRouteImport } from './routes/_app.quotes.index'
 import { Route as AppQuotesQuoteIdRouteImport } from './routes/_app.quotes.$quoteId'
 import { Route as AppReceivingIndexRouteImport } from './routes/_app.receiving.index'
 import { Route as AppReceivingReceiptIdRouteImport } from './routes/_app.receiving.$receiptId'
+import { Route as AppReleasesReleaseIdRouteImport } from './routes/_app.releases.$releaseId'
 import { Route as AppReturnsIndexRouteImport } from './routes/_app.returns.index'
 import { Route as AppReturnsReturnIdRouteImport } from './routes/_app.returns.$returnId'
 import { Route as AppServicesIndexRouteImport } from './routes/_app.services.index'
@@ -206,6 +207,11 @@ const AppReceivingReceiptIdRoute = AppReceivingReceiptIdRouteImport.update({
   path: '/receiving/$receiptId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReleasesReleaseIdRoute = AppReleasesReleaseIdRouteImport.update({
+  id: '/$releaseId',
+  path: '/$releaseId',
+  getParentRoute: () => AppReleasesRoute,
+} as any)
 const AppReturnsIndexRoute = AppReturnsIndexRouteImport.update({
   id: '/returns/',
   path: '/returns/',
@@ -264,7 +270,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
-  '/releases': typeof AppReleasesRoute
+  '/releases': typeof AppReleasesRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
   '/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/releases/$releaseId': typeof AppReleasesReleaseIdRoute
   '/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/services/$ticketId': typeof AppServicesTicketIdRoute
   '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
@@ -306,7 +313,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
-  '/releases': typeof AppReleasesRoute
+  '/releases': typeof AppReleasesRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
@@ -321,6 +328,7 @@ export interface FileRoutesByTo {
   '/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
   '/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/releases/$releaseId': typeof AppReleasesReleaseIdRoute
   '/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/services/$ticketId': typeof AppServicesTicketIdRoute
   '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
@@ -350,7 +358,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/pos': typeof AppPosRoute
-  '/_app/releases': typeof AppReleasesRoute
+  '/_app/releases': typeof AppReleasesRouteWithChildren
   '/_app/reports': typeof AppReportsRoute
   '/_app/serials': typeof AppSerialsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -365,6 +373,7 @@ export interface FileRoutesById {
   '/_app/purchasing/$poId': typeof AppPurchasingPoIdRoute
   '/_app/quotes/$quoteId': typeof AppQuotesQuoteIdRoute
   '/_app/receiving/$receiptId': typeof AppReceivingReceiptIdRoute
+  '/_app/releases/$releaseId': typeof AppReleasesReleaseIdRoute
   '/_app/returns/$returnId': typeof AppReturnsReturnIdRoute
   '/_app/services/$ticketId': typeof AppServicesTicketIdRoute
   '/_app/shifts/$shiftId': typeof AppShiftsShiftIdRoute
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/purchasing/$poId'
     | '/quotes/$quoteId'
     | '/receiving/$receiptId'
+    | '/releases/$releaseId'
     | '/returns/$returnId'
     | '/services/$ticketId'
     | '/shifts/$shiftId'
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/purchasing/$poId'
     | '/quotes/$quoteId'
     | '/receiving/$receiptId'
+    | '/releases/$releaseId'
     | '/returns/$returnId'
     | '/services/$ticketId'
     | '/shifts/$shiftId'
@@ -494,6 +505,7 @@ export interface FileRouteTypes {
     | '/_app/purchasing/$poId'
     | '/_app/quotes/$quoteId'
     | '/_app/receiving/$receiptId'
+    | '/_app/releases/$releaseId'
     | '/_app/returns/$returnId'
     | '/_app/services/$ticketId'
     | '/_app/shifts/$shiftId'
@@ -739,6 +751,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReceivingReceiptIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/releases/$releaseId': {
+      id: '/_app/releases/$releaseId'
+      path: '/$releaseId'
+      fullPath: '/releases/$releaseId'
+      preLoaderRoute: typeof AppReleasesReleaseIdRouteImport
+      parentRoute: typeof AppReleasesRoute
+    }
     '/_app/returns/': {
       id: '/_app/returns/'
       path: '/returns'
@@ -812,13 +831,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppReleasesRouteChildren {
+  AppReleasesReleaseIdRoute: typeof AppReleasesReleaseIdRoute
+}
+
+const AppReleasesRouteChildren: AppReleasesRouteChildren = {
+  AppReleasesReleaseIdRoute: AppReleasesReleaseIdRoute,
+}
+
+const AppReleasesRouteWithChildren = AppReleasesRoute._addFileChildren(
+  AppReleasesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAssemblyRoute: typeof AppAssemblyRoute
   AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppPosRoute: typeof AppPosRoute
-  AppReleasesRoute: typeof AppReleasesRoute
+  AppReleasesRoute: typeof AppReleasesRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
   AppSerialsRoute: typeof AppSerialsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -860,7 +891,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppPosRoute: AppPosRoute,
-  AppReleasesRoute: AppReleasesRoute,
+  AppReleasesRoute: AppReleasesRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
   AppSerialsRoute: AppSerialsRoute,
   AppSettingsRoute: AppSettingsRoute,

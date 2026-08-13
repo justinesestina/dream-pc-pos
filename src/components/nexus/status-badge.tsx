@@ -35,8 +35,7 @@ const map: Record<string, Tone> = {
   quoted: "info",
   parts_reserved: "info",
   released: "active",
-  // services
-  received: "neutral",
+  // services (intake "received" is overridden to neutral where shown)
   diagnosing: "info",
   waiting_customer: "warning",
   waiting_parts: "warning",
@@ -58,6 +57,35 @@ const map: Record<string, Tone> = {
   closed: "neutral",
   pass: "success",
   fail: "danger",
+  // returns
+  requested: "warning",
+  inspection: "info",
+  replaced: "info",
+  // consultations
+  new: "neutral",
+  requirements: "info",
+  recommended: "warning",
+  won: "success",
+  lost: "neutral",
+  // purchasing
+  submitted: "info",
+  confirmed: "info",
+  partial: "warning",
+  received: "success",
+  // receiving
+  in_progress: "info",
+  discrepancy: "danger",
+  // releases
+  scheduled: "info",
+  // staff
+  available: "success",
+  busy: "warning",
+  off: "neutral",
+  inactive: "neutral",
+  // tasks
+  todo: "neutral",
+  blocked: "danger",
+  done: "success",
 };
 
 export function StatusBadge({

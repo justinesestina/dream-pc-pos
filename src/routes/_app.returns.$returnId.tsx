@@ -122,7 +122,7 @@ function ReturnDetailPage() {
   const { returnId } = Route.useParams();
   const navigate = useNavigate();
   const { returnById, setReturnStatus, updateReturn, actor } = useOps();
-  const { orders, customerById, productById, invFor, adjustStock, serials } = useStore();
+  const { orders, customerById, productById, invFor, adjustStock, serials, updateSerial } = useStore();
 
   const rma = returnById(returnId);
   const order = useMemo(() => orders.find((o) => o.id === rma?.orderId), [orders, rma?.orderId]);
@@ -203,17 +203,26 @@ function ReturnDetailPage() {
 
   function settle() {
     const next = resolution === "replacement" ? "replaced" : "refunded";
+    const shouldRestock = restock && !rma!.restockedAt;
     updateReturn(rma!.id, {
       refundMethod: next === "refunded" ? method : null,
       refundAmount: next === "refunded" ? refundValue : 0,
       restock,
+      ...(shouldRestock ? { restockedAt: new Date().toISOString() } : {}),
     });
     setReturnStatus(rma!.id, next);
-    if (restock) {
+    if (shouldRestock) {
       adjustStock(rma!.productId, rma!.qty, `Return restock — ${rma!.id}`);
     }
+    if (serial) {
+      updateSerial(serial.id, { status: shouldRestock ? "in_stock" : "rma" });
+    }
     toast.success(next === "refunded" ? `Refund of ${money(refundValue)} recorded.` : "Replacement issued.", {
-      description: restock ? `${rma!.qty} unit(s) returned to available stock.` : "No inventory adjustment applied.",
+      description: shouldRestock
+        ? `${rma!.qty} unit(s) returned to available stock.`
+        : rma!.restockedAt
+          ? "Stock was already restored for this RMA."
+          : "No inventory adjustment applied.",
     });
   }
 
@@ -466,7 +475,7 @@ function ReturnDetailPage() {
                 { label: "On hand", value: inv ? inv.onHand : "—", mono: true },
                 { label: "Reserved", value: inv ? inv.reserved : "—", mono: true },
                 { label: "Damaged", value: inv ? inv.damaged : "—", mono: true },
-                { label: "Restock", value: restock ? `+${rma.qty} on settle` : "None", mono: true },
+                { label: "Restock", value: rma.restockedAt ? `Applied ${dateTime(rma.restockedAt)}` : restock ? `+${rma.qty} on settle` : "None", mono: true },
               ]}
             />
             {serial && (

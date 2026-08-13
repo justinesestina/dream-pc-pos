@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Plus, Users } from "lucide-react";
@@ -25,6 +25,7 @@ import { useStore } from "@/lib/store";
 import type { Consultation, ConsultationStatus } from "@/lib/ops-types";
 
 export const Route = createFileRoute("/_app/consultations/")({
+  validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
       { title: "Consultations — DPC Nexus" },
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/_app/consultations/")({
 
 const STATUSES: ConsultationStatus[] = ["new", "requirements", "recommended", "quoted", "won", "lost"];
 
-function NewConsultationDialog() {
+function NewConsultationDialog({ openNew = false }: { openNew?: boolean }) {
   const ops = useOps();
   const store = useStore();
   const navigate = useNavigate();
@@ -48,6 +49,10 @@ function NewConsultationDialog() {
   const [customerId, setCustomerId] = useState(store.customers[0]?.id ?? "");
   const [primaryUse, setPrimaryUse] = useState("");
   const [budget, setBudget] = useState("");
+
+  useEffect(() => {
+    if (openNew) setOpen(true);
+  }, [openNew]);
 
   const submit = () => {
     const customer = store.customerById(customerId);
@@ -121,6 +126,7 @@ function NewConsultationDialog() {
 function ConsultationsIndexPage() {
   const ops = useOps();
   const navigate = useNavigate();
+  const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
 
@@ -159,7 +165,7 @@ function ConsultationsIndexPage() {
       <PageHeader
         title="Consultations"
         description="Customer build consultations and requirements capture."
-        actions={<NewConsultationDialog />}
+        actions={<NewConsultationDialog openNew={openNew} />}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

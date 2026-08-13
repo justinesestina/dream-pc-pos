@@ -28,7 +28,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useStore } from "@/lib/store";
+import { useOps } from "@/lib/ops-store";
 import { can, roleLabels, type Capability } from "@/lib/permissions";
+import { EmptyState } from "@/components/nexus/primitives";
 import { VAT_RATE } from "@/lib/format";
 import type { Role } from "@/lib/types";
 
@@ -54,12 +56,27 @@ const ALL_CAPS: Capability[] = [
 
 function SettingsPage() {
   const store = useStore();
+  const ops = useOps();
   const [profile, setProfile] = useState({
     name: "Dream PC Build & IT Solutions",
     address: "88 Marcos Highway, Cainta, Rizal, Philippines",
     phone: "+63 917 000 1234",
     email: "hello@dpcnexus.local",
   });
+
+  if (!can(store.user?.role ?? "owner", "settings")) {
+    return (
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader title="Settings" description="Store profile, roles, tax rules and preferences." />
+        <Panel>
+          <EmptyState
+            title="No access to settings"
+            description={`The ${roleLabels[store.user?.role ?? "owner"]} role does not include the settings capability. Switch to an Owner or Admin role to manage store settings.`}
+          />
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
@@ -180,8 +197,8 @@ function SettingsPage() {
         <PanelHeader title="Demo data controls" hint="Reset all local demo state" />
         <div className="flex items-center justify-between gap-3 p-4">
           <p className="max-w-md text-xs text-muted-foreground">
-            Restores every module — orders, inventory, builds, services, purchasing and audit logs — to the
-            original seeded demo dataset. Your signed-in session is preserved.
+            Restores every module — orders, inventory, builds, services, purchasing, shifts, returns,
+            consultations and tasks — to the original seeded demo dataset. Your signed-in session is preserved.
           </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -192,7 +209,8 @@ function SettingsPage() {
                 <AlertDialogTitle>Reset all demo data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This clears every change made in this demo session — orders, inventory adjustments, builds,
-                  service tickets and audit logs — and reseeds the original dataset. This cannot be undone.
+                  service tickets, purchasing, shifts, returns, consultations and tasks — and reseeds the
+                  original dataset. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -200,6 +218,7 @@ function SettingsPage() {
                 <AlertDialogAction
                   onClick={() => {
                     store.resetDemoData();
+                    ops.resetOpsData();
                     toast.success("Demo data has been reset.");
                   }}
                 >

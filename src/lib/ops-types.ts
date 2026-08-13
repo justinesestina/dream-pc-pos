@@ -115,6 +115,8 @@ export interface ReturnRequest {
   inspectionNotes?: string | undefined;
   notes?: string | undefined;
   restock: boolean;
+  /** Set once restock is applied so reopening + re-settling never double-adjusts stock. */
+  restockedAt?: string | undefined;
 }
 
 /* ------------------------------------------------------------- cash drawer */

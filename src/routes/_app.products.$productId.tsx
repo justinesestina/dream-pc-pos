@@ -1,13 +1,15 @@
-import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
 import { KeyValueGrid, Section, KeyValue } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { useStore } from "@/lib/store";
+import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { money, num, dateTime, titleCase } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Boxes } from "lucide-react";
+import { Boxes, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/products/$productId")({
   head: () => ({
@@ -23,9 +25,11 @@ export const Route = createFileRoute("/_app/products/$productId")({
 
 function ProductsProductidPage() {
   const { productId } = Route.useParams();
-  const { productById, invFor, serials, movements } = useStore();
+  const navigate = useNavigate();
+  const { productById, invFor, serials, movements, deleteProduct } = useStore();
   const product = productById(productId);
   const inv = invFor(productId);
+  const [editOpen, setEditOpen] = useState(false);
 
   const productSerials = useMemo(
     () => serials.filter((s) => s.productId === productId),
@@ -67,13 +71,39 @@ function ProductsProductidPage() {
           </>
         }
         actions={
-          <Button asChild size="sm" variant="outline" className="gap-1.5">
-            <Link to="/inventory/$productId" params={{ productId: product.id }}>
-              <Boxes className="size-3.5" /> View inventory
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline" className="gap-1.5">
+              <Link to="/inventory/$productId" params={{ productId: product.id }}>
+                <Boxes className="size-3.5" /> View inventory
+              </Link>
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3.5" /> Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-destructive hover:text-destructive"
+              onClick={() => {
+                const inv = invFor(product.id);
+                if ((inv?.onHand ?? 0) > 0) {
+                  toast.error("Cannot delete: product still has stock on hand.");
+                  return;
+                }
+                if (window.confirm(`Delete ${product.name} from the catalog?`)) {
+                  deleteProduct(product.id);
+                  toast.success(`${product.name} removed from the catalog.`);
+                  navigate({ to: "/products", search: { openNew: false } });
+                }
+              }}
+            >
+              <Trash2 className="size-3.5" /> Delete
+            </Button>
+          </div>
         }
       />
+
+      <ProductFormDialog open={editOpen} onOpenChange={setEditOpen} product={product} />
 
       <Section title="Overview">
         <KeyValueGrid

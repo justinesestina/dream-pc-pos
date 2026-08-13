@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink } from "@/components/nexus/primitives";
@@ -9,7 +9,10 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
 import { DemoNote } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
+import { NewReleaseDialog } from "@/components/releases/new-release-dialog";
 import { useOps } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
+import { completeReleaseSource } from "@/lib/release-complete";
 import { dateShort, titleCase } from "@/lib/format";
 import type { ReleaseRecord } from "@/lib/ops-types";
 
@@ -40,8 +43,23 @@ const REF_PARAM: Record<ReleaseRecord["kind"], string> = {
 };
 
 function ReleasesPage() {
-  const { releases, actor, completeRelease } = useOps();
+  const { releases, actor, completeRelease, setBuildStage } = useOps();
+  const store = useStore();
+  const navigate = useNavigate();
   const [status, setStatus] = useState("all");
+
+  const complete = (r: ReleaseRecord) => {
+    completeRelease(r.id, r.customerName, actor);
+    completeReleaseSource(
+      (id, s) => store.updateOrderStatus(id, s),
+      (id, s) => store.setBuildStatus(id, s),
+      (id, s) => store.setServiceStatus(id, s),
+      r.kind,
+      r.refId,
+    );
+    if (r.kind === "build") setBuildStage(r.refId, "released");
+    toast.success(`${r.id} marked completed.`);
+  };
 
   const stats = useMemo(() => {
     const today = new Date().toDateString();
@@ -84,8 +102,7 @@ function ReleasesPage() {
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
-              completeRelease(r.id, r.customerName, actor);
-              toast.success(`${r.id} marked completed.`);
+              complete(r);
             }}
           >
             Mark completed
@@ -98,7 +115,11 @@ function ReleasesPage() {
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Delivery & Release" description="Pickup and delivery handover for builds and services." />
+      <PageHeader
+        title="Delivery & Release"
+        description="Pickup and delivery handover for builds and services."
+        actions={<NewReleaseDialog />}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Scheduled today" numericValue={stats.scheduledToday} format={(n) => Math.round(n).toString()} accent="info" />
@@ -116,6 +137,7 @@ function ReleasesPage() {
           rows={filtered}
           columns={columns}
           initialSort={{ key: "scheduled", dir: "desc" }}
+          onRowClick={(r) => navigate({ to: "/releases/$releaseId", params: { releaseId: r.id } })}
           empty={<EmptyState title="No releases match your filters" description="Try adjusting the status filter." />}
         />
       </Panel>

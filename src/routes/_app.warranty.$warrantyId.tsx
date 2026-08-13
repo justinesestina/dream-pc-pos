@@ -105,7 +105,9 @@ function WarrantyDetailPage() {
         <KeyValueGrid
           cols={3}
           items={[
-            { label: "Serial", value: warranty.serial ?? "—", mono: true },
+            { label: "Serial", value: warranty.serial ? (
+              <Link to="/serials" search={{ serial: warranty.serial }} className="mono underline decoration-border underline-offset-2 hover:text-foreground">{warranty.serial}</Link>
+            ) : "—" },
             { label: "Product", value: warranty.productName },
             {
               label: "Customer",

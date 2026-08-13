@@ -7,6 +7,7 @@ import {
   CircleDashed,
   FlaskConical,
   Info,
+  Minus,
   Plus,
   Trash2,
   XCircle,
@@ -38,6 +39,8 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { useOps, stageProgress } from "@/lib/ops-store";
 import { ASSEMBLY_STAGES, type AssemblyStageId } from "@/lib/ops-types";
+import { NewReleaseDialog } from "@/components/releases/new-release-dialog";
+import { stageForStatus, statusForStage } from "@/lib/build-state";
 import { money, dateTime, titleCase } from "@/lib/format";
 import { checkCompatibility, type CompatibilityIssue, type IssueSeverity } from "@/lib/compatibility";
 import type { BuildSlot, BuildStatus, ProductCategory } from "@/lib/types";
@@ -212,6 +215,11 @@ function BuildsBuildidPage() {
   const navigate = useNavigate();
   const build = store.builds.find((b) => b.id === buildId);
 
+  const issues = useMemo(
+    () => (build ? checkCompatibility(build.components, store.products) : []),
+    [build, store.products],
+  );
+
   if (!build) {
     return (
       <div className="space-y-5 p-4 sm:p-6">
@@ -231,11 +239,6 @@ function BuildsBuildidPage() {
     return s + (p ? p.price * c.qty : 0);
   }, 0);
   const servicesTotal = build.services.reduce((s, x) => s + x.amount, 0);
-
-  const issues = useMemo(
-    () => checkCompatibility(build.components, store.products),
-    [build.components, store.products],
-  );
 
   const errorCount = issues.filter((i) => i.severity === "error").length;
   const warningCount = issues.filter((i) => i.severity === "warning").length;
@@ -276,7 +279,14 @@ function BuildsBuildidPage() {
         }
         actions={
           <>
-            <Select value={build.status} onValueChange={(v) => store.setBuildStatus(build.id, v as BuildStatus)}>
+            <Select
+              value={build.status}
+              onValueChange={(v) => {
+                const status = v as BuildStatus;
+                store.setBuildStatus(build.id, status);
+                ops.setBuildStage(build.id, stageForStatus(status, o.stage));
+              }}
+            >
               <SelectTrigger className="h-8 w-40 text-[13px]">
                 <SelectValue />
               </SelectTrigger>
@@ -291,6 +301,7 @@ function BuildsBuildidPage() {
             <Button size="sm" onClick={handleGenerateQuote} disabled={build.components.length === 0}>
               Generate quote
             </Button>
+            {build.status === "ready" && <NewReleaseDialog triggerLabel="Schedule release" />}
           </>
         }
       />
@@ -307,7 +318,11 @@ function BuildsBuildidPage() {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => ops.setBuildStage(build.id, s.id)}
+                  onClick={() => {
+                    ops.setBuildStage(build.id, s.id);
+                    const st = statusForStage(s.id);
+                    if (st && build.status !== "cancelled") store.setBuildStatus(build.id, st);
+                  }}
                   className={cn(
                     "rounded border px-2 py-1 text-[11px] transition-colors",
                     state === "done" && "border-success/30 bg-success/10 text-success",
@@ -376,8 +391,31 @@ function BuildsBuildidPage() {
                         <p className="truncate text-[13px] text-foreground">{p?.name ?? c.productId}</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <div className="text-right text-[13px]">
-                          <p className="text-muted-foreground">×{c.qty}</p>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0"
+                            disabled={c.qty <= 1}
+                            onClick={() => store.setBuildComponentQty(build.id, c.productId, c.qty - 1)}
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="size-3" />
+                          </Button>
+                          <span className="mono w-6 text-center text-[12px]" title="Quantity">
+                            {c.qty}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 w-7 p-0"
+                            onClick={() => store.setBuildComponentQty(build.id, c.productId, c.qty + 1)}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="size-3" />
+                          </Button>
+                        </div>
+                        <div className="w-20 text-right text-[13px]">
                           <p className="mono text-foreground">{money((p?.price ?? 0) * c.qty)}</p>
                         </div>
                         <Button

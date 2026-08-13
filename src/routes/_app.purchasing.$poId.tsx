@@ -5,6 +5,17 @@ import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { KeyValueGrid, Section, TotalsRows, DemoNote, ProgressBar } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useOps } from "@/lib/ops-store";
 import { money, num, dateShort } from "@/lib/format";
 import type { PurchaseStatus } from "@/lib/ops-types";
@@ -45,8 +56,11 @@ function PurchaseOrderDetailPage() {
     );
   }
 
-  const relatedReceipt = receipts.find((r) => r.purchaseOrderId === po.id);
-  const canReceive = ["submitted", "confirmed", "partial"].includes(po.status);
+  const inProgressReceipt = receipts.find(
+    (r) => r.purchaseOrderId === po.id && r.status === "in_progress",
+  );
+  const anyReceipt = receipts.find((r) => r.purchaseOrderId === po.id);
+  const canReceive = ["submitted", "confirmed", "partial"].includes(po.status) && !inProgressReceipt;
   const next = NEXT_STATUS[po.status];
 
   const handleStartReceiving = () => {
@@ -73,19 +87,34 @@ function PurchaseOrderDetailPage() {
               </Button>
             )}
             {po.status !== "cancelled" && po.status !== "received" && (
-              <Button size="sm" variant="outline" className="text-destructive" onClick={() => setPoStatus(po.id, "cancelled")}>
-                Cancel PO
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="text-destructive">Cancel PO</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel {po.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The purchase order will be marked cancelled. Any partial deliveries already received stay
+                      in inventory.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep PO</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => setPoStatus(po.id, "cancelled")}>Cancel PO</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
-            {canReceive && !relatedReceipt && (
+            {canReceive && (
               <Button size="sm" onClick={handleStartReceiving}>
                 Start receiving
               </Button>
             )}
-            {relatedReceipt && (
+            {anyReceipt && (
               <Button size="sm" variant="outline" asChild>
-                <Link to="/receiving/$receiptId" params={{ receiptId: relatedReceipt.id }}>
-                  View receipt {relatedReceipt.id}
+                <Link to="/receiving/$receiptId" params={{ receiptId: anyReceipt.id }}>
+                  View receipt {anyReceipt.id}
                 </Link>
               </Button>
             )}

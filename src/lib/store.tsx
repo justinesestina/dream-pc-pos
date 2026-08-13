@@ -50,6 +50,7 @@ const STORAGE_KEY = "dpc-nexus-demo-v1";
 
 interface Snapshot {
   user: User | null;
+  products: Product[];
   inventory: InventoryItem[];
   serials: SerialNumber[];
   customers: Customer[];
@@ -73,6 +74,7 @@ interface Snapshot {
 function seed(): Snapshot {
   return {
     user: null,
+    products: structuredClone(demo.products),
     inventory: structuredClone(demo.inventory),
     serials: structuredClone(demo.serials),
     customers: structuredClone(demo.customers),
@@ -149,9 +151,20 @@ interface StoreValue extends Snapshot {
   setCartCustomer: (id: string | null) => void;
   holdCart: () => void;
   resumeHeldCart: (id: string) => void;
-  completeSale: (method: PaymentMethod) => Order;
+  completeSale: (method: PaymentMethod, opts?: { notes?: string; change?: number }) => Order;
+  /* serials */
+  availableSerialsOf: (productId: string) => SerialNumber[];
+  setCartLineSerials: (productId: string, serials: string[]) => void;
+  registerSerials: (productId: string, serials: string[], ref?: string) => number;
+  updateSerial: (
+    serialId: string,
+    patch: Partial<Pick<SerialNumber, "status" | "orderId" | "buildId" | "customerId" | "warrantyUntil">>,
+  ) => void;
   /* entities */
   createCustomer: (data: Omit<Customer, "id" | "since" | "status">) => Customer;
+  createProduct: (data: Omit<Product, "id">) => Product;
+  updateProduct: (productId: string, patch: Partial<Product>) => void;
+  deleteProduct: (productId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   createQuote: (data: {
     customerId: string | null;
@@ -173,6 +186,7 @@ interface StoreValue extends Snapshot {
   setBuildStatus: (buildId: string, status: BuildStatus) => void;
   addBuildComponent: (buildId: string, slot: BuildSlot, productId: string, qty?: number) => void;
   removeBuildComponent: (buildId: string, productId: string) => void;
+  setBuildComponentQty: (buildId: string, productId: string, qty: number) => void;
   toggleQaCheck: (buildId: string, label: string, value: boolean | null) => void;
   finalizeQa: (buildId: string, result: "pass" | "fail") => void;
   quoteFromBuild: (buildId: string) => Quote | null;
@@ -184,6 +198,12 @@ interface StoreValue extends Snapshot {
     labor: number;
   }) => ServiceTicket;
   setServiceStatus: (id: string, status: ServiceStatus) => void;
+  updateService: (
+    ticketId: string,
+    patch: Partial<Pick<ServiceTicket, "diagnosis" | "labor" | "actualCost" | "technician" | "notes">>,
+  ) => void;
+  addServicePart: (ticketId: string, productId: string, qty: number) => void;
+  removeServicePart: (ticketId: string, productId: string) => void;
   adjustStock: (productId: string, delta: number, note: string) => void;
   createClaim: (warrantyId: string, reason: string) => WarrantyClaim;
   markAllNotificationsRead: () => void;
@@ -224,10 +244,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((prev) => fn(prev));
   }, []);
 
-  const products = demo.products;
   const productById = useCallback(
-    (id: string) => products.find((p) => p.id === id),
-    [products],
+    (id: string) => state.products.find((p) => p.id === id),
+    [state.products],
   );
 
   const invFor = useCallback(
@@ -279,12 +298,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value: StoreValue = useMemo(() => {
     const lineFor = (l: CartLine) => {
       const p = productById(l.productId)!;
-      return { productId: l.productId, name: p.name, sku: p.sku, qty: l.qty, unitPrice: p.price };
+      return {
+        productId: l.productId,
+        name: p.name,
+        sku: p.sku,
+        qty: l.qty,
+        unitPrice: p.price,
+        serials: l.serials,
+      };
     };
 
     return {
       ...state,
-      products,
       hydrated,
 
       signIn: (email, password) => {
@@ -374,14 +399,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           };
         }),
 
-      completeSale: (method) => {
+      completeSale: (method, opts = {}) => {
         const items = state.cart.map(lineFor);
         const serviceTotal = 0;
         const t = computeTotals(items, state.cartDiscount, serviceTotal);
         const id = `DPC-${state.counters.order}`;
         const at = new Date().toISOString();
         const customer = customerById(state.cartCustomerId);
-        const payment: Payment = { id: `pay-${id}`, method, amount: t.total, at };
+        const payment: Payment = { id: `pay-${id}`, method, amount: t.total, at, change: opts.change };
+        const soldSerials = new Map<string, { ser: string; until: string }[]>();
+        for (const i of items) {
+          const p = productById(i.productId);
+          if (!p?.serialTracked || !i.serials?.length) continue;
+          const until = new Date();
+          until.setMonth(until.getMonth() + p.warrantyMonths);
+          soldSerials.set(
+            i.productId,
+            i.serials.map((ser) => ({ ser, until: until.toISOString() })),
+          );
+        }
         const newOrder: Order = {
           id,
           customerId: state.cartCustomerId,
@@ -396,6 +432,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           total: t.total,
           payment,
           createdAt: at,
+          notes: opts.notes,
           cashier: state.user?.name ?? "Demo User",
           timeline: [
             { label: "Order created", at, actor: state.user?.name, state: "done" },
@@ -428,6 +465,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             })),
             ...s.movements,
           ],
+          serials: s.serials.map((sn) => {
+            const match = soldSerials.get(sn.productId)?.find((m) => m.ser === sn.serial);
+            if (!match) return sn;
+            return {
+              ...sn,
+              status: "sold" as const,
+              orderId: id,
+              customerId: state.cartCustomerId ?? undefined,
+              warrantyUntil: match.until,
+            };
+          }),
           warranties: [
             ...items
               .filter((i) => (productById(i.productId)?.warrantyMonths ?? 0) > 0)
@@ -441,6 +489,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   customerName: customer?.name ?? "Walk-in Customer",
                   productId: p.id,
                   productName: p.name,
+                  serial: soldSerials.get(p.id)?.[0]?.ser,
                   orderId: id,
                   purchasedAt: at,
                   expiresAt: exp.toISOString(),
@@ -464,6 +513,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return newOrder;
       },
 
+      availableSerialsOf: (productId) =>
+        state.serials.filter((sn) => sn.productId === productId && sn.status === "in_stock"),
+
+      setCartLineSerials: (productId, serials) =>
+        patch((s) => ({
+          ...s,
+          cart: s.cart.map((l) => (l.productId === productId ? { ...l, serials } : l)),
+        })),
+
+      registerSerials: (productId, serials, ref) => {
+        const known = new Set(state.serials.map((sn) => sn.serial.toLowerCase()));
+        const fresh = serials
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .filter((x) => !known.has(x.toLowerCase()))
+          .map((x) => ({
+            id: `sn-${Math.random().toString(36).slice(2, 9)}`,
+            serial: x,
+            productId,
+            status: "in_stock" as const,
+          }));
+        if (fresh.length === 0) return 0;
+        patch((s) => ({
+          ...s,
+          serials: [...fresh, ...s.serials],
+          auditLogs: log(
+            s,
+            `registered ${fresh.length} serial(s) for ${productId}${ref ? ` (${ref})` : ""}`,
+            productId,
+          ),
+        }));
+        return fresh.length;
+      },
+
+      updateSerial: (serialId, p) =>
+        patch((s) => ({
+          ...s,
+          serials: s.serials.map((sn) => (sn.id === serialId ? { ...sn, ...p } : sn)),
+          auditLogs: log(s, `updated serial ${serialId} (${p.status ?? "modified"})`, serialId),
+        })),
+
       createCustomer: (data) => {
         const customer: Customer = {
           ...data,
@@ -479,6 +569,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
         return customer;
       },
+
+      createProduct: (data) => {
+        const id = `p-${data.sku.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Math.floor(Math.random() * 900 + 100)}`;
+        const product: Product = { ...data, id };
+        patch((s) => ({
+          ...s,
+          products: [product, ...s.products],
+          inventory: s.inventory.some((i) => i.productId === id)
+            ? s.inventory
+            : [
+                ...s.inventory,
+                { productId: id, onHand: 0, reserved: 0, damaged: 0, sold: 0, reorderPoint: 4 },
+              ],
+          auditLogs: log(s, `created product ${product.name}`, id),
+        }));
+        return product;
+      },
+
+      updateProduct: (productId, patchData) =>
+        patch((s) => ({
+          ...s,
+          products: s.products.map((p) => (p.id === productId ? { ...p, ...patchData } : p)),
+          auditLogs: log(s, `updated product ${productId}`, productId),
+        })),
+
+      deleteProduct: (productId) =>
+        patch((s) => ({
+          ...s,
+          products: s.products.filter((p) => p.id !== productId),
+          inventory: s.inventory.filter((i) => i.productId !== productId),
+          auditLogs: log(s, `deleted product ${productId}`, productId),
+        })),
 
       updateOrderStatus: (orderId, status) =>
         patch((s) => ({
@@ -581,16 +703,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             { label: "Released", at: "", state: "pending" },
           ],
         };
+        const toReserve = new Map<string, number>();
+        for (const l of quote.items) {
+          if (productById(l.productId)?.serialTracked) toReserve.set(l.productId, l.qty);
+        }
         patch((s) => ({
           ...s,
           orders: [newOrder, ...s.orders],
           quotes: s.quotes.map((q) =>
             q.id === quoteId ? { ...q, status: "converted", orderId: id } : q,
           ),
+          builds: quote.buildId
+            ? s.builds.map((b) =>
+                b.id === quote.buildId
+                  ? { ...b, orderId: id, status: "parts_reserved" as const }
+                  : b,
+              )
+            : s.builds,
           inventory: s.inventory.map((inv) => {
             const line = quote.items.find((i) => i.productId === inv.productId);
             if (!line) return inv;
             return { ...inv, reserved: inv.reserved + line.qty };
+          }),
+          serials: s.serials.map((sn) => {
+            const rem = toReserve.get(sn.productId);
+            if (rem === undefined || sn.status !== "in_stock" || rem <= 0) return sn;
+            toReserve.set(sn.productId, rem - 1);
+            return { ...sn, status: "reserved" as const, orderId: id };
           }),
           counters: { ...s.counters, order: s.counters.order + 1 },
           auditLogs: log(s, `converted quote ${quoteId} into order ${id}`, id),
@@ -662,6 +801,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : b,
           ),
           auditLogs: log(s, `removed component ${pid} from ${buildId}`, buildId),
+        })),
+
+      setBuildComponentQty: (buildId, pid, qty) =>
+        patch((s) => ({
+          ...s,
+          builds: s.builds.map((b) =>
+            b.id === buildId
+              ? {
+                  ...b,
+                  components: b.components.map((c) =>
+                    c.productId === pid ? { ...c, qty: Math.max(1, Math.floor(qty)) } : c,
+                  ),
+                }
+              : b,
+          ),
+          auditLogs: log(s, `set qty ${Math.max(1, Math.floor(qty))} for ${pid} in ${buildId}`, buildId),
         })),
 
       setBuildStatus: (buildId, status) =>
@@ -804,6 +959,87 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `set service ${id} to ${status}`, id),
         })),
 
+      updateService: (ticketId, p) =>
+        patch((s) => ({
+          ...s,
+          services: s.services.map((t) => (t.id === ticketId ? { ...t, ...p } : t)),
+          auditLogs: log(s, `updated service ${ticketId}`, ticketId),
+        })),
+
+      addServicePart: (ticketId, productId, qty) =>
+        patch((s) => {
+          const ticket = s.services.find((t) => t.id === ticketId);
+          const prod = s.products.find((p) => p.id === productId);
+          if (!ticket || !prod) return s;
+          const safeQty = Math.max(1, Math.floor(qty));
+          const existing = ticket.parts.find((x) => x.productId === productId);
+          const inv = s.inventory.find((i) => i.productId === productId);
+          const onHand = inv?.onHand ?? 0;
+          const used = existing ? Math.min(existing.qty + safeQty, Math.max(0, onHand + (existing?.qty ?? 0))) : Math.min(safeQty, onHand);
+          return {
+            ...s,
+            services: s.services.map((t) =>
+              t.id === ticketId
+                ? {
+                    ...t,
+                    parts: existing
+                      ? t.parts.map((x) =>
+                          x.productId === productId ? { ...x, qty: used } : x,
+                        )
+                      : [...t.parts, { productId, name: prod.name, qty: used, price: prod.price }],
+                  }
+                : t,
+            ),
+            inventory: s.inventory.map((i) =>
+              i.productId === productId ? { ...i, onHand: Math.max(0, i.onHand - used + (existing?.qty ?? 0)) } : i,
+            ),
+            movements: [
+              {
+                id: `mv-${Math.random().toString(36).slice(2, 9)}`,
+                productId,
+                type: "adjusted" as const,
+                qty: -used,
+                at: new Date().toISOString(),
+                actor: s.user?.name ?? "Demo User",
+                note: `Parts used on ${ticketId}`,
+              },
+              ...s.movements,
+            ],
+            auditLogs: log(s, `used ${used}× ${prod.name} on ${ticketId}`, ticketId),
+          };
+        }),
+
+      removeServicePart: (ticketId, productId) =>
+        patch((s) => {
+          const ticket = s.services.find((t) => t.id === ticketId);
+          const part = ticket?.parts.find((x) => x.productId === productId);
+          if (!ticket || !part) return s;
+          return {
+            ...s,
+            services: s.services.map((t) =>
+              t.id === ticketId
+                ? { ...t, parts: t.parts.filter((x) => x.productId !== productId) }
+                : t,
+            ),
+            inventory: s.inventory.map((i) =>
+              i.productId === productId ? { ...i, onHand: i.onHand + part.qty } : i,
+            ),
+            movements: [
+              {
+                id: `mv-${Math.random().toString(36).slice(2, 9)}`,
+                productId,
+                type: "received" as const,
+                qty: part.qty,
+                at: new Date().toISOString(),
+                actor: s.user?.name ?? "Demo User",
+                note: `Part unassigned from ${ticketId}`,
+              },
+              ...s.movements,
+            ],
+            auditLogs: log(s, `removed ${part.qty}× ${part.name} from ${ticketId}`, ticketId),
+          };
+        }),
+
       adjustStock: (productId, delta, note) =>
         patch((s) => ({
           ...s,
@@ -850,7 +1086,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetDemoData: () =>
         patch((s) => ({ ...seed(), user: s.user, sidebarCollapsed: s.sidebarCollapsed })),
     };
-  }, [state, hydrated, products, productById, invFor, availableOf, customerById, patch]);
+  }, [state, hydrated, productById, invFor, availableOf, customerById, patch]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

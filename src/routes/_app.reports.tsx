@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { toast } from "sonner";
+import { Download } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
+import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader, EmptyState } from "@/components/nexus/primitives";
 import { Segmented } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/detail";
 import { StatCard } from "@/components/nexus/stat-card";
 import { useStore } from "@/lib/store";
+import { can } from "@/lib/permissions";
 import { money, num, titleCase } from "@/lib/format";
 import type { PaymentMethod, Product } from "@/lib/types";
 
@@ -31,9 +35,27 @@ const RANGES = [
 
 const PIE_COLORS = ["var(--color-info)", "var(--color-success)", "var(--color-warning)", "var(--color-destructive)", "#8884d8", "#82ca9d"];
 
+function download(filename: string, content: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function toCSV(headers: string[], rows: (string | number)[][]) {
+  const esc = (v: string | number) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [headers.join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");
+}
+
 function ReportsPage() {
   const store = useStore();
   const [range, setRange] = useState<"7" | "30" | "90">("30");
+  const showCosts = can(store.user?.role ?? "owner", "costs");
 
   const cutoff = useMemo(() => Date.now() - Number(range) * 86400000, [range]);
   const paidOrders = useMemo(
@@ -167,22 +189,62 @@ function ReportsPage() {
     return { active, expiring, claims, total: store.warranties.length };
   }, [store.warranties, store.claims, cutoff]);
 
+  const stamp = new Date().toISOString().slice(0, 10);
+  const exportCSV = () => {
+    const products = toCSV(
+      showCosts
+        ? ["Product", "SKU", "Units sold", "Revenue", "Cost", "Margin", "Margin %"]
+        : ["Product", "SKU", "Units sold", "Revenue"],
+      productSales.map((p) =>
+        showCosts
+          ? [p.name, p.sku, p.qty, p.revenue.toFixed(2), p.cost.toFixed(2), (p.revenue - p.cost).toFixed(2), (p.revenue ? ((p.revenue - p.cost) / p.revenue) * 100 : 0).toFixed(1)]
+          : [p.name, p.sku, p.qty, p.revenue.toFixed(2)],
+      ),
+    );
+    download(`dpc-nexus-products-${stamp}.csv`, products, "text/csv;charset=utf-8");
+  };
+  const exportJSON = () => {
+    const payload = {
+      range: `${range}d`,
+      generatedAt: new Date().toISOString(),
+      summary: {
+        revenue: totalRevenue,
+        grossMargin,
+        grossMarginPct: marginPct,
+        costOfGoods: totalCost,
+        avgOrderValue: paidOrders.length ? totalRevenue / paidOrders.length : 0,
+        paidOrders: paidOrders.length,
+      },
+      revenueByDay,
+      revenueByCategory,
+      productSales,
+      byPaymentMethod: byPaymentMethod.map((m) => ({ method: m.method, count: m.count, amount: m.amount })),
+      byCashier,
+      inventoryValuation,
+      serviceStats,
+      warrantyStats,
+    };
+    download(`dpc-nexus-report-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+  };
+
   const productColumns: Column<{ id: string; name: string; sku: string; qty: number; revenue: number; cost: number }>[] = [
     { key: "name", header: "Product", cell: (r) => <span className="text-[13px] text-foreground">{r.name}</span> },
     { key: "sku", header: "SKU", cell: (r) => <span className="mono text-xs text-subtle">{r.sku}</span> },
     { key: "qty", header: "Units sold", align: "right", cell: (r) => num(r.qty), sortValue: (r) => r.qty },
     { key: "revenue", header: "Revenue", align: "right", cell: (r) => money(r.revenue), sortValue: (r) => r.revenue },
-    {
-      key: "margin",
-      header: "Margin",
-      align: "right",
-      cell: (r) => {
-        const m = r.revenue - r.cost;
-        const pct = r.revenue > 0 ? (m / r.revenue) * 100 : 0;
-        return <span className={pct >= 30 ? "text-success" : pct >= 10 ? "text-warning" : "text-destructive"}>{money(m)} ({pct.toFixed(0)}%)</span>;
-      },
-      sortValue: (r) => r.revenue - r.cost,
-    },
+    ...(showCosts
+      ? ([{
+          key: "margin",
+          header: "Margin",
+          align: "right",
+          cell: (r) => {
+            const m = r.revenue - r.cost;
+            const pct = r.revenue > 0 ? (m / r.revenue) * 100 : 0;
+            return <span className={pct >= 30 ? "text-success" : pct >= 10 ? "text-warning" : "text-destructive"}>{money(m)} ({pct.toFixed(0)}%)</span>;
+          },
+          sortValue: (r) => r.revenue - r.cost,
+        }] as Column<{ id: string; name: string; sku: string; qty: number; revenue: number; cost: number }>[])
+      : []),
   ];
 
   const cashierColumns: Column<{ id: string; cashier: string; orders: number; revenue: number }>[] = [
@@ -205,14 +267,26 @@ function ReportsPage() {
         title="Reports"
         description="Sales, margin, inventory turnover and service output — derived live from operational data."
         actions={
-          <Segmented value={range} onChange={setRange} options={RANGES.map((r) => ({ value: r.value, label: r.label }))} />
+          <>
+            <Button size="sm" variant="outline" onClick={() => { exportCSV(); toast.success("CSV report downloaded."); }}>
+              <Download className="size-3.5" /> Export CSV
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { exportJSON(); toast.success("JSON report downloaded."); }}>
+              <Download className="size-3.5" /> Export JSON
+            </Button>
+            <Segmented value={range} onChange={setRange} options={RANGES.map((r) => ({ value: r.value, label: r.label }))} />
+          </>
         }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Revenue" numericValue={totalRevenue} format={money} hint={`${paidOrders.length} paid orders`} accent="info" />
-        <StatCard label="Gross margin" numericValue={grossMargin} format={money} hint={`${marginPct.toFixed(1)}% of revenue`} accent="success" />
-        <StatCard label="Cost of goods" numericValue={totalCost} format={money} hint="Product cost basis" />
+        {showCosts && (
+          <>
+            <StatCard label="Gross margin" numericValue={grossMargin} format={money} hint={`${marginPct.toFixed(1)}% of revenue`} accent="success" />
+            <StatCard label="Cost of goods" numericValue={totalCost} format={money} hint="Product cost basis" />
+          </>
+        )}
         <StatCard label="Avg. order value" numericValue={paidOrders.length ? totalRevenue / paidOrders.length : 0} format={money} hint="Per transaction" />
       </div>
 
@@ -304,8 +378,10 @@ function ReportsPage() {
             cols={3}
             items={[
               { label: "Units on hand", value: num(inventoryValuation.units) },
-              { label: "Cost value", value: money(inventoryValuation.costValue) },
               { label: "Retail value", value: money(inventoryValuation.retailValue) },
+              ...(showCosts
+                ? [{ label: "Cost value", value: money(inventoryValuation.costValue) }]
+                : []),
             ]}
           />
           <div className="px-4 pb-4">

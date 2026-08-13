@@ -7,7 +7,20 @@ import { KeyValueGrid, Section, TotalsRows, DemoNote } from "@/components/nexus/
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useStore } from "@/lib/store";
+import { NewReleaseDialog } from "@/components/releases/new-release-dialog";
+import { AddServicePartDialog, ServiceDiagnosisEditor } from "@/components/services/service-editor";
 import { money, dateShort } from "@/lib/format";
 import type { ServiceStatus } from "@/lib/types";
 
@@ -35,7 +48,7 @@ const FLOW: ServiceStatus[] = [
 
 function ServicesTicketidPage() {
   const { ticketId } = Route.useParams();
-  const { services, setServiceStatus, customerById } = useStore();
+  const { services, setServiceStatus, customerById, removeServicePart } = useStore();
   const ticket = services.find((t) => t.id === ticketId);
 
   const nextStatuses = useMemo(() => {
@@ -53,7 +66,7 @@ function ServicesTicketidPage() {
           <EmptyState
             title="Ticket not found"
             description={`No service ticket with id "${ticketId}".`}
-            action={<Button asChild size="sm" variant="outline"><Link to="/services">Back to tickets</Link></Button>}
+            action={<Button asChild size="sm" variant="outline"><Link to="/services" search={{ openNew: false }}>Back to tickets</Link></Button>}
           />
         </Panel>
       </div>
@@ -73,7 +86,7 @@ function ServicesTicketidPage() {
       <PageHeader
         title={ticket.id}
         description="Diagnosis, parts used, labor and status timeline."
-        status={<StatusBadge status={ticket.status} />}
+        status={<StatusBadge status={ticket.status} {...(ticket.status === "received" ? { tone: "neutral" as const } : {})} />}
         actions={
           <div className="flex flex-wrap gap-2">
             {nextStatuses.slice(0, 3).map((st) => (
@@ -82,10 +95,25 @@ function ServicesTicketidPage() {
               </Button>
             ))}
             {ticket.status !== "cancelled" && ticket.status !== "released" && (
-              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => advance("cancelled")}>
-                Cancel
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="ghost" className="text-destructive">Cancel</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel ticket {ticket.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The service ticket will be closed as cancelled and removed from the active queue.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep ticket</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => advance("cancelled")}>Cancel ticket</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
+            {ticket.status === "ready" && <NewReleaseDialog triggerLabel="Schedule release" />}
           </div>
         }
       />
@@ -107,30 +135,77 @@ function ServicesTicketidPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title="Parts used" hint={`${ticket.parts.length} line(s)`}>
           {ticket.parts.length === 0 ? (
-            <EmptyState title="No parts recorded" description="No parts have been logged against this ticket yet." />
-          ) : (
-            <div className="divide-y divide-border">
-              {ticket.parts.map((p) => (
-                <div key={p.productId} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
-                  <div>
-                    <p className="text-foreground">{p.name}</p>
-                    <Mono>{p.qty} × {money(p.price)}</Mono>
-                  </div>
-                  <span className="mono tabular-nums">{money(p.qty * p.price)}</span>
-                </div>
-              ))}
+            <div className="p-4">
+              <EmptyState title="No parts recorded" description="No parts have been logged against this ticket yet." />
+              <div className="flex justify-end">
+                <AddServicePartDialog ticket={ticket} />
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="divide-y divide-border">
+                {ticket.parts.map((p) => (
+                  <div key={p.productId} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
+                    <div>
+                      <p className="text-foreground">{p.name}</p>
+                      <Mono>{p.qty} × {money(p.price)}</Mono>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="mono tabular-nums">{money(p.qty * p.price)}</span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                          >
+                            Remove
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove {p.name} from ticket?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              The part will be removed from this ticket and its quantity returned to stock.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep part</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                removeServicePart(ticket.id, p.productId);
+                                toast.success(`${p.name} returned to stock.`);
+                              }}
+                            >
+                              Remove part
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t border-border p-3">
+                <AddServicePartDialog ticket={ticket} />
+                <span className="text-[11px] text-subtle">Parts deduct from on-hand stock.</span>
+              </div>
+              <div className="border-t border-border p-4">
+                <TotalsRows
+                  rows={[
+                    { label: "Parts", value: money(partsTotal) },
+                    { label: "Labor", value: money(ticket.labor) },
+                    { label: "Estimated cost", value: money(ticket.estimatedCost), muted: true },
+                    { label: "Actual cost", value: ticket.actualCost != null ? money(ticket.actualCost) : "—", strong: true },
+                  ]}
+                />
+              </div>
+            </>
           )}
-          <div className="border-t border-border p-4">
-            <TotalsRows
-              rows={[
-                { label: "Parts", value: money(partsTotal) },
-                { label: "Labor", value: money(ticket.labor) },
-                { label: "Estimated cost", value: money(ticket.estimatedCost), muted: true },
-                { label: "Actual cost", value: ticket.actualCost != null ? money(ticket.actualCost) : "—", strong: true },
-              ]}
-            />
-          </div>
+        </Section>
+
+        <Section title="Diagnosis & costs">
+          <ServiceDiagnosisEditor ticket={ticket} />
         </Section>
 
         <Section title="Status timeline">

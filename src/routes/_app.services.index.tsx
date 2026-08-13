@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
@@ -25,6 +25,7 @@ import type { ServiceStatus, ServiceTicket } from "@/lib/types";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_app/services/")({
+  validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
       { title: "Service Tickets — DPC Nexus" },
@@ -51,10 +52,15 @@ function ServicesIndexPage() {
   const { services, customers, createService } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
+  const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [tech, setTech] = useState("all");
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (openNew) setOpen(true);
+  }, [openNew]);
 
   const technicians = useMemo(
     () => Array.from(new Set(services.map((s) => s.technician))).sort(),
@@ -118,7 +124,7 @@ function ServicesIndexPage() {
       cell: (s) => <span className="mono tabular-nums">{money(s.estimatedCost)}</span>,
       sortValue: (s) => s.estimatedCost,
     },
-    { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
+    { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} {...(s.status === "received" ? { tone: "neutral" as const } : {})} />, sortValue: (s) => s.status },
   ];
 
   const submit = () => {

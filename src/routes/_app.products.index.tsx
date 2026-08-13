@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
@@ -6,11 +6,14 @@ import { StatCard } from "@/components/nexus/stat-card";
 import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
+import { Button } from "@/components/ui/button";
 import { useStore, useSimulatedLoad } from "@/lib/store";
+import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { money, num } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
+  validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
       { title: "Products — DPC Nexus" },
@@ -34,10 +37,16 @@ function ProductsIndexPage() {
   const { products, invFor } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
+  const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
   const [brand, setBrand] = useState("all");
   const [stock, setStock] = useState<StockFilter>("all");
+  const [dialog, setDialog] = useState<{ open: boolean; product?: Product }>({ open: false });
+
+  useEffect(() => {
+    if (openNew) setDialog((d) => ({ ...d, open: true }));
+  }, [openNew]);
 
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))).sort(), [products]);
   const brands = useMemo(() => Array.from(new Set(products.map((p) => p.brand))).sort(), [products]);
@@ -144,11 +153,35 @@ function ProductsIndexPage() {
       header: "Location",
       cell: (p) => <Mono>{p.location}</Mono>,
     },
+    {
+      key: "actions",
+      header: "",
+      cell: (p) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDialog({ open: true, product: p });
+          }}
+        >
+          Edit
+        </Button>
+      ),
+    },
   ];
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Products" description="Catalog of components, peripherals and prebuilt systems." />
+      <PageHeader
+        title="Products"
+        description="Catalog of components, peripherals and prebuilt systems."
+        actions={
+          <Button size="sm" onClick={() => setDialog({ open: true })}>
+            New product
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total SKUs" numericValue={stats.total} format={(n) => num(Math.round(n))} accent="info" />
@@ -185,6 +218,12 @@ function ProductsIndexPage() {
           }
         />
       </Panel>
+
+      <ProductFormDialog
+        open={dialog.open}
+        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
+        product={dialog.product}
+      />
     </div>
   );
 }

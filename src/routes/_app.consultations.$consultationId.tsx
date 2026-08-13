@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useOps } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
 import { money, dateTime, titleCase } from "@/lib/format";
 import type { ConsultationStatus } from "@/lib/ops-types";
 
@@ -42,6 +43,7 @@ function TagList({ items, empty }: { items: string[]; empty: string }) {
 function ConsultationDetailPage() {
   const { consultationId } = Route.useParams();
   const ops = useOps();
+  const store = useStore();
   const c = ops.consultationById(consultationId);
 
   if (!c) {
@@ -54,6 +56,24 @@ function ConsultationDetailPage() {
       </div>
     );
   }
+
+  const convert = () => {
+    const build = store.createBuild({
+      customerId: c.customerId,
+      purpose: c.primaryUse,
+      budget: c.budget,
+      ...(c.notes ? { notes: c.notes } : {}),
+    });
+    const quote = store.quoteFromBuild(build.id);
+    ops.updateConsultation(c.id, {
+      recommendedBuildId: build.id,
+      quoteId: quote?.id,
+      status: "quoted",
+    });
+    toast.success(`Converted ${c.id} to ${build.id}${quote ? ` and ${quote.id}` : ""}.`);
+  };
+
+  const canConvert = !c.recommendedBuildId && c.status !== "lost" && c.status !== "won";
 
   const advance = () => {
     const idx = FLOW.indexOf(c.status);
@@ -175,9 +195,20 @@ function ConsultationDetailPage() {
                   )}
                 </div>
               </div>
+              {canConvert ? (
+                <Button size="sm" className="w-full" onClick={convert}>
+                  Convert to build + quote
+                </Button>
+              ) : c.status === "lost" ? (
+                <p className="text-xs text-subtle">This consultation was marked lost and was not converted.</p>
+              ) : (
+                <p className="text-xs text-subtle">
+                  Linked to {c.recommendedBuildId ?? "a build"} and {c.quoteId ?? "a quote"}.
+                </p>
+              )}
               <DemoNote>
-                Linking a build/quote to this consultation is simulated; create them from the Builds or Quotes
-                modules and they will cross-reference automatically once wired to a backend.
+                Conversion creates a build from this consultation and generates a draft quote from its
+                components. Add parts on the build page, then regenerate the quote.
               </DemoNote>
             </div>
           </Section>

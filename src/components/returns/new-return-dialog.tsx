@@ -24,32 +24,34 @@ import {
 } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
+import type { Order } from "@/lib/types";
 import type { ReturnRequest } from "@/lib/ops-types";
 
-export function NewReturnDialog() {
+export function NewReturnDialog({ order }: { order?: Order }) {
   const { orders, productById } = useStore();
   const { createReturn } = useOps();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [orderId, setOrderId] = useState("");
+  const [orderId, setOrderId] = useState(order?.id ?? "");
   const [productId, setProductId] = useState("");
   const [qty, setQty] = useState("1");
   const [reason, setReason] = useState("");
   const [condition, setCondition] = useState<ReturnRequest["condition"]>("used_good");
 
-  const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
-  const availableItems = order?.items ?? [];
-
   const reset = () => {
-    setOrderId("");
+    setOrderId(order?.id ?? "");
     setProductId("");
     setQty("1");
     setReason("");
     setCondition("used_good");
   };
 
+  const selectedOrder = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
+  const effective = order ?? selectedOrder;
+  const availableItems = effective?.items ?? [];
+
   const submit = () => {
-    if (!order) {
+    if (!effective) {
       toast.error("Select an order.");
       return;
     }
@@ -64,9 +66,9 @@ export function NewReturnDialog() {
     }
     const product = productById(productId);
     const rma = createReturn({
-      orderId: order.id,
-      customerId: order.customerId,
-      customerName: order.customerName,
+      orderId: effective.id,
+      customerId: effective.customerId,
+      customerName: effective.customerName,
       productId,
       productName: product?.name ?? item.name,
       qty: Number(qty) || 1,
@@ -102,31 +104,33 @@ export function NewReturnDialog() {
           <DialogDescription>Create an RMA against an existing order.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Order</Label>
-            <Select
-              value={orderId}
-              onValueChange={(v) => {
-                setOrderId(v);
-                setProductId("");
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select order" />
-              </SelectTrigger>
-              <SelectContent>
-                {orders.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.id} — {o.customerName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!order && (
+            <div className="space-y-1.5">
+              <Label>Order</Label>
+              <Select
+                value={orderId}
+                onValueChange={(v) => {
+                  setOrderId(v);
+                  setProductId("");
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select order" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.id} — {o.customerName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Product</Label>
-              <Select value={productId} onValueChange={setProductId} disabled={!order}>
+              <Select value={productId} onValueChange={setProductId} disabled={!effective}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select item" />
                 </SelectTrigger>

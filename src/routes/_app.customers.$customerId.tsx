@@ -47,7 +47,7 @@ function CustomersCustomeridPage() {
       <div className="space-y-5 p-4 sm:p-6">
         <PageHeader title="Customer detail" description="Profile, owned systems, orders and tickets." />
         <Panel>
-          <EmptyState title="Customer not found" description={`No customer with id "${customerId}".`} action={<Button asChild size="sm" variant="outline"><Link to="/customers">Back to customers</Link></Button>} />
+          <EmptyState title="Customer not found" description={`No customer with id "${customerId}".`} action={<Button asChild size="sm" variant="outline"><Link to="/customers" search={{ openNew: false }}>Back to customers</Link></Button>} />
         </Panel>
       </div>
     );
@@ -78,7 +78,7 @@ function CustomersCustomeridPage() {
     { key: "id", header: "Ticket", cell: (s) => <IdLink to="/services/$ticketId" params={{ ticketId: s.id }}>{s.id}</IdLink> },
     { key: "device", header: "Device", cell: (s) => s.device },
     { key: "date", header: "Received", cell: (s) => dateShort(s.createdAt) },
-    { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} /> },
+    { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} {...(s.status === "received" ? { tone: "neutral" as const } : {})} /> },
   ];
 
   const warrantyColumns: Column<Warranty>[] = [

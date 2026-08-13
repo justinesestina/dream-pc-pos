@@ -70,6 +70,12 @@ const COLUMNS: KanbanColumn[] = [
     filterFn: (b) => b.status === "ready",
     accent: "border-t-success/60",
   },
+  {
+    id: "cancelled",
+    label: "Cancelled",
+    filterFn: (b) => b.status === "cancelled",
+    accent: "border-t-destructive/50",
+  },
 ];
 
 /* ───────────────────────────── Build Card ──── */
@@ -256,15 +262,14 @@ function AssemblyWorkspacePage() {
   const [techFilter, setTechFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Only show builds that are in the active pipeline
+  // Only show builds that are in the active pipeline (cancelled stay visible in their own column)
   const activeBuilds = useMemo(() => {
     return store.builds.filter(
       (b) =>
         b.status !== "draft" &&
         b.status !== "consultation" &&
         b.status !== "quoted" &&
-        b.status !== "released" &&
-        b.status !== "cancelled",
+        b.status !== "released",
     );
   }, [store.builds]);
 
@@ -290,10 +295,11 @@ function AssemblyWorkspacePage() {
   const inTesting = activeBuilds.filter((b) => b.status === "testing").length;
   const ready = activeBuilds.filter((b) => b.status === "ready").length;
   const avgProgress = useMemo(() => {
-    if (activeBuilds.length === 0) return 0;
+    const pipeline = activeBuilds.filter((b) => b.status !== "cancelled");
+    if (pipeline.length === 0) return 0;
     return Math.round(
-      activeBuilds.reduce((s, b) => s + stageProgress(ops.opsForBuild(b.id).stage), 0) /
-        activeBuilds.length,
+      pipeline.reduce((s, b) => s + stageProgress(ops.opsForBuild(b.id).stage), 0) /
+        pipeline.length,
     );
   }, [activeBuilds, ops]);
 

@@ -88,17 +88,20 @@ export function CommandPalette({
           <CommandItem onSelect={() => go("/pos")}>
             <Plus /> New Sale <CommandShortcut>F1</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={() => go("/quotes/new")}>
+          <CommandItem onSelect={() => go("/quotes")}>
             <FileText /> New Quote
           </CommandItem>
-          <CommandItem onSelect={() => go("/builds/new")}>
-            <Cpu /> New Custom Build
+          <CommandItem onSelect={() => go("/consultations?new=1")}>
+            <Cpu /> New Custom Build Consultation
           </CommandItem>
           <CommandItem onSelect={() => go("/customers?new=1")}>
             <UserPlus /> New Customer
           </CommandItem>
           <CommandItem onSelect={() => go("/services?new=1")}>
             <Wrench /> New Service Ticket
+          </CommandItem>
+          <CommandItem onSelect={() => go("/products?new=1")}>
+            <Package /> New Product
           </CommandItem>
         </CommandGroup>
 

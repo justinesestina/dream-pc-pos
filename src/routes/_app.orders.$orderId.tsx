@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
@@ -6,6 +7,27 @@ import { Section, KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { NewReturnDialog } from "@/components/returns/new-return-dialog";
 import { useStore } from "@/lib/store";
 import { money, moneyExact, dateTime, titleCase } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
@@ -34,9 +56,11 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus[]>> = {
 
 function OrdersOrderidPage() {
   const { orderId } = Route.useParams();
-  const { orders, customerById, updateOrderStatus } = useStore();
+  const { orders, customerById, updateOrderStatus, warranties, createClaim } = useStore();
   const navigate = useNavigate();
   const order = orders.find((o) => o.id === orderId);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimReason, setClaimReason] = useState("");
 
   if (!order) {
     return (
@@ -59,10 +83,20 @@ function OrdersOrderidPage() {
 
   const customer = customerById(order.customerId);
   const nextOptions = NEXT_STATUS[order.status] ?? [];
+  const orderWarranty = warranties.find((w) => w.orderId === order.id);
+  const isReturnable = order.status !== "pending" && order.status !== "cancelled";
 
   const advance = (status: OrderStatus) => {
     updateOrderStatus(order.id, status);
     toast.success(`Order ${order.id} set to ${titleCase(status)}`);
+  };
+
+  const fileClaim = () => {
+    if (!orderWarranty || !claimReason.trim()) return;
+    const claim = createClaim(orderWarranty.id, claimReason.trim());
+    toast.success(`Warranty claim ${claim.id} filed.`);
+    setClaimReason("");
+    setClaimOpen(false);
   };
 
   return (
@@ -93,18 +127,76 @@ function OrdersOrderidPage() {
                 </Button>
               ))}
             {nextOptions.includes("cancelled") && (
-              <Button size="sm" variant="outline" onClick={() => advance("cancelled")}>
-                Cancel
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline">Cancel</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel order {order.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The order will be marked cancelled and can no longer be advanced toward fulfillment.
+                      This can be undone only by moving it through a forward workflow.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep order</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => advance("cancelled")}>Cancel order</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {nextOptions.includes("refunded") && (
-              <Button size="sm" variant="outline" onClick={() => advance("refunded")}>
-                Refund
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline">Refund</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Refund order {order.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Records a refund of {money(order.total)} against this order and marks it refunded.
+                      Issued refunds are tracked in the shift and returns workflows.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep order</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => advance("refunded")}>Issue refund</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {isReturnable && <NewReturnDialog order={order} />}
+            {orderWarranty && (
+              <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>
+                File warranty claim
               </Button>
             )}
           </>
         }
       />
+
+      <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>File a warranty claim</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="claim-reason">Reason</Label>
+            <Textarea
+              id="claim-reason"
+              rows={3}
+              value={claimReason}
+              onChange={(e) => setClaimReason(e.target.value)}
+              placeholder="Describe the fault or defect"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClaimOpen(false)}>Cancel</Button>
+            <Button onClick={fileClaim} disabled={!claimReason.trim()}>File claim</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {(order.buildId || order.quoteId) && (
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
@@ -149,7 +241,17 @@ function OrdersOrderidPage() {
                         <p className="text-foreground">{it.name}</p>
                         {it.serials && it.serials.length > 0 && (
                           <p className="mono mt-0.5 text-[10.5px] text-subtle">
-                            S/N: {it.serials.join(", ")}
+                            S/N:{" "}
+                            {it.serials.map((s) => (
+                              <Link
+                                key={s}
+                                to="/serials"
+                                search={{ serial: s }}
+                                className="underline decoration-border underline-offset-2 transition-colors hover:text-foreground"
+                              >
+                                {s}
+                              </Link>
+                            ))}
                           </p>
                         )}
                       </td>

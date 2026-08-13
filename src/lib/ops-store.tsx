@@ -35,6 +35,7 @@ import type {
   TaskStatus,
 } from "./ops-types";
 import { ASSEMBLY_STAGES } from "./ops-types";
+import type { PaymentMethod } from "./types";
 
 const STORAGE_KEY = "dpc-nexus-ops-v1";
 
@@ -128,6 +129,7 @@ interface OpsValue extends OpsSnapshot {
   completeReceipt: (
     receiptId: string,
     onStock: (productId: string, qty: number, ref: string) => void,
+    onSerials?: (productId: string, serials: string[], ref: string) => void,
   ) => void;
   /* returns */
   createReturn: (data: Omit<ReturnRequest, "id" | "createdAt" | "status">) => ReturnRequest;
@@ -136,7 +138,13 @@ interface OpsValue extends OpsSnapshot {
   /* shifts */
   openNewShift: (openingCash: number, cashier: string) => Shift;
   addCashAdjustment: (shiftId: string, a: Omit<CashAdjustment, "id" | "at" | "actor">) => void;
-  closeShift: (shiftId: string, countedCash: number, notes?: string) => void;
+  closeShift: (
+    shiftId: string,
+    countedCash: number,
+    tenders: Record<PaymentMethod, number>,
+    refunds: number,
+    notes?: string,
+  ) => void;
   /* consultations */
   createConsultation: (
     data: Omit<Consultation, "id" | "createdAt" | "status"> & { status?: Consultation["status"] },
@@ -300,7 +308,7 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
           receipts: s.receipts.map((r) => (r.id === receiptId ? { ...r, notes } : r)),
         })),
 
-      completeReceipt: (receiptId, onStock) => {
+      completeReceipt: (receiptId, onStock, onSerials) => {
         const receipt = find(state.receipts, receiptId);
         if (!receipt) return;
         const discrepancy = receipt.lines.some(
@@ -310,6 +318,11 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
           const good = Math.max(0, l.received - l.damaged);
           if (good > 0) onStock(l.productId, good, receipt.id);
         });
+        if (onSerials) {
+          receipt.lines.forEach((l) => {
+            if (l.serials.length > 0) onSerials(l.productId, l.serials, receipt.id);
+          });
+        }
         patch((s) => ({
           ...s,
           receipts: s.receipts.map((r) =>
@@ -400,12 +413,12 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
           ),
         })),
 
-      closeShift: (shiftId, countedCash, notes) =>
+      closeShift: (shiftId, countedCash, tenders, refunds, notes) =>
         patch((s) => ({
           ...s,
           shifts: s.shifts.map((sh) =>
             sh.id === shiftId
-              ? { ...sh, status: "closed", closedAt: new Date().toISOString(), countedCash, notes }
+              ? { ...sh, status: "closed", closedAt: new Date().toISOString(), countedCash, tenders, refunds, notes }
               : sh,
           ),
         })),

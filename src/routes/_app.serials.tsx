@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
 import { Section, KeyValueGrid, DemoNote } from "@/components/nexus/detail";
@@ -8,11 +9,31 @@ import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
 import { Timeline } from "@/components/nexus/timeline";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { dateShort, dateTime, num, titleCase } from "@/lib/format";
 import type { SerialNumber, TimelineEvent } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/serials")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    serial: typeof search["serial"] === "string" ? search["serial"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Serial Numbers — DPC Nexus" },
@@ -32,12 +53,42 @@ export const Route = createFileRoute("/_app/serials")({
 const STATUSES = ["in_stock", "reserved", "installed", "sold", "rma"];
 
 function SerialsPage() {
-  const { serials, productById, customerById, orders, builds, warranties, movements } = useStore();
+  const { serials, products, productById, customerById, orders, builds, warranties, movements, registerSerials, updateSerial } = useStore();
   const loading = useSimulatedLoad();
-  const [q, setQ] = useState("");
+  const { serial: serialParam } = Route.useSearch() as { serial?: string };
+  const [q, setQ] = useState(serialParam ?? "");
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [regProduct, setRegProduct] = useState("");
+  const [regSerials, setRegSerials] = useState("");
+
+  const serialTracked = products.filter((p) => p.serialTracked);
+
+  const submitRegister = () => {
+    if (!regProduct) {
+      toast.error("Pick a product to register serials for.");
+      return;
+    }
+    const list = regSerials
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (list.length === 0) {
+      toast.error("Enter at least one serial number.");
+      return;
+    }
+    const added = registerSerials(regProduct, list);
+    if (added === 0) {
+      toast.info("All of those serials are already registered.");
+    } else {
+      toast.success(`${added} serial(s) registered to ${productById(regProduct)?.name}.`);
+    }
+    setRegSerials("");
+    setRegProduct("");
+    setRegisterOpen(false);
+  };
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -116,6 +167,11 @@ function SerialsPage() {
       <PageHeader
         title="Serial Numbers"
         description="Unit-level traceability from receiving through sale, build and warranty."
+        actions={
+          <Button size="sm" onClick={() => setRegisterOpen(true)}>
+            Register serials
+          </Button>
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -157,6 +213,7 @@ function SerialsPage() {
               null
             }
             movements={movements.filter((m) => m.productId === selected.productId).slice(0, 6)}
+            onUpdate={updateSerial}
           />
         ) : (
           <Panel className="grid place-items-center p-8">
@@ -164,6 +221,50 @@ function SerialsPage() {
           </Panel>
         )}
       </div>
+
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register serial numbers</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reg-product">Product</Label>
+              <Select value={regProduct} onValueChange={setRegProduct}>
+                <SelectTrigger id="reg-product" className="w-full">
+                  <SelectValue placeholder="Select a serial-tracked product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serialTracked.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.sku} — {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reg-serials">Serial numbers</Label>
+              <Textarea
+                id="reg-serials"
+                rows={4}
+                value={regSerials}
+                onChange={(e) => setRegSerials(e.target.value)}
+                placeholder={"One per line, or comma-separated\nSN-CPU-0001\nSN-CPU-0002"}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Serials already on the register are skipped automatically.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegisterOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitRegister}>Register units</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DemoNote>
         Serial history is reconstructed from local demo data. Real deployments should log every scan event (receive,
@@ -181,6 +282,7 @@ function SerialDetail({
   warranty,
   customerName,
   movements,
+  onUpdate,
 }: {
   unit: SerialNumber;
   product: ReturnType<ReturnType<typeof useStore>["productById"]>;
@@ -189,6 +291,7 @@ function SerialDetail({
   warranty: ReturnType<typeof useStore>["warranties"][number] | undefined;
   customerName: string | null;
   movements: ReturnType<typeof useStore>["movements"];
+  onUpdate: ReturnType<typeof useStore>["updateSerial"];
 }) {
   const lifecycle: TimelineEvent[] = [
     { label: "Received into stock", at: movements.at(-1)?.at ?? "", state: "done" },
@@ -267,6 +370,38 @@ function SerialDetail({
           ]}
         />
       </Section>
+
+      <div className="flex flex-wrap gap-2">
+        {unit.status === "rma" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              onUpdate(unit.id, {
+                status: "in_stock",
+                orderId: undefined,
+                buildId: undefined,
+                customerId: undefined,
+                warrantyUntil: undefined,
+              });
+              toast.success(`${unit.serial} returned to in-stock.`);
+            }}
+          >
+            Return to stock
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              onUpdate(unit.id, { status: "rma" });
+              toast.success(`${unit.serial} marked as RMA.`);
+            }}
+          >
+            Mark RMA
+          </Button>
+        )}
+      </div>
 
       <Section title="Lifecycle">
         <div className="p-4">
