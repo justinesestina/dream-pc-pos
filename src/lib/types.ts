@@ -36,11 +36,11 @@ export type ProductCategory =
   | "Services";
 
 export interface ProductSpecs {
-  socket?: string;
-  memoryType?: "DDR4" | "DDR5";
-  wattage?: number;
-  tdp?: number;
-  formFactor?: string;
+  socket?: string | undefined;
+  memoryType?: "DDR4" | "DDR5" | undefined;
+  wattage?: number | undefined;
+  tdp?: number | undefined;
+  formFactor?: string | undefined;
   [key: string]: string | number | undefined;
 }
 
@@ -57,7 +57,7 @@ export interface Product {
   location: string;
   supplier: string;
   specs: ProductSpecs;
-  isService?: boolean;
+  isService?: boolean | undefined;
 }
 
 export interface InventoryItem {
@@ -76,10 +76,10 @@ export interface SerialNumber {
   serial: string;
   productId: string;
   status: SerialStatus;
-  orderId?: string;
-  buildId?: string;
-  customerId?: string;
-  warrantyUntil?: string;
+  orderId?: string | undefined;
+  buildId?: string | undefined;
+  customerId?: string | undefined;
+  warrantyUntil?: string | undefined;
 }
 
 export type MovementType =
@@ -97,8 +97,8 @@ export interface InventoryMovement {
   qty: number;
   at: string;
   actor: string;
-  reference?: string;
-  note?: string;
+  reference?: string | undefined;
+  note?: string | undefined;
 }
 
 export interface Customer {
@@ -110,7 +110,7 @@ export interface Customer {
   address: string;
   since: string;
   status: "active" | "inactive";
-  notes?: string;
+  notes?: string | undefined;
 }
 
 export type OrderStatus =
@@ -132,7 +132,7 @@ export interface OrderItem {
   sku: string;
   qty: number;
   unitPrice: number;
-  serials?: string[];
+  serials?: string[] | undefined;
 }
 
 export interface Payment {
@@ -140,14 +140,14 @@ export interface Payment {
   method: PaymentMethod;
   amount: number;
   at: string;
-  reference?: string;
+  reference?: string | undefined;
 }
 
 export interface TimelineEvent {
   label: string;
   at: string;
-  actor?: string;
-  note?: string;
+  actor?: string | undefined;
+  note?: string | undefined;
   state: "done" | "active" | "pending";
 }
 
@@ -165,9 +165,9 @@ export interface Order {
   total: number;
   payment: Payment | null;
   createdAt: string;
-  buildId?: string;
-  quoteId?: string;
-  notes?: string;
+  buildId?: string | undefined;
+  quoteId?: string | undefined;
+  notes?: string | undefined;
   timeline: TimelineEvent[];
   cashier: string;
 }
@@ -202,9 +202,9 @@ export interface Quote {
   total: number;
   createdAt: string;
   expiresAt: string;
-  notes?: string;
-  buildId?: string;
-  orderId?: string;
+  notes?: string | undefined;
+  buildId?: string | undefined;
+  orderId?: string | undefined;
   preparedBy: string;
 }
 
@@ -261,9 +261,9 @@ export interface Build {
   services: BuildService[];
   technician: string;
   createdAt: string;
-  notes?: string;
-  orderId?: string;
-  quoteId?: string;
+  notes?: string | undefined;
+  orderId?: string | undefined;
+  quoteId?: string | undefined;
   qa: QaCheck[];
   qaResult: "pass" | "fail" | null;
 }
@@ -291,7 +291,7 @@ export interface ServiceTicket {
   customerName: string;
   device: string;
   issue: string;
-  diagnosis?: string;
+  diagnosis?: string | undefined;
   status: ServiceStatus;
   technician: string;
   parts: ServicePart[];
@@ -299,7 +299,7 @@ export interface ServiceTicket {
   estimatedCost: number;
   actualCost: number | null;
   createdAt: string;
-  notes?: string;
+  notes?: string | undefined;
   timeline: TimelineEvent[];
 }
 
@@ -311,7 +311,7 @@ export interface WarrantyClaim {
   reason: string;
   status: "open" | "in_review" | "approved" | "rejected" | "closed";
   createdAt: string;
-  resolution?: string;
+  resolution?: string | undefined;
 }
 
 export interface Warranty {
@@ -320,7 +320,7 @@ export interface Warranty {
   customerName: string;
   productId: string;
   productName: string;
-  serial?: string;
+  serial?: string | undefined;
   orderId: string;
   purchasedAt: string;
   expiresAt: string;
@@ -351,5 +351,5 @@ export interface AppNotification {
 export interface CartLine {
   productId: string;
   qty: number;
-  serials?: string[];
+  serials?: string[] | undefined;
 }
