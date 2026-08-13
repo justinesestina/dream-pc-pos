@@ -101,7 +101,7 @@ function StaffPage() {
     }
 
     for (const s of services) {
-      if (s.status === "completed" || s.status === "cancelled") continue;
+      if (s.status === "released" || s.status === "cancelled") continue;
       list.push({
         id: `a-svc-${s.id}`,
         staffName: s.technician,

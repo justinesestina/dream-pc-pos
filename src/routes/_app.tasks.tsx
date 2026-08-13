@@ -190,7 +190,7 @@ function TasksPage() {
     {
       key: "status",
       header: "Status",
-      cell: (t) => <StatusBadge status={t.status} tone={t.status === "blocked" ? "danger" : undefined} />,
+      cell: (t) => <StatusBadge status={t.status} tone={t.status === "blocked" ? "danger" : t.status === "done" ? "success" : t.status === "in_progress" ? "info" : "neutral"} />,
       sortValue: (t) => STATUSES.indexOf(t.status),
     },
     {
