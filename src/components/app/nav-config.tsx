@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   BarChart3,
   Boxes,
+  Barcode,
   Cpu,
   FileText,
   LayoutDashboard,
@@ -58,6 +59,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Products", to: "/products", icon: Package, cap: "products" },
       { label: "Inventory", to: "/inventory", icon: Boxes, cap: "inventory" },
+      { label: "Serial Numbers", to: "/serials", icon: Barcode, cap: "inventory" },
       { label: "Custom Builds", to: "/builds", icon: Cpu, cap: "builds" },
       { label: "Purchasing", to: "/purchasing", icon: ClipboardList, cap: "purchasing" },
       { label: "Suppliers", to: "/suppliers", icon: Building2, cap: "purchasing" },
