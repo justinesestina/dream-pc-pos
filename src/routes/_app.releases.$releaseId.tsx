@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useOps } from "@/lib/ops-store";
 import { useStore } from "@/lib/store";
 import { completeReleaseSource } from "@/lib/release-complete";
-import { dateShort, dateTime, titleCase } from "@/lib/format";
+import { dateTime, titleCase } from "@/lib/format";
 import type { ReleaseRecord } from "@/lib/ops-types";
 import type { TimelineEvent } from "@/lib/types";
 
@@ -76,17 +76,13 @@ function ReleasesReleaseidPage() {
     },
     {
       label: "Handover completed",
-      at: release.releasedAt ?? "",
+      at: release.completedAt ?? "",
       state: release.status === "completed" ? "done" : "pending",
     },
   ];
 
-  const complete = () => {
-    if (!receivedBy.trim()) {
-      toast.error("Enter who received the item.");
-      return;
-    }
-    ops.completeRelease(release.id, receivedBy.trim(), ops.actor);
+  const markReleased = () => {
+    ops.markReleaseReleased(release.id, ops.actor);
     completeReleaseSource(
       (id, status) => store.updateOrderStatus(id, status),
       (id, status) => store.setBuildStatus(id, status),
@@ -95,7 +91,16 @@ function ReleasesReleaseidPage() {
       release.refId,
     );
     if (release.kind === "build") ops.setBuildStage(release.refId, "released");
-    toast.success(`${release.refId} marked as released and completed.`);
+    toast.success(`${release.refId} marked as released.`);
+  };
+
+  const complete = () => {
+    if (!receivedBy.trim()) {
+      toast.error("Enter who received the item.");
+      return;
+    }
+    ops.completeRelease(release.id, receivedBy.trim());
+    toast.success(`${release.refId} handover completed.`);
   };
 
   return (
@@ -124,7 +129,14 @@ function ReleasesReleaseidPage() {
                 { label: "Customer", value: release.customerName },
                 { label: "Method", value: titleCase(release.method) },
                 { label: "Scheduled", value: dateTime(release.scheduledAt) },
-                { label: "Completed at", value: release.releasedAt ? dateShort(release.releasedAt) : "—" },
+                {
+                  label: "Released at",
+                  value: release.releasedAt ? dateTime(release.releasedAt) : "—",
+                },
+                {
+                  label: "Completed at",
+                  value: release.completedAt ? dateTime(release.completedAt) : "—",
+                },
                 { label: "Released by", value: release.releasedBy ?? "—" },
                 { label: "Received by", value: release.receivedBy ?? "—" },
               ]}
@@ -145,8 +157,19 @@ function ReleasesReleaseidPage() {
           <Section title="Complete handover">
             {release.status === "completed" ? (
               <p className="p-4 text-[13px] text-muted-foreground">
-                This release is closed. The source {release.kind} was marked {titleCase(release.kind === "build" ? "released" : release.kind === "order" ? "completed" : "released")}.
+                This release is closed. The source {release.kind} was marked{" "}
+                {titleCase(release.kind === "build" ? "released" : release.kind === "order" ? "completed" : "released")}.
               </p>
+            ) : release.status === "scheduled" ? (
+              <div className="space-y-3 p-4">
+                <p className="text-[12.5px] text-muted-foreground">
+                  Confirm the item has left the store. The source {release.kind} is marked released; a separate
+                  handover step records who received it.
+                </p>
+                <Button className="w-full" onClick={markReleased}>
+                  Mark as released
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3 p-4">
                 <div className="space-y-1.5">
@@ -166,8 +189,8 @@ function ReleasesReleaseidPage() {
           </Section>
 
           <DemoNote>
-            Completing this release also advances the linked build, service or order status so the two demo stores stay
-            consistent.
+            Marking a release as released also advances the linked build, service or order status so the two demo
+            stores stay consistent; completing the handover closes the release record.
           </DemoNote>
         </div>
       </div>

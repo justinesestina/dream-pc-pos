@@ -63,6 +63,7 @@ function ConsultationDetailPage() {
       purpose: c.primaryUse,
       budget: c.budget,
       ...(c.notes ? { notes: c.notes } : {}),
+      consultationId: c.id,
     });
     const quote = store.quoteFromBuild(build.id);
     ops.updateConsultation(c.id, {

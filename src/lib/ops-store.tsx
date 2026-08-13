@@ -35,6 +35,8 @@ import type {
   TaskStatus,
 } from "./ops-types";
 import { ASSEMBLY_STAGES } from "./ops-types";
+import { onBuildStatus } from "./build-sync";
+import { stageForStatus } from "./build-state";
 import type { PaymentMethod } from "./types";
 
 const STORAGE_KEY = "dpc-nexus-ops-v1";
@@ -174,7 +176,8 @@ interface OpsValue extends OpsSnapshot {
   assignBuildStaff: (buildId: string, patch: { technician?: string; qaStaff?: string }) => void;
   /* releases */
   createRelease: (data: Omit<ReleaseRecord, "id" | "status">) => ReleaseRecord;
-  completeRelease: (id: string, receivedBy: string, releasedBy: string) => void;
+  markReleaseReleased: (id: string, releasedBy: string) => void;
+  completeRelease: (id: string, receivedBy: string) => void;
   resetOpsData: () => void;
 }
 
@@ -206,6 +209,20 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
   }, [state]);
 
   const patch = useCallback((fn: (s: OpsSnapshot) => OpsSnapshot) => setState(fn), []);
+
+  useEffect(
+    () =>
+      onBuildStatus((buildId, status) => {
+        patch((s) => ({
+          ...s,
+          buildOps: upsertOps(s.buildOps, buildId, (o) => ({
+            ...o,
+            stage: stageForStatus(status, o.stage),
+          })),
+        }));
+      }),
+    [patch],
+  );
 
   const value: OpsValue = useMemo(() => {
     const find = <T extends { id: string }>(list: T[], id: string) => list.find((x) => x.id === id);
@@ -573,18 +590,22 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
         return rec;
       },
 
-      completeRelease: (id, receivedBy, releasedBy) =>
+      markReleaseReleased: (id, releasedBy) =>
         patch((s) => ({
           ...s,
           releases: s.releases.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  status: "completed",
-                  receivedBy,
-                  releasedBy,
-                  releasedAt: new Date().toISOString(),
-                }
+            r.id === id && r.status === "scheduled"
+              ? { ...r, status: "released", releasedBy, releasedAt: new Date().toISOString() }
+              : r,
+          ),
+        })),
+
+      completeRelease: (id, receivedBy) =>
+        patch((s) => ({
+          ...s,
+          releases: s.releases.map((r) =>
+            r.id === id && r.status === "released"
+              ? { ...r, status: "completed", receivedBy, completedAt: new Date().toISOString() }
               : r,
           ),
         })),

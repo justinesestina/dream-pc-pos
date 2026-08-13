@@ -282,5 +282,6 @@ export interface ReleaseRecord {
   releasedBy?: string | undefined;
   receivedBy?: string | undefined;
   releasedAt?: string | undefined;
+  completedAt?: string | undefined;
   notes?: string | undefined;
 }

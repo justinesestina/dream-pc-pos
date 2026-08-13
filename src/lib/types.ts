@@ -137,6 +137,7 @@ export interface Payment {
   amount: number;
   at: string;
   reference?: string | undefined;
+  tendered?: number | undefined;
   change?: number | undefined;
 }
 
@@ -255,6 +256,7 @@ export interface Build {
   notes?: string | undefined;
   orderId?: string | undefined;
   quoteId?: string | undefined;
+  consultationId?: string | undefined;
   qa: QaCheck[];
   qaResult: "pass" | "fail" | null;
 }

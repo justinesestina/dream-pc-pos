@@ -11,7 +11,7 @@ import { DemoNote } from "@/components/nexus/detail";
 import { DocumentPreview, PrintButton, type DocKind, type DocLine } from "@/components/nexus/document";
 import { useStore } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
-import { dateShort, money, titleCase, VAT_RATE } from "@/lib/format";
+import { dateShort, money, moneyExact, titleCase, VAT_RATE } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/documents")({
   head: () => ({
@@ -75,10 +75,16 @@ function DocumentsPage() {
           ...(o.discount ? [{ label: "Discount", value: -o.discount }] : []),
           ...(o.serviceTotal ? [{ label: "Services", value: o.serviceTotal }] : []),
           { label: `VAT (${Math.round(VAT_RATE * 100)}%)`, value: o.tax },
+          ...(o.payment?.method === "cash" && o.payment.tendered
+            ? [{ label: "Tendered", value: o.payment.tendered }]
+            : []),
+          ...(o.payment?.method === "cash" && o.payment.change
+            ? [{ label: "Change", value: -o.payment.change }]
+            : []),
           { label: "Total", value: o.total, strong: true },
         ],
         footer: o.payment
-          ? `Paid via ${titleCase(o.payment.method)}${o.payment.reference ? ` · ref ${o.payment.reference}` : ""} · cashier ${o.cashier}`
+          ? `Paid via ${titleCase(o.payment.method)}${o.payment.reference ? ` · ref ${o.payment.reference}` : ""}${o.payment.tendered !== undefined ? ` · tendered ${moneyExact(o.payment.tendered)}` : ""}${o.payment.change ? ` · change ${moneyExact(o.payment.change)}` : ""} · cashier ${o.cashier}`
           : `Awaiting payment · prepared by ${o.cashier}`,
         amount: o.total,
       });

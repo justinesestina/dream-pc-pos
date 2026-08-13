@@ -163,7 +163,7 @@ export function CartPanel({
 }: {
   notes: string;
   onNotesChange: (v: string) => void;
-  onCheckout: (method: PaymentMethod, change: number) => void;
+  onCheckout: (method: PaymentMethod, tendered: number, change: number, reference: string) => void;
 }) {
   const store = useStore();
   const [payOpen, setPayOpen] = useState(false);

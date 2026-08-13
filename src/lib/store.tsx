@@ -19,6 +19,7 @@ import {
   type ReactNode,
 } from "react";
 import * as demo from "./demo-data";
+import { emitBuildStatus } from "./build-sync";
 import { VAT_RATE } from "./format";
 import type {
   AppNotification,
@@ -145,7 +146,10 @@ interface StoreValue extends Snapshot {
   setCartCustomer: (id: string | null) => void;
   holdCart: () => void;
   resumeHeldCart: (id: string) => void;
-  completeSale: (method: PaymentMethod, opts?: { notes?: string; change?: number }) => Order;
+  completeSale: (
+    method: PaymentMethod,
+    opts?: { notes?: string; change?: number; tendered?: number; reference?: string },
+  ) => Order;
   /* serials */
   availableSerialsOf: (productId: string) => SerialNumber[];
   setCartLineSerials: (productId: string, serials: string[]) => void;
@@ -177,6 +181,7 @@ interface StoreValue extends Snapshot {
     purpose: string;
     budget: number;
     notes?: string;
+    consultationId?: string;
   }) => Build;
   updateBuild: (buildId: string, patch: Partial<Build>) => void;
   setBuildStatus: (buildId: string, status: BuildStatus) => void;
@@ -399,8 +404,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       completeSale: (method, opts = {}) => {
         const items = state.cart.map(lineFor);
-        const serviceTotal = 0;
-        const t = computeTotals(items, state.cartDiscount, serviceTotal);
+        const serviceTotal = items.reduce(
+          (sum, i) => (productById(i.productId)?.isService ? sum + i.qty * i.unitPrice : sum),
+          0,
+        );
+        const productItems = items.filter((i) => !productById(i.productId)?.isService);
+        const t = computeTotals(productItems, state.cartDiscount, serviceTotal);
         const id = `DPC-${state.counters.order}`;
         const at = new Date().toISOString();
         const customer = customerById(state.cartCustomerId);
@@ -409,6 +418,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           method,
           amount: t.total,
           at,
+          reference: opts.reference,
+          tendered: opts.tendered,
           change: opts.change,
         };
         const soldSerials = new Map<string, { ser: string; until: string }[]>();
@@ -422,6 +433,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             i.serials.map((ser) => ({ ser, until: until.toISOString() })),
           );
         }
+        const newWarranties = items.flatMap((i, lineIdx) => {
+          const p = productById(i.productId);
+          const sold = soldSerials.get(i.productId);
+          if (!p || !sold?.length) return [];
+          const exp = new Date();
+          exp.setMonth(exp.getMonth() + (p.warrantyMonths ?? 0));
+          return sold.map(({ ser }, serialIdx) => ({
+            id: `WR-${id}-${lineIdx}-${serialIdx}`,
+            customerId: state.cartCustomerId ?? "walk-in",
+            customerName: customer?.name ?? "Walk-in Customer",
+            productId: p.id,
+            productName: p.name,
+            serial: ser,
+            orderId: id,
+            purchasedAt: at,
+            expiresAt: exp.toISOString(),
+            status: "active" as const,
+          }));
+        });
         const newOrder: Order = {
           id,
           customerId: state.cartCustomerId,
@@ -480,28 +510,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               warrantyUntil: match.until,
             };
           }),
-          warranties: [
-            ...items
-              .filter((i) => (productById(i.productId)?.warrantyMonths ?? 0) > 0)
-              .map((i) => {
-                const p = productById(i.productId);
-                const exp = new Date();
-                exp.setMonth(exp.getMonth() + (p?.warrantyMonths ?? 0));
-                return {
-                  id: `WR-${Math.floor(Math.random() * 9000 + 21000)}`,
-                  customerId: state.cartCustomerId ?? "walk-in",
-                  customerName: customer?.name ?? "Walk-in Customer",
-                  productId: p?.id ?? i.productId,
-                  productName: p?.name ?? i.name,
-                  serial: soldSerials.get(i.productId)?.[0]?.ser,
-                  orderId: id,
-                  purchasedAt: at,
-                  expiresAt: exp.toISOString(),
-                  status: "active" as const,
-                };
-              }),
-            ...s.warranties,
-          ],
+          warranties: [...newWarranties, ...s.warranties],
           counters: { ...s.counters, order: s.counters.order + 1 },
           cart: [],
           cartDiscount: 0,
@@ -751,10 +760,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           counters: { ...s.counters, order: s.counters.order + 1 },
           auditLogs: log(s, `converted quote ${quoteId} into order ${id}`, id),
         }));
+        if (quote.buildId) emitBuildStatus(quote.buildId, "parts_reserved");
         return newOrder;
       },
 
-      createBuild: ({ customerId, purpose, budget, notes }) => {
+      createBuild: ({ customerId, purpose, budget, notes, consultationId }) => {
         const id = `BUILD-${state.counters.build}`;
         const customer = customerById(customerId);
         const build: Build = {
@@ -773,6 +783,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           technician: state.user?.role === "technician" ? state.user.name : "Unassigned",
           createdAt: new Date().toISOString(),
           notes,
+          consultationId,
           qa: demo.builds[1]?.qa.map((c) => ({ ...c, passed: null })) ?? [],
           qaResult: null,
         };
@@ -838,7 +849,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
         })),
 
-      setBuildStatus: (buildId, status) =>
+      setBuildStatus: (buildId, status) => {
+        emitBuildStatus(buildId, status);
         patch((s) => ({
           ...s,
           builds: s.builds.map((b) => (b.id === buildId ? { ...b, status } : b)),
@@ -852,7 +864,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   kind: "build",
                 })
               : s.notifications,
-        })),
+        }));
+      },
 
       toggleQaCheck: (buildId, label, v) =>
         patch((s) => ({
@@ -864,7 +877,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
         })),
 
-      finalizeQa: (buildId, result) =>
+      finalizeQa: (buildId, result) => {
         patch((s) => ({
           ...s,
           builds: s.builds.map((b) =>
@@ -879,7 +892,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             priority: result === "pass" ? "normal" : "critical",
             kind: "build",
           }),
-        })),
+        }));
+        if (result === "pass") emitBuildStatus(buildId, "ready");
+      },
 
       quoteFromBuild: (buildId) => {
         const build = state.builds.find((b) => b.id === buildId);

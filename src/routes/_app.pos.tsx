@@ -38,11 +38,13 @@ function PosPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const checkout = (method: PaymentMethod, change: number) => {
+  const checkout = (method: PaymentMethod, tendered: number, change: number, reference: string) => {
     const trimmed = notes.trim();
     const order = store.completeSale(method, {
       ...(trimmed ? { notes: trimmed } : {}),
+      tendered,
       ...(change > 0 ? { change } : {}),
+      ...(reference ? { reference } : {}),
     });
     setNotes("");
     toast.success(`Sale ${order.id} completed${change > 0 ? ` · change ${moneyExact(change)}` : ""}`);

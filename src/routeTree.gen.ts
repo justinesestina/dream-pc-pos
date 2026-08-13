@@ -16,7 +16,6 @@ import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppPosRouteImport } from './routes/_app.pos'
-import { Route as AppReleasesRouteImport } from './routes/_app.releases'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppSerialsRouteImport } from './routes/_app.serials'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -40,6 +39,7 @@ import { Route as AppQuotesIndexRouteImport } from './routes/_app.quotes.index'
 import { Route as AppQuotesQuoteIdRouteImport } from './routes/_app.quotes.$quoteId'
 import { Route as AppReceivingIndexRouteImport } from './routes/_app.receiving.index'
 import { Route as AppReceivingReceiptIdRouteImport } from './routes/_app.receiving.$receiptId'
+import { Route as AppReleasesIndexRouteImport } from './routes/_app.releases.index'
 import { Route as AppReleasesReleaseIdRouteImport } from './routes/_app.releases.$releaseId'
 import { Route as AppReturnsIndexRouteImport } from './routes/_app.returns.index'
 import { Route as AppReturnsReturnIdRouteImport } from './routes/_app.returns.$returnId'
@@ -85,11 +85,6 @@ const AppDocumentsRoute = AppDocumentsRouteImport.update({
 const AppPosRoute = AppPosRouteImport.update({
   id: '/pos',
   path: '/pos',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReleasesRoute = AppReleasesRouteImport.update({
-  id: '/releases',
-  path: '/releases',
   getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
@@ -208,10 +203,15 @@ const AppReceivingReceiptIdRoute = AppReceivingReceiptIdRouteImport.update({
   path: '/receiving/$receiptId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReleasesIndexRoute = AppReleasesIndexRouteImport.update({
+  id: '/releases/',
+  path: '/releases/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppReleasesReleaseIdRoute = AppReleasesReleaseIdRouteImport.update({
-  id: '/$releaseId',
-  path: '/$releaseId',
-  getParentRoute: () => AppReleasesRoute,
+  id: '/releases/$releaseId',
+  path: '/releases/$releaseId',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppReturnsIndexRoute = AppReturnsIndexRouteImport.update({
   id: '/returns/',
@@ -277,7 +277,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
-  '/releases': typeof AppReleasesRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
@@ -307,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/purchasing/': typeof AppPurchasingIndexRoute
   '/quotes/': typeof AppQuotesIndexRoute
   '/receiving/': typeof AppReceivingIndexRoute
+  '/releases/': typeof AppReleasesIndexRoute
   '/returns/': typeof AppReturnsIndexRoute
   '/services/': typeof AppServicesIndexRoute
   '/shifts/': typeof AppShiftsIndexRoute
@@ -321,7 +321,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/pos': typeof AppPosRoute
-  '/releases': typeof AppReleasesRouteWithChildren
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
@@ -351,6 +350,7 @@ export interface FileRoutesByTo {
   '/purchasing': typeof AppPurchasingIndexRoute
   '/quotes': typeof AppQuotesIndexRoute
   '/receiving': typeof AppReceivingIndexRoute
+  '/releases': typeof AppReleasesIndexRoute
   '/returns': typeof AppReturnsIndexRoute
   '/services': typeof AppServicesIndexRoute
   '/shifts': typeof AppShiftsIndexRoute
@@ -367,7 +367,6 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/pos': typeof AppPosRoute
-  '/_app/releases': typeof AppReleasesRouteWithChildren
   '/_app/reports': typeof AppReportsRoute
   '/_app/serials': typeof AppSerialsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -397,6 +396,7 @@ export interface FileRoutesById {
   '/_app/purchasing/': typeof AppPurchasingIndexRoute
   '/_app/quotes/': typeof AppQuotesIndexRoute
   '/_app/receiving/': typeof AppReceivingIndexRoute
+  '/_app/releases/': typeof AppReleasesIndexRoute
   '/_app/returns/': typeof AppReturnsIndexRoute
   '/_app/services/': typeof AppServicesIndexRoute
   '/_app/shifts/': typeof AppShiftsIndexRoute
@@ -413,7 +413,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/pos'
-    | '/releases'
     | '/reports'
     | '/serials'
     | '/settings'
@@ -443,6 +442,7 @@ export interface FileRouteTypes {
     | '/purchasing/'
     | '/quotes/'
     | '/receiving/'
+    | '/releases/'
     | '/returns/'
     | '/services/'
     | '/shifts/'
@@ -457,7 +457,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/pos'
-    | '/releases'
     | '/reports'
     | '/serials'
     | '/settings'
@@ -487,6 +486,7 @@ export interface FileRouteTypes {
     | '/purchasing'
     | '/quotes'
     | '/receiving'
+    | '/releases'
     | '/returns'
     | '/services'
     | '/shifts'
@@ -502,7 +502,6 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/pos'
-    | '/_app/releases'
     | '/_app/reports'
     | '/_app/serials'
     | '/_app/settings'
@@ -532,6 +531,7 @@ export interface FileRouteTypes {
     | '/_app/purchasing/'
     | '/_app/quotes/'
     | '/_app/receiving/'
+    | '/_app/releases/'
     | '/_app/returns/'
     | '/_app/services/'
     | '/_app/shifts/'
@@ -594,13 +594,6 @@ declare module '@tanstack/react-router' {
       path: '/pos'
       fullPath: '/pos'
       preLoaderRoute: typeof AppPosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/releases': {
-      id: '/_app/releases'
-      path: '/releases'
-      fullPath: '/releases'
-      preLoaderRoute: typeof AppReleasesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/reports': {
@@ -764,12 +757,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReceivingReceiptIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/releases/': {
+      id: '/_app/releases/'
+      path: '/releases'
+      fullPath: '/releases/'
+      preLoaderRoute: typeof AppReleasesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/releases/$releaseId': {
       id: '/_app/releases/$releaseId'
-      path: '/$releaseId'
+      path: '/releases/$releaseId'
       fullPath: '/releases/$releaseId'
       preLoaderRoute: typeof AppReleasesReleaseIdRouteImport
-      parentRoute: typeof AppReleasesRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/returns/': {
       id: '/_app/returns/'
@@ -851,25 +851,12 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppReleasesRouteChildren {
-  AppReleasesReleaseIdRoute: typeof AppReleasesReleaseIdRoute
-}
-
-const AppReleasesRouteChildren: AppReleasesRouteChildren = {
-  AppReleasesReleaseIdRoute: AppReleasesReleaseIdRoute,
-}
-
-const AppReleasesRouteWithChildren = AppReleasesRoute._addFileChildren(
-  AppReleasesRouteChildren,
-)
-
 interface AppRouteChildren {
   AppAssemblyRoute: typeof AppAssemblyRoute
   AppAuditRoute: typeof AppAuditRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppPosRoute: typeof AppPosRoute
-  AppReleasesRoute: typeof AppReleasesRouteWithChildren
   AppReportsRoute: typeof AppReportsRoute
   AppSerialsRoute: typeof AppSerialsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -884,6 +871,7 @@ interface AppRouteChildren {
   AppPurchasingPoIdRoute: typeof AppPurchasingPoIdRoute
   AppQuotesQuoteIdRoute: typeof AppQuotesQuoteIdRoute
   AppReceivingReceiptIdRoute: typeof AppReceivingReceiptIdRoute
+  AppReleasesReleaseIdRoute: typeof AppReleasesReleaseIdRoute
   AppReturnsReturnIdRoute: typeof AppReturnsReturnIdRoute
   AppServicesTicketIdRoute: typeof AppServicesTicketIdRoute
   AppShiftsShiftIdRoute: typeof AppShiftsShiftIdRoute
@@ -898,6 +886,7 @@ interface AppRouteChildren {
   AppPurchasingIndexRoute: typeof AppPurchasingIndexRoute
   AppQuotesIndexRoute: typeof AppQuotesIndexRoute
   AppReceivingIndexRoute: typeof AppReceivingIndexRoute
+  AppReleasesIndexRoute: typeof AppReleasesIndexRoute
   AppReturnsIndexRoute: typeof AppReturnsIndexRoute
   AppServicesIndexRoute: typeof AppServicesIndexRoute
   AppShiftsIndexRoute: typeof AppShiftsIndexRoute
@@ -912,7 +901,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppPosRoute: AppPosRoute,
-  AppReleasesRoute: AppReleasesRouteWithChildren,
   AppReportsRoute: AppReportsRoute,
   AppSerialsRoute: AppSerialsRoute,
   AppSettingsRoute: AppSettingsRoute,
@@ -927,6 +915,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPurchasingPoIdRoute: AppPurchasingPoIdRoute,
   AppQuotesQuoteIdRoute: AppQuotesQuoteIdRoute,
   AppReceivingReceiptIdRoute: AppReceivingReceiptIdRoute,
+  AppReleasesReleaseIdRoute: AppReleasesReleaseIdRoute,
   AppReturnsReturnIdRoute: AppReturnsReturnIdRoute,
   AppServicesTicketIdRoute: AppServicesTicketIdRoute,
   AppShiftsShiftIdRoute: AppShiftsShiftIdRoute,
@@ -941,6 +930,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPurchasingIndexRoute: AppPurchasingIndexRoute,
   AppQuotesIndexRoute: AppQuotesIndexRoute,
   AppReceivingIndexRoute: AppReceivingIndexRoute,
+  AppReleasesIndexRoute: AppReleasesIndexRoute,
   AppReturnsIndexRoute: AppReturnsIndexRoute,
   AppServicesIndexRoute: AppServicesIndexRoute,
   AppShiftsIndexRoute: AppShiftsIndexRoute,

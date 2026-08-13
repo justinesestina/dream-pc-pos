@@ -641,6 +641,19 @@ function BuildsBuildidPage() {
                   ),
                 },
                 {
+                  label: "Consultation",
+                  value: build.consultationId ? (
+                    <IdLink
+                      to="/consultations/$consultationId"
+                      params={{ consultationId: build.consultationId }}
+                    >
+                      {build.consultationId}
+                    </IdLink>
+                  ) : (
+                    "—"
+                  ),
+                },
+                {
                   label: "Customer",
                   value: build.customerId ? (
                     <IdLink to="/customers/$customerId" params={{ customerId: build.customerId }}>

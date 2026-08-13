@@ -60,6 +60,7 @@ function OrdersOrderidPage() {
   const navigate = useNavigate();
   const order = orders.find((o) => o.id === orderId);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [claimWarrantyId, setClaimWarrantyId] = useState<string | null>(null);
   const [claimReason, setClaimReason] = useState("");
 
   if (!order) {
@@ -83,7 +84,7 @@ function OrdersOrderidPage() {
 
   const customer = customerById(order.customerId);
   const nextOptions = NEXT_STATUS[order.status] ?? [];
-  const orderWarranty = warranties.find((w) => w.orderId === order.id);
+  const orderWarranties = warranties.filter((w) => w.orderId === order.id);
   const isReturnable = order.status !== "pending" && order.status !== "cancelled";
 
   const advance = (status: OrderStatus) => {
@@ -91,11 +92,14 @@ function OrdersOrderidPage() {
     toast.success(`Order ${order.id} set to ${titleCase(status)}`);
   };
 
+  const claimWarranty = claimWarrantyId ? warranties.find((w) => w.id === claimWarrantyId) : undefined;
+
   const fileClaim = () => {
-    if (!orderWarranty || !claimReason.trim()) return;
-    const claim = createClaim(orderWarranty.id, claimReason.trim());
-    toast.success(`Warranty claim ${claim.id} filed.`);
+    if (!claimWarranty || !claimReason.trim()) return;
+    const claim = createClaim(claimWarranty.id, claimReason.trim());
+    toast.success(`Warranty claim ${claim.id} filed for serial ${claimWarranty.serial}.`);
     setClaimReason("");
+    setClaimWarrantyId(null);
     setClaimOpen(false);
   };
 
@@ -167,11 +171,6 @@ function OrdersOrderidPage() {
               </AlertDialog>
             )}
             {isReturnable && <NewReturnDialog order={order} />}
-            {orderWarranty && (
-              <Button size="sm" variant="outline" onClick={() => setClaimOpen(true)}>
-                File warranty claim
-              </Button>
-            )}
           </>
         }
       />
@@ -180,6 +179,11 @@ function OrdersOrderidPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>File a warranty claim</DialogTitle>
+            {claimWarranty && (
+              <p className="mono text-xs text-muted-foreground">
+                {claimWarranty.productName} · serial {claimWarranty.serial}
+              </p>
+            )}
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="claim-reason">Reason</Label>
@@ -297,12 +301,63 @@ function OrdersOrderidPage() {
                   { label: "Method", value: titleCase(order.payment.method) },
                   { label: "Amount", value: moneyExact(order.payment.amount), mono: true },
                   { label: "Reference", value: order.payment.reference ?? "—", mono: true },
+                  {
+                    label: "Tendered",
+                    value: order.payment.tendered !== undefined ? moneyExact(order.payment.tendered) : "—",
+                    mono: true,
+                  },
+                  {
+                    label: "Change",
+                    value: order.payment.change ? moneyExact(order.payment.change) : "—",
+                    mono: true,
+                  },
                   { label: "Paid at", value: dateTime(order.payment.at) },
                 ]}
               />
             ) : (
               <div className="p-4">
                 <EmptyState title="No payment recorded" description="This order has not been paid yet." />
+              </div>
+            )}
+          </Section>
+
+          <Section title="Warranties">
+            {orderWarranties.length > 0 ? (
+              <div className="divide-y divide-border/60">
+                {orderWarranties.map((w) => (
+                  <div key={w.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0">
+                      <Link
+                        to="/warranty/$warrantyId"
+                        params={{ warrantyId: w.id }}
+                        className="mono block text-xs text-foreground underline decoration-border underline-offset-2 hover:text-foreground"
+                      >
+                        {w.serial}
+                      </Link>
+                      <p className="truncate text-[11.5px] text-muted-foreground">
+                        {w.productName} · expires {dateTime(w.expiresAt)}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => {
+                        setClaimWarrantyId(w.id);
+                        setClaimOpen(true);
+                      }}
+                    >
+                      File claim
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4">
+                <EmptyState
+                  title="No warranties"
+                  description="No covered serials were sold with this order."
+                />
               </div>
             )}
           </Section>

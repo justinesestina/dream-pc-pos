@@ -30,15 +30,17 @@ export function PaymentDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   total: number;
-  onConfirm: (method: PaymentMethod, change: number) => void;
+  onConfirm: (method: PaymentMethod, tendered: number, change: number, reference: string) => void;
 }) {
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [tendered, setTendered] = useState("");
+  const [reference, setReference] = useState("");
 
   useEffect(() => {
     if (open) {
       setMethod("cash");
       setTendered("");
+      setReference("");
     }
   }, [open]);
 
@@ -50,6 +52,10 @@ export function PaymentDialog({
   const isCash = method === "cash";
   const change = isCash ? Math.max(0, tenderedNum - total) : 0;
   const sufficient = !isCash || tenderedNum >= total;
+  const refLabel =
+    method === "bank" ? "Transfer reference" : method === "gcash" ? "GCash reference" : "Card reference";
+  const refValid = reference.trim().length > 0;
+  const canCharge = isCash ? sufficient && tenderedNum > 0 : sufficient && refValid;
   const quickTenders = useMemo(() => {
     const roundUp = (to: number) => Math.ceil(total / to) * to;
     const base = new Set<number>();
@@ -144,11 +150,31 @@ export function PaymentDialog({
             )}
           </div>
         ) : (
-          <p className="rounded-md border border-border bg-elevated px-3 py-2.5 text-[12.5px] text-muted-foreground">
-            {method === "card" && "Card payment is approved instantly in this demo."}
-            {method === "gcash" && "A GCash QR prompt would appear here."}
-            {method === "bank" && "Bank transfer is marked paid on confirmation."}
-          </p>
+          <div className="space-y-3">
+            <p className="rounded-md border border-border bg-elevated px-3 py-2.5 text-[12.5px] text-muted-foreground">
+              {method === "card" && "Card payment is approved instantly in this demo."}
+              {method === "gcash" && "A GCash QR prompt would appear here."}
+              {method === "bank" && "Bank transfer is marked paid on confirmation."}
+            </p>
+            <div className="space-y-1.5">
+              <label htmlFor="pos-reference" className="label-tech">
+                {refLabel}
+              </label>
+              <Input
+                id="pos-reference"
+                autoFocus
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder={method === "card" ? "Last 4 digits" : "e.g. GCASH-123456 / BPI-0001"}
+                className="h-10 tabular-nums"
+              />
+              {!refValid && (
+                <p className="text-[11.5px] text-destructive">
+                  A reference is required for {method} payments.
+                </p>
+              )}
+            </div>
+          </div>
         )}
 
         <DialogFooter>
@@ -156,9 +182,9 @@ export function PaymentDialog({
             Cancel
           </Button>
           <Button
-            disabled={!sufficient || (isCash && tenderedNum === 0)}
+            disabled={!canCharge}
             onClick={() => {
-              onConfirm(method, change);
+              onConfirm(method, isCash ? tenderedNum : total, change, isCash ? "" : reference.trim());
               onOpenChange(false);
             }}
           >

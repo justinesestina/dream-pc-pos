@@ -16,7 +16,7 @@ import { completeReleaseSource } from "@/lib/release-complete";
 import { dateShort, titleCase } from "@/lib/format";
 import type { ReleaseRecord } from "@/lib/ops-types";
 
-export const Route = createFileRoute("/_app/releases")({
+export const Route = createFileRoute("/_app/releases/")({
   head: () => ({
     meta: [
       { title: "Delivery & Release — DPC Nexus" },
@@ -43,22 +43,27 @@ const REF_PARAM: Record<ReleaseRecord["kind"], string> = {
 };
 
 function ReleasesPage() {
-  const { releases, actor, completeRelease, setBuildStage } = useOps();
+  const { releases, actor, markReleaseReleased, completeRelease, setBuildStage } = useOps();
   const store = useStore();
   const navigate = useNavigate();
   const [status, setStatus] = useState("all");
 
-  const complete = (r: ReleaseRecord) => {
-    completeRelease(r.id, r.customerName, actor);
-    completeReleaseSource(
-      (id, s) => store.updateOrderStatus(id, s),
-      (id, s) => store.setBuildStatus(id, s),
-      (id, s) => store.setServiceStatus(id, s),
-      r.kind,
-      r.refId,
-    );
-    if (r.kind === "build") setBuildStage(r.refId, "released");
-    toast.success(`${r.id} marked completed.`);
+  const advance = (r: ReleaseRecord) => {
+    if (r.status === "scheduled") {
+      markReleaseReleased(r.id, actor);
+      completeReleaseSource(
+        (id, s) => store.updateOrderStatus(id, s),
+        (id, s) => store.setBuildStatus(id, s),
+        (id, s) => store.setServiceStatus(id, s),
+        r.kind,
+        r.refId,
+      );
+      if (r.kind === "build") setBuildStage(r.refId, "released");
+      toast.success(`${r.id} marked released.`);
+    } else if (r.status === "released") {
+      completeRelease(r.id, r.customerName);
+      toast.success(`${r.id} marked completed.`);
+    }
   };
 
   const stats = useMemo(() => {
@@ -96,19 +101,32 @@ function ReleasesPage() {
       header: "",
       align: "right",
       cell: (r) =>
-        r.status !== "completed" ? (
+        r.status === "scheduled" ? (
           <Button
             size="sm"
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
-              complete(r);
+              advance(r);
+            }}
+          >
+            Mark released
+          </Button>
+        ) : r.status === "released" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              advance(r);
             }}
           >
             Mark completed
           </Button>
         ) : (
-          <span className="mono text-[11px] text-subtle">{r.releasedAt ? dateShort(r.releasedAt) : "—"}</span>
+          <span className="mono text-[11px] text-subtle">
+            {r.completedAt ? dateShort(r.completedAt) : r.releasedAt ? dateShort(r.releasedAt) : "—"}
+          </span>
         ),
     },
   ];
