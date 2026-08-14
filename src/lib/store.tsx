@@ -50,7 +50,15 @@ import type {
 
 const STORAGE_KEY = "dpc-nexus-demo-v1";
 
+/**
+ * Bump when the persisted snapshot shape changes incompatibly so that stale
+ * localStorage from an older app version is discarded and re-seeded instead
+ * of crashing the UI.
+ */
+const SCHEMA_VERSION = 2;
+
 interface Snapshot {
+  schemaVersion: number;
   user: User | null;
   products: Product[];
   inventory: InventoryItem[];
@@ -75,6 +83,7 @@ interface Snapshot {
 
 function seed(): Snapshot {
   return {
+    schemaVersion: SCHEMA_VERSION,
     user: null,
     products: structuredClone(demo.products),
     inventory: structuredClone(demo.inventory),
@@ -232,7 +241,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<Snapshot>;
-        setState((prev) => ({ ...prev, ...parsed }));
+        if (parsed.schemaVersion === SCHEMA_VERSION) {
+          setState((prev) => ({ ...prev, ...parsed }));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
       }
     } catch {
       /* corrupt demo state — fall back to seed */

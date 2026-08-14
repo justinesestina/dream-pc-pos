@@ -334,7 +334,7 @@ function DashboardPage() {
                 <li key={o.id} className="flex items-center gap-3 px-4 py-2.5">
                   <div className="min-w-0 flex-1">
                     <IdLink to="/orders/$orderId" params={{ orderId: o.id }}>{o.id}</IdLink>
-                    <p className="truncate text-[13px]">{o.items[0]?.name ?? "—"}{o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</p>
+                    <p className="truncate text-[13px]">{o.items?.[0]?.name ?? "—"}{o.items && o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</p>
                     <p className="mono mt-0.5 text-[11px] text-subtle">{o.customerName} · {relative(o.createdAt)}</p>
                   </div>
                   <div className="text-right">

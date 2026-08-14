@@ -41,7 +41,15 @@ import type { PaymentMethod } from "./types";
 
 const STORAGE_KEY = "dpc-nexus-ops-v1";
 
+/**
+ * Bump when the persisted snapshot shape changes incompatibly so that stale
+ * localStorage from an older app version is discarded and re-seeded instead
+ * of crashing the UI.
+ */
+const SCHEMA_VERSION = 2;
+
 interface OpsSnapshot {
+  schemaVersion: number;
   suppliers: Supplier[];
   purchaseOrders: PurchaseOrder[];
   receipts: GoodsReceipt[];
@@ -57,6 +65,7 @@ interface OpsSnapshot {
 
 function seed(): OpsSnapshot {
   return {
+    schemaVersion: SCHEMA_VERSION,
     suppliers: structuredClone(seedData.suppliers),
     purchaseOrders: structuredClone(seedData.purchaseOrders),
     receipts: structuredClone(seedData.goodsReceipts),
@@ -191,7 +200,14 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState((prev) => ({ ...prev, ...(JSON.parse(raw) as Partial<OpsSnapshot>) }));
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<OpsSnapshot>;
+        if (parsed.schemaVersion === SCHEMA_VERSION) {
+          setState((prev) => ({ ...prev, ...parsed }));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
     } catch {
       /* corrupt demo state — keep the seed */
     }
