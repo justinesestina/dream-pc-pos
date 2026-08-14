@@ -1,9 +1,9 @@
 /**
  * DPC NEXUS — domain types.
  *
- * These mirror the intended backend schema (see mock-api.ts). All demo data
- * conforms to these types so the data layer can be swapped for a real API
- * without touching UI components.
+ * These mirror the intended Supabase schema in docs/DPC-NEXUS-SUPABASE-DATABASE-ARCHITECTURE.md.
+ * All demo data conforms to these types so the data layer can be swapped for a real API
+ * (via the planned api facade) without touching UI components.
  */
 
 export type Role = "owner" | "admin" | "cashier" | "technician" | "inventory";
