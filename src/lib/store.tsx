@@ -28,6 +28,7 @@ import type {
   BuildSlot,
   BuildStatus,
   CartLine,
+  Category,
   ClaimEvent,
   Customer,
   InventoryItem,
@@ -55,11 +56,12 @@ const STORAGE_KEY = "dpc-nexus-demo-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 interface Snapshot {
   schemaVersion: number;
   user: User | null;
+  categories: Category[];
   products: Product[];
   inventory: InventoryItem[];
   serials: SerialNumber[];
@@ -85,6 +87,7 @@ function seed(): Snapshot {
   return {
     schemaVersion: SCHEMA_VERSION,
     user: null,
+    categories: structuredClone(demo.categories),
     products: structuredClone(demo.products),
     inventory: structuredClone(demo.inventory),
     serials: structuredClone(demo.serials),
@@ -144,6 +147,8 @@ interface StoreValue extends Snapshot {
   invFor: (productId: string) => InventoryItem | undefined;
   availableOf: (productId: string) => number;
   customerById: (id: string | null) => Customer | undefined;
+  categoryById: (id: string) => Category | undefined;
+  categoryNameOf: (categoryId: string) => string;
   /* ui */
   setSidebarCollapsed: (v: boolean) => void;
   /* cart */
@@ -171,9 +176,22 @@ interface StoreValue extends Snapshot {
   ) => void;
   /* entities */
   createCustomer: (data: Omit<Customer, "id" | "since" | "status">) => Customer;
-  createProduct: (data: Omit<Product, "id">) => Product;
-  updateProduct: (productId: string, patch: Partial<Product>) => void;
+  createProduct: (
+    data: Omit<Product, "id">,
+    opts?: { onHand?: number; reorderPoint?: number },
+  ) => { ok: boolean; error?: string; product?: Product };
+  updateProduct: (
+    productId: string,
+    patch: Partial<Product>,
+    opts?: { onHand?: number; reorderPoint?: number },
+  ) => { ok: boolean; error?: string };
+  archiveProduct: (productId: string) => void;
+  reactivateProduct: (productId: string) => void;
   deleteProduct: (productId: string) => void;
+  createCategory: (name: string) => { ok: boolean; error?: string; category?: Category };
+  updateCategory: (categoryId: string, patch: Partial<Pick<Category, "name">>) => { ok: boolean; error?: string };
+  archiveCategory: (categoryId: string) => void;
+  reactivateCategory: (categoryId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   createQuote: (data: {
     customerId: string | null;
@@ -293,6 +311,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [state.customers],
   );
 
+  const categoryById = useCallback(
+    (id: string) => state.categories.find((c) => c.id === id),
+    [state.categories],
+  );
+
+  const categoryNameOf = useCallback(
+    (categoryId: string) => categoryById(categoryId)?.name ?? "Uncategorized",
+    [categoryById],
+  );
+
   const log = (s: Snapshot, action: string, entity: string): AuditLog[] => [
     {
       id: `al-${Math.random().toString(36).slice(2, 9)}`,
@@ -352,11 +380,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       invFor,
       availableOf,
       customerById,
+      categoryById,
+      categoryNameOf,
       setSidebarCollapsed: (v) => patch((s) => ({ ...s, sidebarCollapsed: v })),
 
       addToCart: (productId, qty = 1) => {
         const p = productById(productId);
         if (!p) return { ok: false, error: "Unknown product." };
+        if (p.archived) return { ok: false, error: "This product is archived." };
         const avail = availableOf(productId);
         const existing = state.cart.find((l) => l.productId === productId);
         const nextQty = (existing?.qty ?? 0) + qty;
@@ -596,9 +627,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return customer;
       },
 
-      createProduct: (data) => {
-        const id = `p-${data.sku.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Math.floor(Math.random() * 900 + 100)}`;
-        const product: Product = { ...data, id };
+      createProduct: (data, opts = {}) => {
+        const sku = data.sku.trim().toUpperCase();
+        if (state.products.some((p) => p.sku.toUpperCase() === sku)) {
+          return { ok: false, error: `SKU ${sku} already exists in the catalog.` };
+        }
+        if (!categoryById(data.categoryId)) {
+          return { ok: false, error: "Select a valid category." };
+        }
+        const id = `p-${sku.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Math.floor(Math.random() * 900 + 100)}`;
+        const product: Product = {
+          ...data,
+          id,
+          sku,
+          productType: data.productType ?? (data.isService ? "service" : "product"),
+          archived: false,
+        };
+        const onHand = Math.max(0, Math.floor(opts.onHand ?? 0));
+        const reorderPoint = Math.max(0, Math.floor(opts.reorderPoint ?? 4));
         patch((s) => ({
           ...s,
           products: [product, ...s.products],
@@ -606,18 +652,74 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ? s.inventory
             : [
                 ...s.inventory,
-                { productId: id, onHand: 0, reserved: 0, damaged: 0, sold: 0, reorderPoint: 4 },
+                { productId: id, onHand, reserved: 0, damaged: 0, sold: 0, reorderPoint },
               ],
-          auditLogs: log(s, `created product ${product.name}`, id),
+          auditLogs: log(s, `created product ${product.name} (${sku})`, id),
         }));
-        return product;
+        return { ok: true, product };
       },
 
-      updateProduct: (productId, patchData) =>
+      updateProduct: (productId, patchData, opts = {}) => {
+        const existing = productById(productId);
+        if (!existing) return { ok: false, error: "Product not found." };
+        const sku = (patchData.sku ?? existing.sku).trim().toUpperCase();
+        if (state.products.some((p) => p.id !== productId && p.sku.toUpperCase() === sku)) {
+          return { ok: false, error: `SKU ${sku} already exists in the catalog.` };
+        }
+        const hasStockPatch = opts.onHand !== undefined || opts.reorderPoint !== undefined;
+        const next = { ...patchData, sku } as Partial<Product>;
+        if (next.productType === undefined && next.isService !== undefined) {
+          next.productType = next.isService ? "service" : "product";
+        }
+        patch((s) => {
+          const newMovements =
+            hasStockPatch && opts.onHand !== undefined
+              ? [
+                  ...s.movements,
+                  {
+                    id: `mv-${Math.random().toString(36).slice(2, 9)}`,
+                    productId,
+                    type: "adjusted" as const,
+                    qty: opts.onHand - (invFor(productId)?.onHand ?? 0),
+                    at: new Date().toISOString(),
+                    actor: s.user?.name ?? "Demo User",
+                    note: "Stock level edited in product form",
+                  },
+                ]
+              : s.movements;
+          return {
+            ...s,
+            products: s.products.map((p) => (p.id === productId ? { ...p, ...next } : p)),
+            inventory: hasStockPatch
+              ? s.inventory.map((i) =>
+                  i.productId === productId
+                    ? {
+                        ...i,
+                        onHand: opts.onHand !== undefined ? Math.max(0, Math.floor(opts.onHand)) : i.onHand,
+                        reorderPoint: opts.reorderPoint !== undefined ? Math.max(0, Math.floor(opts.reorderPoint)) : i.reorderPoint,
+                      }
+                    : i,
+                )
+              : s.inventory,
+            movements: newMovements,
+            auditLogs: log(s, `updated product ${productId} (${sku})`, productId),
+          };
+        });
+        return { ok: true };
+      },
+
+      archiveProduct: (productId) =>
         patch((s) => ({
           ...s,
-          products: s.products.map((p) => (p.id === productId ? { ...p, ...patchData } : p)),
-          auditLogs: log(s, `updated product ${productId}`, productId),
+          products: s.products.map((p) => (p.id === productId ? { ...p, archived: true } : p)),
+          auditLogs: log(s, `archived product ${productId}`, productId),
+        })),
+
+      reactivateProduct: (productId) =>
+        patch((s) => ({
+          ...s,
+          products: s.products.map((p) => (p.id === productId ? { ...p, archived: false } : p)),
+          auditLogs: log(s, `reactivated product ${productId}`, productId),
         })),
 
       deleteProduct: (productId) =>
@@ -626,6 +728,56 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           products: s.products.filter((p) => p.id !== productId),
           inventory: s.inventory.filter((i) => i.productId !== productId),
           auditLogs: log(s, `deleted product ${productId}`, productId),
+        })),
+
+      createCategory: (name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return { ok: false, error: "Category name is required." };
+        if (state.categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
+          return { ok: false, error: `Category "${trimmed}" already exists.` };
+        }
+        const category: Category = {
+          id: `cat-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          name: trimmed,
+          archived: false,
+          createdAt: new Date().toISOString(),
+        };
+        patch((s) => ({
+          ...s,
+          categories: [...s.categories, category],
+          auditLogs: log(s, `created category ${category.name}`, category.id),
+        }));
+        return { ok: true, category };
+      },
+
+      updateCategory: (categoryId, patchData) => {
+        const existing = categoryById(categoryId);
+        if (!existing) return { ok: false, error: "Category not found." };
+        const name = (patchData.name ?? existing.name).trim();
+        if (!name) return { ok: false, error: "Category name is required." };
+        if (state.categories.some((c) => c.id !== categoryId && c.name.toLowerCase() === name.toLowerCase())) {
+          return { ok: false, error: `Category "${name}" already exists.` };
+        }
+        patch((s) => ({
+          ...s,
+          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, name } : c)),
+          auditLogs: log(s, `renamed category ${existing.name} to ${name}`, categoryId),
+        }));
+        return { ok: true };
+      },
+
+      archiveCategory: (categoryId) =>
+        patch((s) => ({
+          ...s,
+          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, archived: true } : c)),
+          auditLogs: log(s, `archived category ${categoryId}`, categoryId),
+        })),
+
+      reactivateCategory: (categoryId) =>
+        patch((s) => ({
+          ...s,
+          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, archived: false } : c)),
+          auditLogs: log(s, `reactivated category ${categoryId}`, categoryId),
         })),
 
       updateOrderStatus: (orderId, status) =>
@@ -1169,7 +1321,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetDemoData: () =>
         patch((s) => ({ ...seed(), user: s.user, sidebarCollapsed: s.sidebarCollapsed })),
     };
-  }, [state, hydrated, productById, invFor, availableOf, customerById, patch]);
+  }, [state, hydrated, productById, invFor, availableOf, customerById, categoryById, categoryNameOf, patch]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

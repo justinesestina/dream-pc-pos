@@ -87,7 +87,8 @@ function ReportsPage() {
   const totalRevenue = paidOrders.reduce((s, o) => s + o.total, 0);
 
   const productCost = (id: string) => store.productById(id)?.cost ?? 0;
-  const productCategory = (id: string) => store.productById(id)?.category ?? "Accessories";
+  const productCategory = (id: string) =>
+    store.categoryNameOf(store.productById(id)?.categoryId ?? "");
 
   const revenueByCategory = useMemo(() => {
     const map = new Map<string, number>();

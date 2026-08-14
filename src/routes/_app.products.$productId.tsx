@@ -9,7 +9,7 @@ import { useStore } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { money, num, dateTime, titleCase } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Boxes, Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Boxes, Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/_app/products/$productId")({
   head: () => ({
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_app/products/$productId")({
 function ProductsProductidPage() {
   const { productId } = Route.useParams();
   const navigate = useNavigate();
-  const { productById, invFor, serials, movements, deleteProduct } = useStore();
+  const { productById, invFor, serials, movements, categoryNameOf, archiveProduct, reactivateProduct } = useStore();
   const product = productById(productId);
   const inv = invFor(productId);
   const [editOpen, setEditOpen] = useState(false);
@@ -57,13 +57,25 @@ function ProductsProductidPage() {
 
   const margin = product.price > 0 ? ((product.price - product.cost) / product.price) * 100 : 0;
   const available = Math.max(0, (inv?.onHand ?? 0) - (inv?.reserved ?? 0));
+  const categoryName = categoryNameOf(product.categoryId);
+  const typeLabel =
+    product.productType === "service"
+      ? "Service"
+      : product.productType === "bundle"
+        ? "Bundle / Package"
+        : "Product";
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title={product.name}
-        description={`${product.brand} · ${product.category} · ${product.sku}`}
-        status={<StatusBadge status={product.category} tone="neutral" label={product.category} />}
+        description={`${product.brand} · ${categoryName} · ${product.sku}`}
+        status={
+          <div className="flex items-center gap-2">
+            <StatusBadge status="active" tone="neutral" label={typeLabel} />
+            {product.archived && <StatusBadge status="inactive" label="Archived" />}
+          </div>
+        }
         meta={
           <>
             <Mono>{product.sku}</Mono>
@@ -80,30 +92,42 @@ function ProductsProductidPage() {
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
               <Pencil className="size-3.5" /> Edit
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="gap-1.5 text-destructive hover:text-destructive"
-              onClick={() => {
-                const inv = invFor(product.id);
-                if ((inv?.onHand ?? 0) > 0) {
-                  toast.error("Cannot delete: product still has stock on hand.");
-                  return;
-                }
-                if (window.confirm(`Delete ${product.name} from the catalog?`)) {
-                  deleteProduct(product.id);
-                  toast.success(`${product.name} removed from the catalog.`);
-                  navigate({ to: "/products", search: { openNew: false } });
-                }
-              }}
-            >
-              <Trash2 className="size-3.5" /> Delete
-            </Button>
+            {product.archived ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => {
+                  reactivateProduct(product.id);
+                  toast.success(`${product.name} reactivated.`);
+                }}
+              >
+                <ArchiveRestore className="size-3.5" /> Reactivate
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 text-muted-foreground"
+                onClick={() => {
+                  archiveProduct(product.id);
+                  toast.success(`${product.name} archived.`);
+                }}
+              >
+                <Archive className="size-3.5" /> Archive
+              </Button>
+            )}
           </div>
         }
       />
 
       <ProductFormDialog open={editOpen} onOpenChange={setEditOpen} product={product} />
+
+      {product.description && (
+        <Section title="Description">
+          <p className="px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">{product.description}</p>
+        </Section>
+      )}
 
       <Section title="Overview">
         <KeyValueGrid
@@ -111,7 +135,8 @@ function ProductsProductidPage() {
           items={[
             { label: "SKU", value: <Mono className="text-xs">{product.sku}</Mono> },
             { label: "Brand", value: product.brand },
-            { label: "Category", value: product.category },
+            { label: "Category", value: categoryName },
+            { label: "Type", value: typeLabel },
             { label: "Price", value: money(product.price), mono: true },
             { label: "Cost", value: money(product.cost), mono: true },
             { label: "Margin", value: `${margin.toFixed(1)}%`, mono: true },

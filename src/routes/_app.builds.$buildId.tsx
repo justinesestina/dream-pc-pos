@@ -54,7 +54,7 @@ import { NewReleaseDialog } from "@/components/releases/new-release-dialog";
 import { stageForStatus, statusForStage } from "@/lib/build-state";
 import { money, dateTime, titleCase } from "@/lib/format";
 import { checkCompatibility, type CompatibilityIssue, type IssueSeverity } from "@/lib/compatibility";
-import type { BuildSlot, BuildStatus, ProductCategory } from "@/lib/types";
+import type { BuildSlot, BuildStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/builds/$buildId")({
   head: () => ({
@@ -83,18 +83,18 @@ const BUILD_STATUSES: BuildStatus[] = [
 
 const TECHS = ["Unassigned", "Marco Reyes", "Angelo Cruz", "Bea Santos", "Jun Dela Cruz"];
 
-const SLOT_CATEGORY_MAP: Record<BuildSlot, ProductCategory> = {
-  CPU: "CPU",
-  Motherboard: "Motherboard",
-  RAM: "RAM",
-  GPU: "GPU",
-  Storage: "Storage",
-  PSU: "PSU",
-  Case: "Case",
-  Cooling: "Cooling",
-  Fans: "Fans",
-  Software: "Software",
-  Accessories: "Accessories",
+const SLOT_CATEGORY_MAP: Record<BuildSlot, string> = {
+  CPU: "cpu",
+  Motherboard: "motherboard",
+  RAM: "ram",
+  GPU: "gpu",
+  Storage: "storage",
+  PSU: "psu",
+  Case: "case",
+  Cooling: "cooling",
+  Fans: "fans",
+  Software: "software",
+  Accessories: "accessories",
 };
 
 const ALL_SLOTS: BuildSlot[] = [
@@ -116,15 +116,16 @@ function AddComponentDialog({ buildId }: { buildId: string }) {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [qty, setQty] = useState("1");
 
-  const category = SLOT_CATEGORY_MAP[slot];
+  const categoryKey = SLOT_CATEGORY_MAP[slot];
   const availableProducts = useMemo(
     () =>
       store.products.filter((p) => {
-        if (p.category !== category) return false;
+        if (store.categoryById(p.categoryId)?.key !== categoryKey) return false;
         if (p.isService) return false;
+        if (p.archived) return false;
         return true;
       }),
-    [store.products, category],
+    [store.products, store.categoryById, categoryKey],
   );
 
   const submit = () => {
@@ -230,8 +231,15 @@ function BuildsBuildidPage() {
   const [removing, setRemoving] = useState<string | null>(null);
 
   const issues = useMemo(
-    () => (build ? checkCompatibility(build.components, store.products) : []),
-    [build, store.products],
+    () =>
+      build
+        ? checkCompatibility(
+            build.components,
+            store.products,
+            (pid) => store.categoryById(store.productById(pid)?.categoryId ?? "")?.key,
+          )
+        : [],
+    [build, store.products, store.categoryById, store.productById],
   );
 
   if (!build) {

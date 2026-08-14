@@ -21,19 +21,29 @@ export interface CompatibilityIssue {
 
 type Spec = Product["specs"];
 
-function spec(products: Product[], components: BuildComponent[], category: string): Spec | undefined {
-  const comp = components.find((c) => {
-    const p = products.find((x) => x.id === c.productId);
-    return p?.category === category;
-  });
+/** Resolve the semantic role (category key) for a product id. */
+export type CategoryKeyResolver = (productId: string) => string | undefined;
+
+function spec(
+  products: Product[],
+  components: BuildComponent[],
+  keyOf: CategoryKeyResolver,
+  key: string,
+): Spec | undefined {
+  const comp = components.find((c) => keyOf(c.productId) === key);
   if (!comp) return undefined;
   return products.find((p) => p.id === comp.productId)?.specs;
 }
 
-function allOfCategory(products: Product[], components: BuildComponent[], category: string): Spec[] {
+function allOfCategory(
+  products: Product[],
+  components: BuildComponent[],
+  keyOf: CategoryKeyResolver,
+  key: string,
+): Spec[] {
   return components
     .map((c) => products.find((p) => p.id === c.productId))
-    .filter((p): p is Product => p?.category === category)
+    .filter((p): p is Product => !!p && keyOf(p.id) === key)
     .map((p) => p.specs);
 }
 
@@ -43,15 +53,16 @@ function allOfCategory(products: Product[], components: BuildComponent[], catego
 export function checkCompatibility(
   components: BuildComponent[],
   products: Product[],
+  keyOf: CategoryKeyResolver,
 ): CompatibilityIssue[] {
   const issues: CompatibilityIssue[] = [];
 
-  const cpuSpec = spec(products, components, "CPU");
-  const mbSpec = spec(products, components, "Motherboard");
-  const ramSpecs = allOfCategory(products, components, "RAM");
-  const gpuSpec = spec(products, components, "GPU");
-  const psuSpec = spec(products, components, "PSU");
-  const caseSpec = spec(products, components, "Case");
+  const cpuSpec = spec(products, components, keyOf, "cpu");
+  const mbSpec = spec(products, components, keyOf, "motherboard");
+  const ramSpecs = allOfCategory(products, components, keyOf, "ram");
+  const gpuSpec = spec(products, components, keyOf, "gpu");
+  const psuSpec = spec(products, components, keyOf, "psu");
+  const caseSpec = spec(products, components, keyOf, "case");
 
   // ── CPU ↔ Motherboard socket ──────────────────────────────────────
   if (cpuSpec?.socket && mbSpec?.socket && cpuSpec.socket !== mbSpec.socket) {
@@ -131,19 +142,16 @@ export function checkCompatibility(
   }
 
   // ── Missing essential components ──────────────────────────────────
-  const essentials: { category: string; slot: string; label: string }[] = [
-    { category: "CPU", slot: "CPU", label: "CPU" },
-    { category: "Motherboard", slot: "Motherboard", label: "Motherboard" },
-    { category: "RAM", slot: "RAM", label: "RAM" },
-    { category: "PSU", slot: "PSU", label: "PSU" },
-    { category: "Case", slot: "Case", label: "Case" },
-    { category: "Storage", slot: "Storage", label: "Storage" },
+  const essentials: { key: string; slot: string; label: string }[] = [
+    { key: "cpu", slot: "CPU", label: "CPU" },
+    { key: "motherboard", slot: "Motherboard", label: "Motherboard" },
+    { key: "ram", slot: "RAM", label: "RAM" },
+    { key: "psu", slot: "PSU", label: "PSU" },
+    { key: "case", slot: "Case", label: "Case" },
+    { key: "storage", slot: "Storage", label: "Storage" },
   ];
   for (const e of essentials) {
-    const has = components.some((c) => {
-      const p = products.find((x) => x.id === c.productId);
-      return p?.category === e.category;
-    });
+    const has = components.some((c) => keyOf(c.productId) === e.key);
     if (!has) {
       issues.push({
         severity: "info",

@@ -54,9 +54,10 @@ export function CommandPalette({
     ? store.products
         .filter(
           (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.sku.toLowerCase().includes(q) ||
-            p.category.toLowerCase().includes(q),
+            !p.archived &&
+            (p.name.toLowerCase().includes(q) ||
+              p.sku.toLowerCase().includes(q) ||
+              store.categoryNameOf(p.categoryId).toLowerCase().includes(q)),
         )
         .slice(0, 5)
     : [];

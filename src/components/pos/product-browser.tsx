@@ -9,36 +9,22 @@ import { money } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
-const CATEGORIES = [
-  "CPU",
-  "GPU",
-  "Motherboard",
-  "RAM",
-  "Storage",
-  "PSU",
-  "Case",
-  "Cooling",
-  "Fans",
-  "Monitor",
-  "Keyboard",
-  "Mouse",
-  "Headset",
-  "Networking",
-  "Accessories",
-  "Software",
-  "Services",
-] as const;
-
 export function ProductBrowser({ loading }: { loading: boolean }) {
   const store = useStore();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
 
+  const categories = useMemo(
+    () => store.categories.filter((c) => !c.archived).sort((a, b) => a.name.localeCompare(b.name)),
+    [store.categories],
+  );
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     return store.products.filter((p) => {
-      if (category !== "all" && p.category !== category) return false;
+      if (p.archived) return false;
+      if (category !== "all" && p.categoryId !== category) return false;
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -78,9 +64,9 @@ export function ProductBrowser({ loading }: { loading: boolean }) {
         <CategoryChip active={category === "all"} onClick={() => setCategory("all")}>
           All
         </CategoryChip>
-        {CATEGORIES.map((c) => (
-          <CategoryChip key={c} active={category === c} onClick={() => setCategory(c)}>
-            {c}
+        {categories.map((c) => (
+          <CategoryChip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
+            {c.name}
           </CategoryChip>
         ))}
       </div>
@@ -192,12 +178,13 @@ function ProductCard({ product, onAdd }: { product: Product; onAdd: (p: Product)
 
 function ProductRow({ product, onAdd }: { product: Product; onAdd: (p: Product) => void }) {
   const { avail, isService, out } = useStock(product.id);
+  const store = useStore();
   return (
     <li className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-elevated/60">
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] text-foreground">{product.name}</p>
         <p className="mono text-[10.5px] text-subtle">
-          {product.sku} · {product.brand} · {product.category}
+          {product.sku} · {product.brand} · {store.categoryNameOf(product.categoryId)}
         </p>
       </div>
       <span

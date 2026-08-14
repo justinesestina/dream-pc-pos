@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
 import { StatCard } from "@/components/nexus/stat-card";
-import { Toolbar, SearchInput, Segmented, ResultCount } from "@/components/nexus/toolbar";
+import { Toolbar, SearchInput, FilterSelect, Segmented, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { AdjustStockDialog } from "@/components/inventory/adjust-stock-dialog";
@@ -34,10 +34,11 @@ interface Row extends InventoryItem {
 }
 
 function InventoryPage() {
-  const { inventory, productById } = useStore();
+  const { inventory, productById, categories } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [category, setCategory] = useState("all");
   const [onlyReorder, setOnlyReorder] = useState<"all" | "reorder">("all");
 
   const rows: Row[] = useMemo(
@@ -53,10 +54,11 @@ function InventoryPage() {
         const hay = `${product?.name ?? ""} ${product?.sku ?? ""}`.toLowerCase();
         if (!hay.includes(query)) return false;
       }
+      if (category !== "all" && product?.categoryId !== category) return false;
       if (onlyReorder === "reorder" && r.onHand > r.reorderPoint) return false;
       return true;
     });
-  }, [rows, q, onlyReorder, productById]);
+  }, [rows, q, category, onlyReorder, productById]);
 
   const stats = useMemo(() => {
     let onHand = 0;
@@ -159,6 +161,15 @@ function InventoryPage() {
       <Panel>
         <Toolbar>
           <SearchInput value={q} onChange={setQ} placeholder="Search product or SKU…" />
+          <FilterSelect
+            value={category}
+            onChange={setCategory}
+            options={categories
+              .filter((c) => !c.archived)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((c) => ({ value: c.id, label: c.name }))}
+            label="Category"
+          />
           <Segmented
             value={onlyReorder}
             onChange={setOnlyReorder}

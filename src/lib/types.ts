@@ -18,24 +18,16 @@ export interface User {
   password?: string;
 }
 
-export type ProductCategory =
-  | "CPU"
-  | "GPU"
-  | "Motherboard"
-  | "RAM"
-  | "Storage"
-  | "PSU"
-  | "Case"
-  | "Cooling"
-  | "Fans"
-  | "Monitor"
-  | "Keyboard"
-  | "Mouse"
-  | "Headset"
-  | "Networking"
-  | "Accessories"
-  | "Software"
-  | "Services";
+export type ProductType = "product" | "service" | "bundle";
+
+export interface Category {
+  id: string;
+  name: string;
+  archived: boolean;
+  createdAt: string;
+  /** stable semantic slug used by build-slot logic; survives category renames. */
+  key?: string | undefined;
+}
 
 export interface ProductSpecs {
   socket?: string | undefined;
@@ -51,7 +43,9 @@ export interface Product {
   sku: string;
   name: string;
   brand: string;
-  category: ProductCategory;
+  categoryId: string;
+  productType?: ProductType | undefined;
+  description?: string | undefined;
   price: number;
   cost: number;
   serialTracked: boolean;
@@ -60,6 +54,7 @@ export interface Product {
   supplier: string;
   specs: ProductSpecs;
   isService?: boolean | undefined;
+  archived?: boolean | undefined;
 }
 
 export interface InventoryItem {

@@ -3,14 +3,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
 import { StatCard } from "@/components/nexus/stat-card";
-import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/nexus/toolbar";
+import { Toolbar, SearchInput, FilterSelect, Segmented, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { CategoryFormDialog } from "@/components/products/category-form-dialog";
 import { money, num } from "@/lib/format";
-import type { Product } from "@/lib/types";
+import type { Category, Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
   validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/_app/products/")({
 });
 
 type StockFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
+type Tab = "products" | "categories" | "archived";
+type ArchivedView = "products" | "categories";
 
 function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_stock" | "out_of_stock" {
   if (onHand <= 0) return "out_of_stock";
@@ -34,31 +37,43 @@ function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_st
 }
 
 function ProductsIndexPage() {
-  const { products, invFor } = useStore();
+  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const { openNew } = Route.useSearch();
+  const [tab, setTab] = useState<Tab>("products");
+  const [archivedView, setArchivedView] = useState<ArchivedView>("products");
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
   const [brand, setBrand] = useState("all");
   const [stock, setStock] = useState<StockFilter>("all");
   const [dialog, setDialog] = useState<{ open: boolean; product?: Product }>({ open: false });
+  const [catDialog, setCatDialog] = useState<{ open: boolean; category?: Category }>({ open: false });
 
   useEffect(() => {
     if (openNew) setDialog((d) => ({ ...d, open: true }));
   }, [openNew]);
 
-  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))).sort(), [products]);
-  const brands = useMemo(() => Array.from(new Set(products.map((p) => p.brand))).sort(), [products]);
+  const activeCategories = useMemo(
+    () => categories.filter((c) => !c.archived).sort((a, b) => a.name.localeCompare(b.name)),
+    [categories],
+  );
+  const activeProducts = useMemo(() => products.filter((p) => !p.archived), [products]);
+  const archivedProducts = useMemo(() => products.filter((p) => p.archived), [products]);
+  const archivedCategories = useMemo(() => categories.filter((c) => c.archived), [categories]);
+  const brands = useMemo(
+    () => Array.from(new Set(activeProducts.map((p) => p.brand))).sort(),
+    [activeProducts],
+  );
 
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return products.filter((p) => {
+    return activeProducts.filter((p) => {
       if (query) {
         const hay = `${p.name} ${p.sku} ${p.brand}`.toLowerCase();
         if (!hay.includes(query)) return false;
       }
-      if (category !== "all" && p.category !== category) return false;
+      if (category !== "all" && p.categoryId !== category) return false;
       if (brand !== "all" && p.brand !== brand) return false;
       if (stock !== "all") {
         const inv = invFor(p.id);
@@ -67,13 +82,13 @@ function ProductsIndexPage() {
       }
       return true;
     });
-  }, [products, q, category, brand, stock, invFor]);
+  }, [activeProducts, q, category, brand, stock, invFor]);
 
   const stats = useMemo(() => {
     let value = 0;
     let low = 0;
     let out = 0;
-    for (const p of products) {
+    for (const p of activeProducts) {
       const inv = invFor(p.id);
       if (!inv) continue;
       value += inv.onHand * p.cost;
@@ -81,8 +96,8 @@ function ProductsIndexPage() {
       if (status === "low_stock") low++;
       if (status === "out_of_stock") out++;
     }
-    return { total: products.length, value, low, out };
-  }, [products, invFor]);
+    return { total: activeProducts.length, value, low, out };
+  }, [activeProducts, invFor]);
 
   const columns: Column<Product>[] = [
     {
@@ -106,8 +121,8 @@ function ProductsIndexPage() {
     {
       key: "category",
       header: "Category",
-      cell: (p) => <span className="text-xs text-muted-foreground">{p.category}</span>,
-      sortValue: (p) => p.category,
+      cell: (p) => <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>,
+      sortValue: (p) => categoryNameOf(p.categoryId),
     },
     {
       key: "price",
@@ -171,58 +186,333 @@ function ProductsIndexPage() {
     },
   ];
 
+  const archivedColumns: Column<Product>[] = [
+    {
+      key: "sku",
+      header: "SKU",
+      cell: (p) => <Mono>{p.sku}</Mono>,
+      sortValue: (p) => p.sku,
+    },
+    {
+      key: "name",
+      header: "Name",
+      cell: (p) => (
+        <div className="min-w-0">
+          <p className="truncate text-[13px] text-foreground">{p.name}</p>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{p.brand}</p>
+        </div>
+      ),
+      sortValue: (p) => p.name,
+      className: "min-w-[14rem]",
+    },
+    {
+      key: "category",
+      header: "Category",
+      cell: (p) => <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>,
+      sortValue: (p) => categoryNameOf(p.categoryId),
+    },
+    {
+      key: "price",
+      header: "Price",
+      cell: (p) => <span className="mono tabular-nums">{money(p.price)}</span>,
+      sortValue: (p) => p.price,
+      align: "right",
+    },
+    {
+      key: "actions",
+      header: "",
+      cell: (p) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDialog({ open: true, product: p });
+          }}
+        >
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
+  const categoryCount = (id: string) => products.filter((p) => p.categoryId === id).length;
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Products"
         description="Catalog of components, peripherals and prebuilt systems."
         actions={
-          <Button size="sm" onClick={() => setDialog({ open: true })}>
-            New product
-          </Button>
+          tab === "categories" ? (
+            <Button size="sm" onClick={() => setCatDialog({ open: true })}>
+              New category
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setDialog({ open: true })}>
+              New product
+            </Button>
+          )
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total SKUs" numericValue={stats.total} format={(n) => num(Math.round(n))} accent="info" />
-        <StatCard
-          label="Catalog value (cost)"
-          numericValue={stats.value}
-          format={(n) => money(Math.round(n))}
-          accent="neutral"
-        />
-        <StatCard label="Low stock" numericValue={stats.low} format={(n) => num(Math.round(n))} accent="warning" />
-        <StatCard label="Out of stock" numericValue={stats.out} format={(n) => num(Math.round(n))} accent="danger" />
-      </div>
-
-      <Panel>
-        <Toolbar>
-          <SearchInput value={q} onChange={setQ} placeholder="Search name, SKU or brand…" />
-          <FilterSelect value={category} onChange={setCategory} options={categories} label="Category" />
-          <FilterSelect value={brand} onChange={setBrand} options={brands} label="Brand" />
-          <FilterSelect
-            value={stock}
-            onChange={(v) => setStock(v as StockFilter)}
-            options={["in_stock", "low_stock", "out_of_stock"]}
-            label="Stock"
+      {tab !== "categories" && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Total SKUs" numericValue={stats.total} format={(n) => num(Math.round(n))} accent="info" />
+          <StatCard
+            label="Catalog value (cost)"
+            numericValue={stats.value}
+            format={(n) => money(Math.round(n))}
+            accent="neutral"
           />
-          <ResultCount shown={rows.length} total={products.length} noun="products" />
-        </Toolbar>
-        <DataTable
-          rows={rows.map((p) => ({ ...p }))}
-          columns={columns}
-          loading={loading}
-          onRowClick={(p) => navigate({ to: "/products/$productId", params: { productId: p.id } })}
-          empty={
-            <EmptyState title="No products match your filters" description="Try clearing the search or filters." />
-          }
-        />
-      </Panel>
+          <StatCard label="Low stock" numericValue={stats.low} format={(n) => num(Math.round(n))} accent="warning" />
+          <StatCard label="Out of stock" numericValue={stats.out} format={(n) => num(Math.round(n))} accent="danger" />
+        </div>
+      )}
+
+      <Segmented
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "products", label: "Products" },
+          { value: "categories", label: "Categories" },
+          { value: "archived", label: "Archived" },
+        ]}
+      />
+
+      {tab === "products" && (
+        <Panel>
+          <Toolbar>
+            <SearchInput value={q} onChange={setQ} placeholder="Search name, SKU or brand…" />
+            <FilterSelect
+              value={category}
+              onChange={setCategory}
+              options={activeCategories.map((c) => ({ value: c.id, label: c.name }))}
+              label="Category"
+            />
+            <FilterSelect value={brand} onChange={setBrand} options={brands} label="Brand" />
+            <FilterSelect
+              value={stock}
+              onChange={(v) => setStock(v as StockFilter)}
+              options={["in_stock", "low_stock", "out_of_stock"]}
+              label="Stock"
+            />
+            <ResultCount shown={rows.length} total={activeProducts.length} noun="products" />
+          </Toolbar>
+          <DataTable
+            rows={rows.map((p) => ({ ...p }))}
+            columns={columns}
+            loading={loading}
+            onRowClick={(p) => navigate({ to: "/products/$productId", params: { productId: p.id } })}
+            empty={
+              <EmptyState
+                title="No products match your filters"
+                description="Try clearing the search or filters, or add a new product."
+                action={
+                  <Button size="sm" onClick={() => setDialog({ open: true })}>
+                    Add product
+                  </Button>
+                }
+              />
+            }
+          />
+        </Panel>
+      )}
+
+      {tab === "categories" && (
+        <Panel>
+          <Toolbar>
+            <ResultCount shown={categories.length} total={categories.length} noun="categories" />
+          </Toolbar>
+          {categories.length === 0 ? (
+            <EmptyState
+              title="No categories yet"
+              description="Create a category to start organizing your catalog."
+              action={
+                <Button size="sm" onClick={() => setCatDialog({ open: true })}>
+                  New category
+                </Button>
+              }
+            />
+          ) : (
+            <DataTable<Category>
+              rows={categories.map((c) => ({ ...c }))}
+              loading={loading}
+              columns={[
+                {
+                  key: "name",
+                  header: "Name",
+                  cell: (c) => <span className="text-[13px] text-foreground">{c.name}</span>,
+                  sortValue: (c) => c.name,
+                },
+                {
+                  key: "products",
+                  header: "Products",
+                  cell: (c) => <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>,
+                  sortValue: (c) => categoryCount(c.id),
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  cell: (c) =>
+                    c.archived ? (
+                      <StatusBadge status="inactive" label="Archived" />
+                    ) : (
+                      <StatusBadge status="active" label="Active" />
+                    ),
+                },
+                {
+                  key: "actions",
+                  header: "",
+                  cell: (c) => (
+                    <div className="flex items-center justify-end gap-1">
+                      {c.archived ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reactivateCategory(c.id);
+                          }}
+                        >
+                          Reactivate
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCatDialog({ open: true, category: c });
+                            }}
+                          >
+                            Rename
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              archiveCategory(c.id);
+                            }}
+                          >
+                            Archive
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </Panel>
+      )}
+
+      {tab === "archived" && (
+        <div className="space-y-4">
+          <Segmented
+            value={archivedView}
+            onChange={setArchivedView}
+            options={[
+              { value: "products", label: "Archived products" },
+              { value: "categories", label: "Archived categories" },
+            ]}
+          />
+
+          {archivedView === "products" ? (
+            <Panel>
+              <Toolbar>
+                <ResultCount shown={archivedProducts.length} total={archivedProducts.length} noun="archived products" />
+              </Toolbar>
+              <DataTable
+                rows={archivedProducts.map((p) => ({ ...p }))}
+                columns={[
+                  ...archivedColumns,
+                  {
+                    key: "reactivate",
+                    header: "",
+                    cell: (p) => (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reactivateProduct(p.id);
+                        }}
+                      >
+                        Reactivate
+                      </Button>
+                    ),
+                  },
+                ]}
+                loading={loading}
+                onRowClick={(p) => navigate({ to: "/products/$productId", params: { productId: p.id } })}
+                empty={<EmptyState title="Nothing archived" description="Archived products will appear here." />}
+              />
+            </Panel>
+          ) : (
+            <Panel>
+              <Toolbar>
+                <ResultCount shown={archivedCategories.length} total={archivedCategories.length} noun="archived categories" />
+              </Toolbar>
+              <DataTable<Category>
+                rows={archivedCategories.map((c) => ({ ...c }))}
+                loading={loading}
+                columns={[
+                  {
+                    key: "name",
+                    header: "Name",
+                    cell: (c) => <span className="text-[13px] text-foreground">{c.name}</span>,
+                    sortValue: (c) => c.name,
+                  },
+                  {
+                    key: "products",
+                    header: "Products",
+                    cell: (c) => <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>,
+                    sortValue: (c) => categoryCount(c.id),
+                  },
+                  {
+                    key: "archivedAt",
+                    header: "Status",
+                    cell: () => <StatusBadge status="inactive" label="Archived" />,
+                  },
+                  {
+                    key: "actions",
+                    header: "",
+                    cell: (c) => (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reactivateCategory(c.id);
+                          }}
+                        >
+                          Reactivate
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </Panel>
+          )}
+        </div>
+      )}
 
       <ProductFormDialog
         open={dialog.open}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         product={dialog.product}
+      />
+      <CategoryFormDialog
+        open={catDialog.open}
+        onOpenChange={(v) => setCatDialog((d) => ({ ...d, open: v }))}
+        category={catDialog.category}
       />
     </div>
   );

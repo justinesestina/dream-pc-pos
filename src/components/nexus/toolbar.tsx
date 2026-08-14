@@ -62,6 +62,8 @@ export function SearchInput({
 }
 
 /** Compact select used for status/category filters. `all` is always first. */
+export type FilterOption = string | { value: string; label: string };
+
 export function FilterSelect({
   value,
   onChange,
@@ -72,7 +74,7 @@ export function FilterSelect({
 }: {
   value: string;
   onChange: (v: string) => void;
-  options: string[];
+  options: FilterOption[];
   label: string;
   allLabel?: string;
   className?: string;
@@ -88,11 +90,15 @@ export function FilterSelect({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">{allLabel}</SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o} value={o}>
-            {titleCase(o)}
-          </SelectItem>
-        ))}
+        {options.map((o) => {
+          const val = typeof o === "string" ? o : o.value;
+          const labelText = typeof o === "string" ? titleCase(o) : o.label;
+          return (
+            <SelectItem key={val} value={val}>
+              {labelText}
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );

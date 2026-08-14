@@ -53,7 +53,7 @@ export const Route = createFileRoute("/_app/serials")({
 const STATUSES = ["in_stock", "reserved", "installed", "sold", "rma"];
 
 function SerialsPage() {
-  const { serials, products, productById, customerById, orders, builds, warranties, movements, registerSerials, updateSerial } = useStore();
+  const { serials, products, productById, customerById, orders, builds, warranties, movements, registerSerials, updateSerial, categoryNameOf } = useStore();
   const loading = useSimulatedLoad();
   const { serial: serialParam } = Route.useSearch() as { serial?: string };
   const [q, setQ] = useState(serialParam ?? "");
@@ -94,24 +94,24 @@ function SerialsPage() {
     const set = new Set<string>();
     for (const s of serials) {
       const p = productById(s.productId);
-      if (p) set.add(p.category);
+      if (p) set.add(categoryNameOf(p.categoryId));
     }
     return [...set].sort();
-  }, [serials, productById]);
+  }, [serials, productById, categoryNameOf]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return serials.filter((s) => {
       const p = productById(s.productId);
       if (status !== "all" && s.status !== status) return false;
-      if (category !== "all" && p?.category !== category) return false;
+      if (category !== "all" && p && categoryNameOf(p.categoryId) !== category) return false;
       if (query) {
         const hay = `${s.serial} ${p?.name ?? ""} ${p?.sku ?? ""} ${s.orderId ?? ""} ${s.buildId ?? ""}`.toLowerCase();
         if (!hay.includes(query)) return false;
       }
       return true;
     });
-  }, [serials, productById, q, status, category]);
+  }, [serials, productById, categoryNameOf, q, status, category]);
 
   const stats = useMemo(() => {
     const by = (st: string) => serials.filter((s) => s.status === st).length;
@@ -214,6 +214,7 @@ function SerialsPage() {
             }
             movements={movements.filter((m) => m.productId === selected.productId).slice(0, 6)}
             onUpdate={updateSerial}
+            categoryNameOf={categoryNameOf}
           />
         ) : (
           <Panel className="grid place-items-center p-8">
@@ -283,6 +284,7 @@ function SerialDetail({
   customerName,
   movements,
   onUpdate,
+  categoryNameOf,
 }: {
   unit: SerialNumber;
   product: ReturnType<ReturnType<typeof useStore>["productById"]>;
@@ -292,6 +294,7 @@ function SerialDetail({
   customerName: string | null;
   movements: ReturnType<typeof useStore>["movements"];
   onUpdate: ReturnType<typeof useStore>["updateSerial"];
+  categoryNameOf: ReturnType<typeof useStore>["categoryNameOf"];
 }) {
   const lifecycle: TimelineEvent[] = [
     { label: "Received into stock", at: movements.at(-1)?.at ?? "", state: "done" },
@@ -333,7 +336,7 @@ function SerialDetail({
                 unit.productId
               ),
             },
-            { label: "Category", value: product?.category ?? "—" },
+            { label: "Category", value: product ? categoryNameOf(product.categoryId) : "—" },
             { label: "Customer", value: customerName ?? "Unassigned" },
             {
               label: "Order",
