@@ -1,25 +1,7 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".output/public",
   "env": {
     "NITRO_PRESET": "vercel",
     "NITRO_PRERENDER": "false"
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/.output/server/index.mjs"
-    }
-  ]
+  }
 }
