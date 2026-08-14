@@ -127,21 +127,21 @@ export function ProductFormDialog({
         </DialogHeader>
         <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. RTX 5070 Gaming OC" />
+            <Label htmlFor="pf-name">Name</Label>
+            <Input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. RTX 5070 Gaming OC" />
           </div>
           <div className="space-y-1.5">
-            <Label>SKU</Label>
-            <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="GPU-RTX5070" />
+            <Label htmlFor="pf-sku">SKU</Label>
+            <Input id="pf-sku" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="GPU-RTX5070" />
           </div>
           <div className="space-y-1.5">
-            <Label>Brand</Label>
-            <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gigabyte" />
+            <Label htmlFor="pf-brand">Brand</Label>
+            <Input id="pf-brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gigabyte" />
           </div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label htmlFor="pf-category">Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as ProductCategory)}>
-              <SelectTrigger>
+              <SelectTrigger id="pf-category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -152,24 +152,24 @@ export function ProductFormDialog({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Selling price (₱)</Label>
-            <Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} />
+            <Label htmlFor="pf-price">Selling price (₱)</Label>
+            <Input id="pf-price" type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Cost (₱)</Label>
-            <Input type="number" min={0} value={cost} onChange={(e) => setCost(e.target.value)} />
+            <Label htmlFor="pf-cost">Cost (₱)</Label>
+            <Input id="pf-cost" type="number" min={0} value={cost} onChange={(e) => setCost(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Warranty (months)</Label>
-            <Input type="number" min={0} value={warranty} onChange={(e) => setWarranty(e.target.value)} />
+            <Label htmlFor="pf-warranty">Warranty (months)</Label>
+            <Input id="pf-warranty" type="number" min={0} value={warranty} onChange={(e) => setWarranty(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label>Supplier</Label>
-            <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="e.g. Nexlogic Distribution" />
+            <Label htmlFor="pf-supplier">Supplier</Label>
+            <Input id="pf-supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="e.g. Nexlogic Distribution" />
           </div>
           <div className="space-y-1.5">
-            <Label>Bin location</Label>
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. A1-01" />
+            <Label htmlFor="pf-location">Bin location</Label>
+            <Input id="pf-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. A1-01" />
           </div>
           <div className="flex items-end gap-4 pb-1">
             <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -182,8 +182,8 @@ export function ProductFormDialog({
             </label>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Specifications (key: value, one per line)</Label>
-            <Textarea rows={3} value={specs} onChange={(e) => setSpecs(e.target.value)} placeholder={"socket: AM5\nmemoryType: DDR5\ntdp: 120"} />
+            <Label htmlFor="pf-specs">Specifications (key: value, one per line)</Label>
+            <Textarea id="pf-specs" rows={3} value={specs} onChange={(e) => setSpecs(e.target.value)} placeholder={"socket: AM5\nmemoryType: DDR5\ntdp: 120"} />
           </div>
         </div>
         <DialogFooter>

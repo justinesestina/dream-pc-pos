@@ -184,13 +184,13 @@ function DashboardPage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Reveal>
+        <Reveal className="min-w-0">
           <Panel>
             <SalesChart daily={daily} hourly={hourly} />
           </Panel>
         </Reveal>
 
-        <Reveal delay={0.08}>
+        <Reveal delay={0.08} className="min-w-0">
           <Panel>
             <PanelHeader title="Quick actions" hint="Jump to the most-used workflows" />
             <div className="grid grid-cols-2 gap-2 p-3">
@@ -228,7 +228,7 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Reveal>
+        <Reveal className="min-w-0">
           <Panel>
             <PanelHeader
               title="Inventory alerts"
@@ -276,7 +276,7 @@ function DashboardPage() {
           </Panel>
         </Reveal>
 
-        <Reveal delay={0.08}>
+        <Reveal delay={0.08} className="min-w-0">
           <Panel>
             <PanelHeader title="Build pipeline" hint="Active custom builds by bench phase" action={
               <Button asChild size="sm" variant="ghost" className="h-7 text-xs"><Link to="/builds">All builds</Link></Button>
@@ -324,7 +324,7 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Reveal>
+        <Reveal className="min-w-0">
           <Panel>
             <PanelHeader title="Recent transactions" action={
               <Button asChild size="sm" variant="ghost" className="h-7 text-xs"><Link to="/orders">All orders</Link></Button>
@@ -347,7 +347,7 @@ function DashboardPage() {
           </Panel>
         </Reveal>
 
-        <Reveal delay={0.08}>
+        <Reveal delay={0.08} className="min-w-0">
           <Panel>
             <PanelHeader title="Recent notifications" hint="System activity feed" action={
               <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => store.markAllNotificationsRead()}>

@@ -31,7 +31,7 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const role = store.user?.role ?? "owner";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-3 backdrop-blur-md sm:px-4">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-3 backdrop-blur-md print:hidden sm:px-4">
       <Sheet open={mobileNav} onOpenChange={setMobileNav}>
         <SheetTrigger asChild>
           <Button size="icon" variant="ghost" className="lg:hidden" aria-label="Open navigation">

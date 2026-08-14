@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
 import { Section, KeyValueGrid, DemoNote } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
+import { PrintButton } from "@/components/nexus/document";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ function ReleasesReleaseidPage() {
         title={<Mono className="text-[19px] text-foreground">{release.id}</Mono>}
         status={<StatusBadge status={release.status} />}
         description={`${titleCase(release.kind)} handover for ${release.customerName}`}
+        actions={<PrintButton label="Print handover" />}
       />
 
       <div className="grid gap-5 lg:grid-cols-3">

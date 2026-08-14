@@ -171,9 +171,13 @@ export function CartPanel({
     const p = store.productById(l.productId)!;
     return { ...l, product: p, lineTotal: p.price * l.qty };
   });
+  const productLines = lines.filter((l) => !l.product.isService);
+  const serviceLines = lines.filter((l) => l.product.isService);
+  const serviceTotal = serviceLines.reduce((s, l) => s + l.lineTotal, 0);
   const totals = computeTotals(
-    lines.map((l) => ({ qty: l.qty, unitPrice: l.product.price })),
+    productLines.map((l) => ({ qty: l.qty, unitPrice: l.product.price })),
     store.cartDiscount,
+    serviceTotal,
   );
   const serialIncomplete = lines.some(
     (l) => l.product.serialTracked && (l.serials?.length ?? 0) < l.qty,
@@ -357,7 +361,10 @@ export function CartPanel({
         />
         <TotalsRows
           rows={[
-            { label: "Gross", value: moneyExact(totals.gross) },
+            { label: "Products", value: moneyExact(totals.gross) },
+            ...(serviceTotal > 0
+              ? [{ label: "Service total", value: moneyExact(serviceTotal) }]
+              : []),
             { label: "Discount", value: `− ${moneyExact(totals.discount)}` },
             { label: `VAT-exclusive subtotal`, value: moneyExact(totals.subtotal) },
             { label: `VAT (${Math.round(VAT_RATE * 100)}%)`, value: moneyExact(totals.tax) },

@@ -106,7 +106,7 @@ export function NewReturnDialog({ order }: { order?: Order }) {
         <div className="space-y-3">
           {!order && (
             <div className="space-y-1.5">
-              <Label>Order</Label>
+              <Label htmlFor="rma-order">Order</Label>
               <Select
                 value={orderId}
                 onValueChange={(v) => {
@@ -114,7 +114,7 @@ export function NewReturnDialog({ order }: { order?: Order }) {
                   setProductId("");
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="rma-order" className="w-full">
                   <SelectValue placeholder="Select order" />
                 </SelectTrigger>
                 <SelectContent>
@@ -129,9 +129,9 @@ export function NewReturnDialog({ order }: { order?: Order }) {
           )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Product</Label>
+              <Label htmlFor="rma-product">Product</Label>
               <Select value={productId} onValueChange={setProductId} disabled={!effective}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="rma-product" className="w-full">
                   <SelectValue placeholder="Select item" />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,9 +149,9 @@ export function NewReturnDialog({ order }: { order?: Order }) {
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Condition</Label>
+            <Label htmlFor="rma-condition">Condition</Label>
             <Select value={condition} onValueChange={(v) => setCondition(v as ReturnRequest["condition"])}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="rma-condition" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

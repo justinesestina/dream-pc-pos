@@ -180,9 +180,9 @@ function TaskEditorDialog({
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Assignee</Label>
+              <Label htmlFor="task-assignee">Assignee</Label>
               <Select value={newAssignee} onValueChange={setNewAssignee}>
-                <SelectTrigger>
+                <SelectTrigger id="task-assignee">
                   <SelectValue placeholder="Select staff" />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,9 +195,9 @@ function TaskEditorDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Priority</Label>
+              <Label htmlFor="task-priority">Priority</Label>
               <Select value={newPriority} onValueChange={(v) => setNewPriority(v as TaskPriority)}>
-                <SelectTrigger>
+                <SelectTrigger id="task-priority">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

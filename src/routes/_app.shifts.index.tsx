@@ -89,12 +89,12 @@ function ShiftsIndexPage() {
         <Section title="Open a new shift">
           <div className="flex flex-wrap items-end gap-3 p-4">
             <div className="space-y-1.5">
-              <Label>Cashier</Label>
-              <Input value={cashier} onChange={(e) => setCashier(e.target.value)} className="w-48" />
+              <Label htmlFor="shift-cashier">Cashier</Label>
+              <Input id="shift-cashier" value={cashier} onChange={(e) => setCashier(e.target.value)} className="w-48" />
             </div>
             <div className="space-y-1.5">
-              <Label>Opening cash (PHP)</Label>
-              <Input type="number" value={opening} onChange={(e) => setOpening(e.target.value)} className="w-40" placeholder="5000" />
+              <Label htmlFor="shift-opening">Opening cash (PHP)</Label>
+              <Input id="shift-opening" type="number" value={opening} onChange={(e) => setOpening(e.target.value)} className="w-40" placeholder="5000" />
             </div>
             <Button
               onClick={() => {

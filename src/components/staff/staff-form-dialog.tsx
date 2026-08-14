@@ -86,13 +86,13 @@ export function StaffFormDialog({
         </DialogHeader>
         <div className="grid gap-4">
           <div className="space-y-1.5">
-            <Label>Full name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maria Santos" />
+            <Label htmlFor="staff-name">Full name</Label>
+            <Input id="staff-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maria Santos" />
           </div>
           <div className="space-y-1.5">
-            <Label>Role</Label>
+            <Label htmlFor="staff-role">Role</Label>
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
+              <SelectTrigger id="staff-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -103,12 +103,12 @@ export function StaffFormDialog({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Skills (comma-separated)</Label>
-            <Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Assembly, Diagnostics, POS" />
+            <Label htmlFor="staff-skills">Skills (comma-separated)</Label>
+            <Input id="staff-skills" value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="Assembly, Diagnostics, POS" />
           </div>
           <div className="space-y-1.5">
-            <Label>Shift</Label>
-            <Input value={shift} onChange={(e) => setShift(e.target.value)} placeholder="e.g. Mon–Sat 09:00–18:00" />
+            <Label htmlFor="staff-shift">Shift</Label>
+            <Input id="staff-shift" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="e.g. Mon–Sat 09:00–18:00" />
           </div>
         </div>
         <DialogFooter>

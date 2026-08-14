@@ -187,9 +187,9 @@ function ServicesIndexPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Customer</Label>
+              <Label htmlFor="s-customer">Customer</Label>
               <Select value={form.customerId} onValueChange={(v) => setForm((f) => ({ ...f, customerId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectTrigger id="s-customer"><SelectValue placeholder="Select customer" /></SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>

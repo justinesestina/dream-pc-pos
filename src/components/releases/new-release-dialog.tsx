@@ -113,7 +113,7 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Release type</Label>
+            <Label htmlFor="rel-type">Release type</Label>
             <Select
               value={kind}
               onValueChange={(v) => {
@@ -121,7 +121,7 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
                 setRefId("");
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="rel-type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -134,9 +134,9 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Reference</Label>
+            <Label htmlFor="rel-ref">Reference</Label>
             <Select value={refId} onValueChange={setRefId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="rel-ref" className="w-full">
                 <SelectValue placeholder={options.length === 0 ? "Nothing ready to release" : "Select an item…"} />
               </SelectTrigger>
               <SelectContent>
@@ -159,9 +159,9 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Method</Label>
+              <Label htmlFor="rel-method">Method</Label>
               <Select value={method} onValueChange={(v) => setMethod(v as ReleaseRecord["method"])}>
-                <SelectTrigger>
+                <SelectTrigger id="rel-method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -171,8 +171,8 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Scheduled</Label>
-              <Input type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} />
+              <Label htmlFor="rel-scheduled">Scheduled</Label>
+              <Input id="rel-scheduled" type="datetime-local" value={scheduled} onChange={(e) => setScheduled(e.target.value)} />
             </div>
           </div>
           {selected && (
@@ -181,8 +181,8 @@ export function NewReleaseDialog({ triggerLabel = "Schedule release" }: { trigge
             </p>
           )}
           <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Handover instructions, contact person, courier…" />
+            <Label htmlFor="rel-notes">Notes</Label>
+            <Textarea id="rel-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Handover instructions, contact person, courier…" />
           </div>
         </div>
         <DialogFooter>

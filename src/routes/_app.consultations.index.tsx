@@ -90,8 +90,9 @@ function NewConsultationDialog({ openNew = false }: { openNew?: boolean }) {
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Customer</Label>
+            <Label htmlFor="nc-customer">Customer</Label>
             <select
+              id="nc-customer"
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
@@ -104,12 +105,12 @@ function NewConsultationDialog({ openNew = false }: { openNew?: boolean }) {
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label>Primary use</Label>
-            <Input value={primaryUse} onChange={(e) => setPrimaryUse(e.target.value)} placeholder="e.g. Video editing" />
+            <Label htmlFor="nc-use">Primary use</Label>
+            <Input id="nc-use" value={primaryUse} onChange={(e) => setPrimaryUse(e.target.value)} placeholder="e.g. Video editing" />
           </div>
           <div className="space-y-1.5">
-            <Label>Budget (PHP)</Label>
-            <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="70000" />
+            <Label htmlFor="nc-budget">Budget (PHP)</Label>
+            <Input id="nc-budget" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="70000" />
           </div>
         </div>
         <DialogFooter>

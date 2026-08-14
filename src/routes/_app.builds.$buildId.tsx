@@ -153,9 +153,9 @@ function AddComponentDialog({ buildId }: { buildId: string }) {
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Slot</Label>
+            <Label htmlFor="bc-slot">Slot</Label>
             <Select value={slot} onValueChange={(v) => { setSlot(v as BuildSlot); setSelectedProduct(""); }}>
-              <SelectTrigger>
+              <SelectTrigger id="bc-slot">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -168,9 +168,9 @@ function AddComponentDialog({ buildId }: { buildId: string }) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Product</Label>
+            <Label htmlFor="bc-product">Product</Label>
             <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger>
+              <SelectTrigger id="bc-product">
                 <SelectValue placeholder="Choose a product…" />
               </SelectTrigger>
               <SelectContent>
@@ -196,8 +196,9 @@ function AddComponentDialog({ buildId }: { buildId: string }) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Qty</Label>
+            <Label htmlFor="bc-qty">Qty</Label>
             <Input
+              id="bc-qty"
               type="number"
               min={1}
               value={qty}
@@ -315,7 +316,11 @@ function BuildsBuildidPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleGenerateQuote} disabled={build.components.length === 0}>
+            <Button
+              size="sm"
+              onClick={handleGenerateQuote}
+              disabled={build.components.length === 0 && build.services.length === 0}
+            >
               Generate quote
             </Button>
             {build.status === "ready" && <NewReleaseDialog triggerLabel="Schedule release" />}

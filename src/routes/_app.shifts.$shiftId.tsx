@@ -210,8 +210,9 @@ function ShiftDetailPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {METHODS.map((m) => (
                     <div key={m} className="space-y-1.5">
-                      <Label>{titleCase(m)}</Label>
+                      <Label htmlFor={`tender-${m}`}>{titleCase(m)}</Label>
                       <Input
+                        id={`tender-${m}`}
                         type="number"
                         min={0}
                         value={tenders[m]}
@@ -222,16 +223,16 @@ function ShiftDetailPage() {
                   ))}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Cash refunds issued (PHP)</Label>
-                  <Input type="number" min={0} value={refunds} onChange={(e) => setRefunds(e.target.value)} placeholder="0" />
+                  <Label htmlFor="shift-refunds">Cash refunds issued (PHP)</Label>
+                  <Input id="shift-refunds" type="number" min={0} value={refunds} onChange={(e) => setRefunds(e.target.value)} placeholder="0" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Counted cash (PHP)</Label>
-                  <Input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(expected)} />
+                  <Label htmlFor="shift-counted">Counted cash (PHP)</Label>
+                  <Input id="shift-counted" type="number" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(expected)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Notes</Label>
-                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+                  <Label htmlFor="shift-notes">Notes</Label>
+                  <Textarea id="shift-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
                 </div>
                 <Button
                   className="w-full"

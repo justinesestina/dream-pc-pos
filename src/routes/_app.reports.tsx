@@ -293,7 +293,7 @@ function ReportsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Revenue over time" hint={`Last ${range} days`} />
           <div className="h-[260px] px-2 py-3">
             <ResponsiveContainer width="100%" height="100%">
@@ -311,7 +311,7 @@ function ReportsPage() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Revenue by category" hint={`Last ${range} days`} />
           {revenueByCategory.length === 0 ? (
             <EmptyState title="No sales in range" description="Try a wider date range." />
@@ -347,7 +347,7 @@ function ReportsPage() {
       </Panel>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Sales by payment method" hint={`Last ${range} days`} />
           {byPaymentMethod.length === 0 ? (
             <EmptyState title="No payments in range" />
@@ -361,7 +361,7 @@ function ReportsPage() {
           )}
         </Panel>
 
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Staff / cashier performance" hint={`Last ${range} days`} />
           <DataTable
             rows={byCashier.map((c) => ({ id: c.cashier, ...c }))}
@@ -374,7 +374,7 @@ function ReportsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Inventory valuation" hint="Current stock on hand" />
           <KeyValueGrid
             cols={3}
@@ -405,7 +405,7 @@ function ReportsPage() {
           </div>
         </Panel>
 
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader title="Service & warranty stats" hint={`Last ${range} days`} />
           <KeyValueGrid
             cols={2}
@@ -421,7 +421,8 @@ function ReportsPage() {
           <div className="px-4 pb-4">
             <DemoNote>
               Margin and valuation figures use the product cost field seeded in demo data — connect a real
-              costing/accounting feed to make these authoritative.
+              costing/accounting feed to make these authoritative. CSV/JSON exports are generated entirely
+              in the browser from local demo data; nothing is sent to a server.
             </DemoNote>
           </div>
         </Panel>

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
 import { KeyValueGrid, Section, TotalsRows, DemoNote } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
+import { PrintButton } from "@/components/nexus/document";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,6 +90,7 @@ function ServicesTicketidPage() {
         status={<StatusBadge status={ticket.status} {...(ticket.status === "received" ? { tone: "neutral" as const } : {})} />}
         actions={
           <div className="flex flex-wrap gap-2">
+            <PrintButton label="Print ticket" />
             {nextStatuses.slice(0, 3).map((st) => (
               <Button key={st} size="sm" variant="outline" onClick={() => advance(st)}>
                 Mark {st.replace(/_/g, " ")}

@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useOps } from "@/lib/ops-store";
+import { PrintButton } from "@/components/nexus/document";
 import { money, num, dateShort } from "@/lib/format";
 import type { PurchaseStatus } from "@/lib/ops-types";
 
@@ -81,6 +82,7 @@ function PurchaseOrderDetailPage() {
         status={<StatusBadge status={po.status} />}
         actions={
           <>
+            <PrintButton label="Print PO" />
             {next && (
               <Button size="sm" variant="outline" onClick={() => setPoStatus(po.id, next)}>
                 Mark as {next}

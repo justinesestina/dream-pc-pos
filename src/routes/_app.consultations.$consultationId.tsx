@@ -197,9 +197,15 @@ function ConsultationDetailPage() {
                 </div>
               </div>
               {canConvert ? (
-                <Button size="sm" className="w-full" onClick={convert}>
-                  Convert to build + quote
-                </Button>
+                <>
+                  <Button size="sm" className="w-full" onClick={convert}>
+                    Convert to build + quote
+                  </Button>
+                  <p className="text-xs text-subtle">
+                    The generated draft quote starts with <strong>setup services only</strong> — a default
+                    assembly &amp; configuration bundle. It has no parts yet.
+                  </p>
+                </>
               ) : c.status === "lost" ? (
                 <p className="text-xs text-subtle">This consultation was marked lost and was not converted.</p>
               ) : (
@@ -209,7 +215,9 @@ function ConsultationDetailPage() {
               )}
               <DemoNote>
                 Conversion creates a build from this consultation and generates a draft quote from its
-                components. Add parts on the build page, then regenerate the quote.
+                components. The initial quote is services-only (default assembly &amp; configuration bundle)
+                — add parts on the build page, then <strong>regenerate the quote</strong> so the parts and
+                their totals are included.
               </DemoNote>
             </div>
           </Section>

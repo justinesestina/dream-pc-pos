@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { NewReturnDialog } from "@/components/returns/new-return-dialog";
+import { PrintButton } from "@/components/nexus/document";
 import { useStore } from "@/lib/store";
 import { money, moneyExact, dateTime, titleCase } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
@@ -123,6 +124,7 @@ function OrdersOrderidPage() {
         }
         actions={
           <>
+            <PrintButton label="Print receipt" />
             {nextOptions
               .filter((s) => s !== "cancelled" && s !== "refunded")
               .map((s) => (

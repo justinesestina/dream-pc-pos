@@ -182,7 +182,7 @@ function SerialsPage() {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Panel>
+        <Panel className="min-w-0">
           <Toolbar>
             <SearchInput value={q} onChange={setQ} placeholder="Search serial, product, order…" />
             <FilterSelect value={status} onChange={setStatus} label="Status" options={STATUSES} />
@@ -318,7 +318,7 @@ function SerialDetail({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <Section title={unit.serial} hint={product?.name ?? unit.productId} action={<StatusBadge status={unit.status} />}>
         <KeyValueGrid
           cols={2}

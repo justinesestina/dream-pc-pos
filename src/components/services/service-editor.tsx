@@ -67,9 +67,9 @@ export function AddServicePartDialog({ ticket }: { ticket: ServiceTicket }) {
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Part</Label>
+            <Label htmlFor="svc-part">Part</Label>
             <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="svc-part" className="w-full">
                 <SelectValue placeholder="Select in-stock part" />
               </SelectTrigger>
               <SelectContent>

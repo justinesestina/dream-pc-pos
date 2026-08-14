@@ -262,7 +262,7 @@ function DocumentsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <Panel className="print:hidden">
+        <Panel className="min-w-0 print:hidden">
           <Toolbar>
             <SearchInput value={q} onChange={setQ} placeholder="Search reference, party or type…" />
             <FilterSelect value={kind} onChange={setKind} options={KINDS} label="Type" />
@@ -278,7 +278,7 @@ function DocumentsPage() {
           />
         </Panel>
 
-        <div className="xl:sticky xl:top-4 xl:self-start">
+        <div className="min-w-0 xl:sticky xl:top-4 xl:self-start">
           {active ? (
             <DocumentPreview
               kind={active.kind}

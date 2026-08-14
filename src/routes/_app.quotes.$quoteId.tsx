@@ -202,8 +202,15 @@ function QuotesQuoteidPage() {
       />
 
       <DemoNote>
-        Sending, approval and rejection are simulated status changes — no e-mail or e-signature
-        integration is triggered.
+        {quote.items.length === 0 && quote.serviceTotal > 0 ? (
+          <>
+            This quote currently contains <strong>setup services only</strong> — it has no parts yet. Add
+            components to the linked build, then <strong>Generate quote</strong> there to rebuild this
+            quotation with the parts and their totals included.
+          </>
+        ) : (
+          "Sending, approval and rejection are simulated status changes — no e-mail or e-signature integration is triggered."
+        )}
       </DemoNote>
     </div>
   );

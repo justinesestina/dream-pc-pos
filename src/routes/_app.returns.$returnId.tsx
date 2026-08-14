@@ -318,9 +318,9 @@ function ReturnDetailPage() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label>Resolution</Label>
+                  <Label htmlFor="rma-resolution">Resolution</Label>
                   <Select value={resolution} onValueChange={(v) => setResolution(v as ReturnResolution)} disabled={closed}>
-                    <SelectTrigger>
+                    <SelectTrigger id="rma-resolution">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -347,13 +347,13 @@ function ReturnDetailPage() {
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Refund method</Label>
+                  <Label htmlFor="rma-method">Refund method</Label>
                   <Select
                     value={method}
                     onValueChange={(v) => setMethod(v as PaymentMethod)}
                     disabled={closed || resolution !== "refund"}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="rma-method">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

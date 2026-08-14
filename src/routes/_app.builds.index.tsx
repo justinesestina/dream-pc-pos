@@ -100,9 +100,9 @@ function NewBuildDialog() {
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Customer</Label>
+            <Label htmlFor="nb-customer">Customer</Label>
             <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger>
+              <SelectTrigger id="nb-customer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -116,16 +116,16 @@ function NewBuildDialog() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Purpose</Label>
-            <Input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. 1440p gaming rig" />
+            <Label htmlFor="nb-purpose">Purpose</Label>
+            <Input id="nb-purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. 1440p gaming rig" />
           </div>
           <div className="space-y-1.5">
-            <Label>Budget (PHP)</Label>
-            <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="80000" />
+            <Label htmlFor="nb-budget">Budget (PHP)</Label>
+            <Input id="nb-budget" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="80000" />
           </div>
           <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            <Label htmlFor="nb-notes">Notes</Label>
+            <Textarea id="nb-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </div>
         </div>
         <DialogFooter>

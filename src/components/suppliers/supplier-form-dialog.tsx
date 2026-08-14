@@ -92,40 +92,40 @@ export function SupplierFormDialog({
         </DialogHeader>
         <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nexlogic Distribution" />
+            <Label htmlFor="sf-name">Name</Label>
+            <Input id="sf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nexlogic Distribution" />
           </div>
           <div className="space-y-1.5">
-            <Label>Contact person</Label>
-            <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="e.g. Juan Dela Cruz" />
+            <Label htmlFor="sf-contact">Contact person</Label>
+            <Input id="sf-contact" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="e.g. Juan Dela Cruz" />
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sales@supplier.ph" />
+            <Label htmlFor="sf-email">Email</Label>
+            <Input id="sf-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sales@supplier.ph" />
           </div>
           <div className="space-y-1.5">
-            <Label>Phone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 0917 123 4567" />
+            <Label htmlFor="sf-phone">Phone</Label>
+            <Input id="sf-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 0917 123 4567" />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Address</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. 123 Shaw Blvd, Mandaluyong" />
+            <Label htmlFor="sf-address">Address</Label>
+            <Input id="sf-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. 123 Shaw Blvd, Mandaluyong" />
           </div>
           <div className="space-y-1.5">
-            <Label>Payment terms</Label>
-            <Input value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="e.g. Net 30" />
+            <Label htmlFor="sf-terms">Payment terms</Label>
+            <Input id="sf-terms" value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="e.g. Net 30" />
           </div>
           <div className="space-y-1.5">
-            <Label>Lead time (days)</Label>
-            <Input type="number" min={1} value={leadTimeDays} onChange={(e) => setLeadTimeDays(e.target.value)} />
+            <Label htmlFor="sf-lead">Lead time (days)</Label>
+            <Input id="sf-lead" type="number" min={1} value={leadTimeDays} onChange={(e) => setLeadTimeDays(e.target.value)} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Categories (comma-separated)</Label>
-            <Input value={categories} onChange={(e) => setCategories(e.target.value)} placeholder={KNOWN_CATEGORIES.join(", ")} />
+            <Label htmlFor="sf-categories">Categories (comma-separated)</Label>
+            <Input id="sf-categories" value={categories} onChange={(e) => setCategories(e.target.value)} placeholder={KNOWN_CATEGORIES.join(", ")} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional internal notes…" />
+            <Label htmlFor="sf-notes">Notes</Label>
+            <Textarea id="sf-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional internal notes…" />
           </div>
         </div>
         <DialogFooter>

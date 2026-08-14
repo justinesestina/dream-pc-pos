@@ -121,9 +121,9 @@ export function NewPurchaseOrderDialog() {
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Supplier</Label>
+              <Label htmlFor="po-supplier">Supplier</Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="po-supplier" className="w-full">
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
@@ -148,7 +148,7 @@ export function NewPurchaseOrderDialog() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Lines</Label>
+              <Label htmlFor="po-lines">Lines</Label>
               <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={addLine}>
                 <Plus className="size-3.5" /> Add line
               </Button>

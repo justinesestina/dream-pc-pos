@@ -203,9 +203,9 @@ function CustomersIndexPage() {
               </div>
             </div>
             <div>
-              <Label>Type</Label>
+              <Label htmlFor="c-type">Type</Label>
               <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as Customer["type"] }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="c-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="business">Business</SelectItem>
