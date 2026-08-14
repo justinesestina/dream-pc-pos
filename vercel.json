@@ -3,5 +3,11 @@
   "env": {
     "NITRO_PRESET": "vercel",
     "NITRO_PRERENDER": "false"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }
