@@ -15,7 +15,6 @@ import {
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DreamLogo } from "@/components/brand/nexus-logo";
 import { PageHeader } from "@/components/nexus/page-header";
 import { StatCard } from "@/components/nexus/stat-card";
 import { Panel, PanelHeader, EmptyState, CardsSkeleton, RowsSkeleton, IdLink } from "@/components/nexus/primitives";
@@ -131,51 +130,21 @@ function DashboardPage() {
           <div className="pointer-events-none absolute inset-0 grid-backdrop opacity-50" />
           <div className="pointer-events-none absolute inset-0 ambient-glow" />
           <div className="relative p-4 sm:p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-8">
-              {/* Brand emblem */}
-              <div className="flex shrink-0 items-center gap-3.5">
-                <div className="relative">
-                  <div
-                    className="pointer-events-none absolute -inset-1.5 rounded-2xl bg-info/15 blur-xl"
-                    aria-hidden="true"
-                  />
-                  <div className="relative flex size-16 items-center justify-center rounded-xl border border-border-strong bg-elevated shadow-[0_0_0_1px_oklch(0.76_0.11_210/0.12)]">
-                    <DreamLogo className="size-10" />
-                  </div>
-                  <span className="status-dot absolute -top-0.5 -right-0.5 size-2 rounded-full" />
-                </div>
-                <div className="leading-none">
-                  <p className="mono text-[10px] tracking-[0.18em] uppercase text-subtle">
-                    Dream PC Build
-                  </p>
-                  <p className="mt-1 text-[17px] font-semibold tracking-tight text-foreground">
-                    DPC <span className="text-info">NEXUS</span>
-                  </p>
-                  <p className="mono mt-1 text-[9.5px] tracking-[0.14em] uppercase text-subtle">
-                    PC Retail · IT Solutions
-                  </p>
-                </div>
-              </div>
-
-              {/* Greeting + actions */}
-              <div className="min-w-0 flex-1">
-                <PageHeader
-                  title={`${greeting()}, ${store.user?.name.split(" ")[0] ?? "there"}`}
-                  description={new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                  meta={
-                    <>
-                      <span className="label-tech">SYNC <span className="text-muted-foreground">Local demo</span></span>
-                      <span className="label-tech">DATA <span className="text-warning">DEMO</span></span>
-                    </>
-                  }
-                  actions={
-                    <Button asChild>
-                      <Link to="/pos"><Plus className="size-4" /> New Sale</Link>
-                    </Button>
-                  }
-                />
-              </div>
-            </div>
+            <PageHeader
+              title={`${greeting()}, ${store.user?.name.split(" ")[0] ?? "there"}`}
+              description={new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              meta={
+                <>
+                  <span className="label-tech">SYNC <span className="text-muted-foreground">Local demo</span></span>
+                  <span className="label-tech">DATA <span className="text-warning">DEMO</span></span>
+                </>
+              }
+              actions={
+                <Button asChild>
+                  <Link to="/pos"><Plus className="size-4" /> New Sale</Link>
+                </Button>
+              }
+            />
 
             <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2.5 border-t border-border pt-4">
               <span className="mono inline-flex items-center gap-2 text-[11px] tracking-wide uppercase">
