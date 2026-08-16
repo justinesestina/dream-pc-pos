@@ -242,7 +242,7 @@ export function CartPanel({
         <CustomerSelect />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto" data-lenis-prevent>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {lines.length === 0 ? (
           <EmptyState
             icon={ShoppingCart}

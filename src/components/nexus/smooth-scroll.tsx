@@ -23,6 +23,7 @@ export function SmoothScroll() {
       autoRaf: false,
       lerp: 0.11,
       smoothWheel: true,
+      allowNestedScroll: true,
     });
 
     lenis.on("scroll", ScrollTrigger.update);
