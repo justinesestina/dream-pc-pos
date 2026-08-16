@@ -35,6 +35,11 @@ export function Reveal({
 
   useGSAP(
     () => {
+      // ScrollTrigger must be registered before any tween that uses
+      // `scrollTrigger`. lib/motion.ts also registers it, but the client
+      // tree-shaker can drop that module's side effects in production, so we
+      // register here too (idempotent).
+      gsap.registerPlugin(ScrollTrigger);
       const el = ref.current;
       if (!el || reducedMotion()) return;
       const targets: gsap.TweenTarget[] =
@@ -69,6 +74,7 @@ export function ScrollProgress({ className }: { className?: string }) {
 
   useGSAP(
     () => {
+      gsap.registerPlugin(ScrollTrigger);
       const el = ref.current;
       if (!el || reducedMotion()) return;
       gsap.set(el, { scaleX: 0, transformOrigin: "left center" });

@@ -13,13 +13,6 @@ export default defineConfig({
     server: { entry: "server" },
   },
   nitro: {
-    preset: process.env.NITRO_PRESET || "vercel",
-    prerender: {
-      crawlLinks: false,
-      routes: [],
-    },
-    routeRules: {
-      "/**": { cache: false },
-    },
+    preset: process.env["NITRO_PRESET"] || "vercel",
   },
 });
