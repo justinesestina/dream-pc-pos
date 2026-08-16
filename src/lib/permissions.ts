@@ -25,9 +25,6 @@ export type Capability =
   | "receiving"
   | "returns"
   | "shifts"
-  | "consultations"
-  | "tasks"
-  | "staff"
   | "audit"
   | "releases"
   | "documents";
@@ -53,9 +50,6 @@ const matrix: Record<Role, Capability[]> = {
     "receiving",
     "returns",
     "shifts",
-    "consultations",
-    "tasks",
-    "staff",
     "audit",
     "releases",
     "documents",
@@ -80,9 +74,6 @@ const matrix: Record<Role, Capability[]> = {
     "receiving",
     "returns",
     "shifts",
-    "consultations",
-    "tasks",
-    "staff",
     "releases",
     "documents",
   ],
@@ -94,24 +85,8 @@ const matrix: Record<Role, Capability[]> = {
     "products",
     "returns",
     "shifts",
-    "consultations",
-    "tasks",
     "documents",
     "releases",
-  ],
-  technician: [
-    "builds",
-    "builds.qa",
-    "assembly",
-    "services",
-    "products",
-    "inventory",
-    "warranty",
-    "orders",
-    "tasks",
-    "staff",
-    "releases",
-    "consultations",
   ],
   inventory: [
     "products",
@@ -121,7 +96,6 @@ const matrix: Record<Role, Capability[]> = {
     "purchasing",
     "receiving",
     "returns",
-    "tasks",
     "documents",
   ],
 };
@@ -147,7 +121,6 @@ const PATH_CAPS: Array<[RegExp, Capability]> = [
   [/^\/pos/, "pos"],
   [/^\/orders/, "orders"],
   [/^\/quotes/, "quotes"],
-  [/^\/consultations/, "consultations"],
   [/^\/returns/, "returns"],
   [/^\/shifts/, "shifts"],
   [/^\/products/, "products"],
@@ -162,8 +135,6 @@ const PATH_CAPS: Array<[RegExp, Capability]> = [
   [/^\/services/, "services"],
   [/^\/warranty/, "warranty"],
   [/^\/releases/, "releases"],
-  [/^\/tasks/, "tasks"],
-  [/^\/staff/, "staff"],
   [/^\/documents/, "documents"],
   [/^\/reports/, "reports"],
   [/^\/settings/, "settings"],
@@ -182,6 +153,5 @@ export const roleLabels: Record<Role, string> = {
   owner: "Owner",
   admin: "Admin",
   cashier: "Cashier",
-  technician: "Technician",
   inventory: "Inventory Staff",
 };

@@ -14,8 +14,6 @@ import {
   RotateCcw,
   Banknote,
   Truck,
-  UserCog,
-  MessagesSquare,
   FileStack,
   PackagePlus,
   Building2,
@@ -50,7 +48,6 @@ export const navGroups: NavGroup[] = [
       { label: "Point of Sale", to: "/pos", icon: ShoppingCart, cap: "pos" },
       { label: "Orders", to: "/orders", icon: Receipt, cap: "orders" },
       { label: "Quotes", to: "/quotes", icon: FileText, cap: "quotes" },
-      { label: "Consultations", to: "/consultations", icon: MessagesSquare, cap: "consultations" },
       { label: "Returns", to: "/returns", icon: RotateCcw, cap: "returns" },
       { label: "Cash Drawer", to: "/shifts", icon: Banknote, cap: "shifts" },
     ],
@@ -79,11 +76,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Operations",
-    items: [
-      { label: "Tasks", to: "/tasks", icon: ClipboardList, cap: "tasks" },
-      { label: "Staff", to: "/staff", icon: UserCog, cap: "staff" },
-      { label: "Documents", to: "/documents", icon: FileStack, cap: "documents" },
-    ],
+    items: [{ label: "Documents", to: "/documents", icon: FileStack, cap: "documents" }],
   },
   {
     label: "Analytics",

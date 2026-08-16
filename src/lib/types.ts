@@ -6,7 +6,7 @@
  * (via the planned api facade) without touching UI components.
  */
 
-export type Role = "owner" | "admin" | "cashier" | "technician" | "inventory";
+export type Role = "owner" | "admin" | "cashier" | "inventory";
 
 export interface User {
   id: string;
@@ -197,7 +197,6 @@ export interface Quote {
 
 export type BuildStatus =
   | "draft"
-  | "consultation"
   | "quoted"
   | "approved"
   | "parts_reserved"
@@ -251,7 +250,6 @@ export interface Build {
   notes?: string | undefined;
   orderId?: string | undefined;
   quoteId?: string | undefined;
-  consultationId?: string | undefined;
   qa: QaCheck[];
   qaResult: "pass" | "fail" | null;
 }

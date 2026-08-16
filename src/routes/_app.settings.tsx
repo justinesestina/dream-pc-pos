@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
 });
 
-const ALL_ROLES: Role[] = ["owner", "admin", "cashier", "technician", "inventory"];
+const ALL_ROLES: Role[] = ["owner", "admin", "cashier", "inventory"];
 const ALL_CAPS: Capability[] = [
   "pos",
   "orders",
@@ -60,6 +60,7 @@ const ALL_CAPS: Capability[] = [
   "inventory.adjust",
   "builds",
   "builds.qa",
+  "assembly",
   "services",
   "warranty",
   "reports",
@@ -69,9 +70,6 @@ const ALL_CAPS: Capability[] = [
   "receiving",
   "returns",
   "shifts",
-  "consultations",
-  "tasks",
-  "staff",
   "audit",
   "releases",
   "documents",
@@ -458,12 +456,9 @@ function SystemSection({
   const orders = store.orders.length;
   const builds = store.builds.length;
   const tickets = store.services.length;
-  const staff = ops.staff.length;
   const suppliers = ops.suppliers.length;
   const releases = ops.releases.length;
-  const consultations = ops.consultations.length;
   const shifts = ops.shifts.length;
-  const tasks = ops.tasks.length;
 
   return (
     <>
@@ -478,11 +473,8 @@ function SystemSection({
               { label: "Orders", value: orders, mono: true },
               { label: "Builds", value: builds, mono: true },
               { label: "Service tickets", value: tickets, mono: true },
-              { label: "Staff", value: staff, mono: true },
               { label: "Suppliers", value: suppliers, mono: true },
-              { label: "Consultations", value: consultations, mono: true },
               { label: "Shifts", value: shifts, mono: true },
-              { label: "Tasks", value: tasks, mono: true },
               { label: "Releases", value: releases, mono: true },
               { label: "Notifications", value: store.notifications.length, mono: true },
             ]}
@@ -510,7 +502,7 @@ function SystemSection({
         <div className="flex items-center justify-between gap-3 p-4">
           <p className="max-w-md text-xs text-muted-foreground">
             Restores every module — orders, inventory, builds, services, purchasing, shifts, returns,
-            consultations and tasks — to the original seeded demo dataset. Your signed-in session is
+            releases and assembly state — to the original seeded demo dataset. Your signed-in session is
             preserved.
           </p>
           <AlertDialog>
@@ -524,7 +516,7 @@ function SystemSection({
                 <AlertDialogTitle>Reset all demo data?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This clears every change made in this demo session — orders, inventory adjustments,
-                  builds, service tickets, purchasing, shifts, returns, consultations and tasks — and
+                  builds, service tickets, purchasing, shifts, returns, releases and assembly state — and
                   reseeds the original dataset. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>

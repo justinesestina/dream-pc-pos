@@ -20,9 +20,9 @@ export const Route = createFileRoute("/_app/reports")({
   head: () => ({
     meta: [
       { title: "Reports — DPC Nexus" },
-      { name: "description", content: "Sales, margin, inventory turnover and technician output." },
+      { name: "description", content: "Sales, margin, inventory valuation and cashier performance." },
       { property: "og:title", content: "Reports — DPC Nexus" },
-      { property: "og:description", content: "Sales, margin, inventory turnover and technician output." },
+      { property: "og:description", content: "Sales, margin, inventory valuation and cashier performance." },
     ],
   }),
   component: ReportsPage,
@@ -250,7 +250,7 @@ function ReportsPage() {
   ];
 
   const cashierColumns: Column<{ id: string; cashier: string; orders: number; revenue: number }>[] = [
-    { key: "cashier", header: "Staff", cell: (r) => <span className="text-[13px] text-foreground">{r.cashier}</span> },
+    { key: "cashier", header: "Cashier", cell: (r) => <span className="text-[13px] text-foreground">{r.cashier}</span> },
     { key: "orders", header: "Orders", align: "right", cell: (r) => num(r.orders), sortValue: (r) => r.orders },
     { key: "revenue", header: "Revenue", align: "right", cell: (r) => money(r.revenue), sortValue: (r) => r.revenue },
     { key: "avg", header: "Avg. ticket", align: "right", cell: (r) => money(r.orders ? r.revenue / r.orders : 0), sortValue: (r) => (r.orders ? r.revenue / r.orders : 0) },
@@ -363,7 +363,7 @@ function ReportsPage() {
         </Panel>
 
         <Panel className="min-w-0">
-          <PanelHeader title="Staff / cashier performance" hint={`Last ${range} days`} />
+          <PanelHeader title="Cashier performance" hint={`Last ${range} days`} />
           <DataTable
             rows={byCashier.map((c) => ({ id: c.cashier, ...c }))}
             columns={cashierColumns}

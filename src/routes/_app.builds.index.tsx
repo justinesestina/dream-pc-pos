@@ -37,9 +37,9 @@ export const Route = createFileRoute("/_app/builds/")({
   head: () => ({
     meta: [
       { title: "Custom Builds — DPC Nexus" },
-      { name: "description", content: "Build pipeline from consultation through QA to release." },
+      { name: "description", content: "Build pipeline from quote through QA to release." },
       { property: "og:title", content: "Custom Builds — DPC Nexus" },
-      { property: "og:description", content: "Build pipeline from consultation through QA to release." },
+      { property: "og:description", content: "Build pipeline from quote through QA to release." },
     ],
   }),
   component: BuildsIndexPage,
@@ -47,7 +47,6 @@ export const Route = createFileRoute("/_app/builds/")({
 
 const STAGE_GROUPS: { status: BuildStatus; label: string }[] = [
   { status: "draft", label: "Draft" },
-  { status: "consultation", label: "Consultation" },
   { status: "quoted", label: "Quoted" },
   { status: "approved", label: "Approved" },
   { status: "parts_reserved", label: "Parts Reserved" },
@@ -208,7 +207,7 @@ function BuildsIndexPage() {
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Custom Builds"
-        description="Build pipeline from consultation through QA to release."
+        description="Build pipeline from quote through QA to release."
         actions={<NewBuildDialog />}
       />
 

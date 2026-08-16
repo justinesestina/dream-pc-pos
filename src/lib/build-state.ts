@@ -3,14 +3,13 @@ import type { BuildStatus } from "./types";
 
 /**
  * Bidirectional map between the build "status" (sales-facing, main store)
- * and the assembly "stage" (technician-facing, ops store). These two views
+ * and the assembly "stage" (workshop-facing, ops store). These two views
  * live in separate demo stores, so every change on one side must be
  * mirrored onto the other to keep boards and status badges consistent.
  *
  * DEMO ONLY — a real backend would expose a single state machine.
  */
 export const STAGE_TO_STATUS: Record<AssemblyStageId, BuildStatus> = {
-  consultation: "consultation",
   quote: "quoted",
   approved: "approved",
   parts_reserved: "parts_reserved",
@@ -27,7 +26,6 @@ export const STAGE_TO_STATUS: Record<AssemblyStageId, BuildStatus> = {
 };
 
 export const STATUS_TO_STAGE: Partial<Record<BuildStatus, AssemblyStageId>> = {
-  consultation: "consultation",
   quoted: "quote",
   approved: "approved",
   parts_reserved: "parts_reserved",

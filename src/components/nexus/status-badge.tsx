@@ -31,7 +31,6 @@ const map: Record<string, Tone> = {
   expired: "neutral",
   converted: "active",
   // builds
-  consultation: "neutral",
   quoted: "info",
   parts_reserved: "info",
   released: "active",
@@ -61,12 +60,6 @@ const map: Record<string, Tone> = {
   requested: "warning",
   inspection: "info",
   replaced: "info",
-  // consultations
-  new: "neutral",
-  requirements: "info",
-  recommended: "warning",
-  won: "success",
-  lost: "neutral",
   // purchasing
   submitted: "info",
   confirmed: "info",
@@ -77,15 +70,6 @@ const map: Record<string, Tone> = {
   discrepancy: "danger",
   // releases
   scheduled: "info",
-  // staff
-  available: "success",
-  busy: "warning",
-  off: "neutral",
-  inactive: "neutral",
-  // tasks
-  todo: "neutral",
-  blocked: "danger",
-  done: "success",
 };
 
 export function StatusBadge({

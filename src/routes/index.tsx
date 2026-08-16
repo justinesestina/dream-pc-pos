@@ -49,14 +49,12 @@ const ROLE_ICONS: Record<Role, LucideIcon> = {
   admin: ShieldCheck,
   cashier: CreditCard,
   inventory: Boxes,
-  technician: ShieldCheck,
 };
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   owner: "Full access · store & system",
-  admin: "Manage staff & operations",
+  admin: "Workshop, approvals & operations",
   cashier: "Point-of-sale & orders",
-  technician: "Assembly, QA & services",
   inventory: "Stock, purchasing & receiving",
 };
 

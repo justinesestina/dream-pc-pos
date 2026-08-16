@@ -92,9 +92,6 @@ export function CommandPalette({
           <CommandItem onSelect={() => go("/quotes")}>
             <FileText /> New Quote
           </CommandItem>
-          <CommandItem onSelect={() => go("/consultations?new=1")}>
-            <Cpu /> New Custom Build Consultation
-          </CommandItem>
           <CommandItem onSelect={() => go("/customers?new=1")}>
             <UserPlus /> New Customer
           </CommandItem>

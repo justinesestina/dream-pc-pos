@@ -208,7 +208,6 @@ interface StoreValue extends Snapshot {
     purpose: string;
     budget: number;
     notes?: string;
-    consultationId?: string;
   }) => Build;
   updateBuild: (buildId: string, patch: Partial<Build>) => void;
   setBuildStatus: (buildId: string, status: BuildStatus) => void;
@@ -929,7 +928,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return newOrder;
       },
 
-      createBuild: ({ customerId, purpose, budget, notes, consultationId }) => {
+      createBuild: ({ customerId, purpose, budget, notes }) => {
         const id = `BUILD-${state.counters.build}`;
         const customer = customerById(customerId);
         const build: Build = {
@@ -945,10 +944,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             { label: "Windows installation", amount: 1000 },
             { label: "Cable management", amount: 500 },
           ],
-          technician: state.user?.role === "technician" ? state.user.name : "Unassigned",
+          technician: state.user?.name ?? "Unassigned",
           createdAt: new Date().toISOString(),
           notes,
-          consultationId,
           qa: demo.builds[1]?.qa.map((c) => ({ ...c, passed: null })) ?? [],
           qaResult: null,
         };
@@ -1117,7 +1115,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           device,
           issue,
           status: "received",
-          technician: state.user?.role === "technician" ? state.user.name : "Unassigned",
+          technician: state.user?.name ?? "Unassigned",
           parts: [],
           labor,
           estimatedCost,

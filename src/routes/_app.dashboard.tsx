@@ -71,7 +71,7 @@ function Telemetry({ label, children }: { label: string; children: React.ReactNo
 }
 
 const PIPELINE_PHASES = [
-  { id: "sales", label: "Consult" },
+  { id: "sales", label: "Quote" },
   { id: "assembly", label: "Bench" },
   { id: "validation", label: "Test" },
   { id: "handover", label: "Release" },
@@ -106,11 +106,6 @@ function DashboardPage() {
       revenue: bucketOrders.reduce((s, o) => s + o.total, 0),
       orders: bucketOrders.length,
     };
-  });
-
-  const tasksToday = ops.tasks.filter((t) => {
-    const due = new Date(t.dueAt).toDateString();
-    return due === today && t.status !== "done";
   });
 
   const stageOf = (buildId: string) => ops.opsForBuild(buildId).stage;
@@ -208,16 +203,18 @@ function DashboardPage() {
               </Button>
             </div>
             <div className="border-t border-border px-4 py-3">
-              <p className="label-tech mb-2">Open tasks due today</p>
-              {tasksToday.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No tasks due today.</p>
+              <p className="label-tech mb-2">Builds on the bench</p>
+              {benchBuilds.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No builds in assembly or testing right now.</p>
               ) : (
                 <ul className="space-y-2">
-                  {tasksToday.slice(0, 5).map((t) => (
-                    <li key={t.id} className="flex items-center gap-2 text-[12.5px]">
+                  {benchBuilds.map((x) => (
+                    <li key={x.b.id} className="flex items-center gap-2 text-[12.5px]">
                       <span className="size-1.5 shrink-0 rounded-full bg-warning" />
-                      <span className="min-w-0 flex-1 truncate">{t.title}</span>
-                      <span className="mono shrink-0 text-[10.5px] text-subtle">{t.assignee}</span>
+                      <IdLink to="/builds/$buildId" params={{ buildId: x.b.id }} className="min-w-0 flex-1 truncate">
+                        {x.b.id} · {x.b.customerName}
+                      </IdLink>
+                      <span className="mono shrink-0 text-[10.5px] text-subtle">{x.stage?.label}</span>
                     </li>
                   ))}
                 </ul>

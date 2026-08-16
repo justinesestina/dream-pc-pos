@@ -28,15 +28,15 @@ export const Route = createFileRoute("/_app/assembly")({
   head: () => ({
     meta: [
       { title: "Assembly Workspace — DPC Nexus" },
-      { name: "description", content: "Technician kanban board for custom build assembly, testing and QA." },
-      { property: "og:title", content: "Assembly Workspace — DPC Nexus" },
-      { property: "og:description", content: "Technician kanban board for custom build assembly, testing and QA." },
+      { name: "description", content: "Workshop kanban board for custom build assembly, testing and QA." },
+      { property: "og:title", content: "Assembly & QA — DPC Nexus" },
+      { property: "og:description", content: "Workshop kanban board for custom build assembly, testing and QA." },
     ],
   }),
   component: AssemblyWorkspacePage,
 });
 
-const TECHS = ["Unassigned", "Marco Reyes", "Angelo Cruz", "Bea Santos", "Jun Dela Cruz", "Ken Villareal"];
+const TECHS = ["Unassigned", "Justine Ramos", "Mika Santos", "Paolo Cruz", "Dana Lim"];
 
 interface KanbanColumn {
   id: string;
@@ -267,7 +267,6 @@ function AssemblyWorkspacePage() {
     return store.builds.filter(
       (b) =>
         b.status !== "draft" &&
-        b.status !== "consultation" &&
         b.status !== "quoted" &&
         b.status !== "released",
     );
@@ -313,7 +312,7 @@ function AssemblyWorkspacePage() {
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Assembly Workspace"
-        description="Kanban board for build assembly, testing and QA — designed for technicians."
+        description="Kanban board for build assembly, testing and QA — designed for the workshop team."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -1,9 +1,9 @@
 /**
  * DPC NEXUS — operations domain types (Phase 2).
  *
- * Purchasing, receiving, returns, cashier shifts, consultations, tasks and
- * staff assignment. These live alongside src/lib/types.ts and reference the
- * same entity ids (products, customers, orders, builds, services).
+ * Purchasing, receiving, returns, cashier shifts and build assembly/QA/release
+ * state. These live alongside src/lib/types.ts and reference the same entity
+ * ids (products, customers, orders, builds, services).
  *
  * DEMO ONLY — no backend, no real money movement, no real authorization.
  */
@@ -146,70 +146,9 @@ export interface Shift {
   notes?: string | undefined;
 }
 
-/* ---------------------------------------------------------- consultations */
-
-export type ConsultationStatus =
-  | "new"
-  | "requirements"
-  | "recommended"
-  | "quoted"
-  | "won"
-  | "lost";
-
-export interface Consultation {
-  id: string;
-  customerId: string;
-  customerName: string;
-  status: ConsultationStatus;
-  primaryUse: string;
-  budget: number;
-  targetResolution: string;
-  workloads: string[];
-  preferences: string[];
-  existingHardware: string[];
-  upgradeOnly: boolean;
-  consultant: string;
-  createdAt: string;
-  recommendedBuildId?: string | undefined;
-  quoteId?: string | undefined;
-  notes?: string | undefined;
-}
-
-/* ----------------------------------------------------------------- tasks */
-
-export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
-export type TaskPriority = "low" | "normal" | "high" | "urgent";
-export type TaskLinkKind = "build" | "service" | "order" | "receiving" | "qa" | "customer";
-
-export interface OpsTask {
-  id: string;
-  title: string;
-  detail?: string | undefined;
-  assignee: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  dueAt: string;
-  createdAt: string;
-  link?: { kind: TaskLinkKind; id: string } | undefined;
-}
-
-/* ----------------------------------------------------------------- staff */
-
-export interface StaffMember {
-  id: string;
-  name: string;
-  initials: string;
-  role: string;
-  skills: string[];
-  shift: string;
-  status: "available" | "busy" | "off";
-  completed: number;
-}
-
 /* ---------------------------------------------------- assembly / QA / release */
 
 export type AssemblyStageId =
-  | "consultation"
   | "quote"
   | "approved"
   | "parts_reserved"
@@ -231,7 +170,6 @@ export interface AssemblyStage {
 }
 
 export const ASSEMBLY_STAGES: AssemblyStage[] = [
-  { id: "consultation", label: "Consultation", group: "sales" },
   { id: "quote", label: "Quote", group: "sales" },
   { id: "approved", label: "Approved", group: "sales" },
   { id: "parts_reserved", label: "Parts reserved", group: "sales" },

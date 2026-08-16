@@ -70,7 +70,6 @@ export const Route = createFileRoute("/_app/builds/$buildId")({
 
 const BUILD_STATUSES: BuildStatus[] = [
   "draft",
-  "consultation",
   "quoted",
   "approved",
   "parts_reserved",
@@ -81,7 +80,7 @@ const BUILD_STATUSES: BuildStatus[] = [
   "cancelled",
 ];
 
-const TECHS = ["Unassigned", "Marco Reyes", "Angelo Cruz", "Bea Santos", "Jun Dela Cruz"];
+const TECHS = ["Unassigned", "Justine Ramos", "Mika Santos", "Paolo Cruz", "Dana Lim"];
 
 const SLOT_CATEGORY_MAP: Record<BuildSlot, string> = {
   CPU: "cpu",
@@ -648,19 +647,6 @@ function BuildsBuildidPage() {
                   value: build.orderId ? (
                     <IdLink to="/orders/$orderId" params={{ orderId: build.orderId }}>
                       {build.orderId}
-                    </IdLink>
-                  ) : (
-                    "—"
-                  ),
-                },
-                {
-                  label: "Consultation",
-                  value: build.consultationId ? (
-                    <IdLink
-                      to="/consultations/$consultationId"
-                      params={{ consultationId: build.consultationId }}
-                    >
-                      {build.consultationId}
                     </IdLink>
                   ) : (
                     "—"

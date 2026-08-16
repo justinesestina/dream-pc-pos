@@ -1,8 +1,8 @@
-/**
+﻿/**
  * DPC NEXUS — operations state container (Phase 2).
  *
  * Sits beside StoreProvider and owns purchasing, receiving, returns, cashier
- * shifts, consultations, tasks, staff and build assembly/QA/release state.
+ * shifts and build assembly/QA/release state.
  * Persisted to localStorage; swap the action bodies for API calls when a
  * backend lands. DEMO ONLY.
  */
@@ -21,18 +21,14 @@ import type {
   AssemblyStageId,
   BuildOps,
   CashAdjustment,
-  Consultation,
   GoodsReceipt,
-  OpsTask,
   PurchaseOrder,
   PurchaseStatus,
   ReleaseRecord,
   ReturnRequest,
   ReturnStatus,
   Shift,
-  StaffMember,
   Supplier,
-  TaskStatus,
 } from "./ops-types";
 import { ASSEMBLY_STAGES } from "./ops-types";
 import { onBuildStatus } from "./build-sync";
@@ -46,7 +42,7 @@ const STORAGE_KEY = "dpc-nexus-ops-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 interface OpsSnapshot {
   schemaVersion: number;
@@ -55,12 +51,9 @@ interface OpsSnapshot {
   receipts: GoodsReceipt[];
   returns: ReturnRequest[];
   shifts: Shift[];
-  consultations: Consultation[];
-  tasks: OpsTask[];
-  staff: StaffMember[];
   buildOps: BuildOps[];
   releases: ReleaseRecord[];
-  counters: { po: number; gr: number; rma: number; shift: number; task: number; cons: number; rel: number };
+  counters: { po: number; gr: number; rma: number; shift: number; rel: number };
 }
 
 function seed(): OpsSnapshot {
@@ -71,12 +64,9 @@ function seed(): OpsSnapshot {
     receipts: structuredClone(seedData.goodsReceipts),
     returns: structuredClone(seedData.returnRequests),
     shifts: structuredClone(seedData.shifts),
-    consultations: structuredClone(seedData.consultations),
-    tasks: structuredClone(seedData.tasks),
-    staff: structuredClone(seedData.staff),
     buildOps: structuredClone(seedData.buildOps),
     releases: structuredClone(seedData.releases),
-    counters: { po: 147, gr: 320, rma: 216, shift: 483, task: 10487, cons: 10487, rel: 313 },
+    counters: { po: 147, gr: 320, rma: 216, shift: 483, rel: 313 },
   };
 }
 
@@ -85,7 +75,7 @@ const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 9)}`;
 export function defaultBuildOps(buildId: string): BuildOps {
   return {
     buildId,
-    stage: "consultation",
+    stage: "quote",
     assembly: [
       "CPU installed",
       "Cooler mounted",
@@ -118,7 +108,6 @@ interface OpsValue extends OpsSnapshot {
   poById: (id: string) => PurchaseOrder | undefined;
   receiptById: (id: string) => GoodsReceipt | undefined;
   returnById: (id: string) => ReturnRequest | undefined;
-  consultationById: (id: string) => Consultation | undefined;
   opsForBuild: (buildId: string) => BuildOps;
   openShift: Shift | undefined;
   /* purchasing */
@@ -158,20 +147,6 @@ interface OpsValue extends OpsSnapshot {
     refunds: number,
     notes?: string,
   ) => void;
-  /* consultations */
-  createConsultation: (
-    data: Omit<Consultation, "id" | "createdAt" | "status"> & { status?: Consultation["status"] },
-  ) => Consultation;
-  updateConsultation: (id: string, patch: Partial<Consultation>) => void;
-  /* tasks */
-  createTask: (data: Omit<OpsTask, "id" | "createdAt" | "status"> & { status?: TaskStatus }) => OpsTask;
-  setTaskStatus: (id: string, status: TaskStatus) => void;
-  assignTask: (id: string, assignee: string) => void;
-  updateTask: (id: string, patch: Partial<Omit<OpsTask, "id" | "createdAt">>) => void;
-  deleteTask: (id: string) => void;
-  /* staff */
-  createStaff: (data: Omit<StaffMember, "id" | "status" | "completed">) => StaffMember;
-  updateStaff: (id: string, patch: Partial<StaffMember>) => void;
   /* build ops */
   setBuildStage: (buildId: string, stage: AssemblyStageId) => void;
   toggleAssemblyStep: (buildId: string, label: string, done: boolean) => void;
@@ -252,7 +227,6 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
       poById: (id) => find(state.purchaseOrders, id),
       receiptById: (id) => find(state.receipts, id),
       returnById: (id) => find(state.returns, id),
-      consultationById: (id) => find(state.consultations, id),
       opsForBuild: (buildId) =>
         state.buildOps.find((b) => b.buildId === buildId) ?? defaultBuildOps(buildId),
       openShift: state.shifts.find((s) => s.status === "open"),
@@ -490,70 +464,6 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
               : sh,
           ),
         })),
-
-      createConsultation: (data) => {
-        const id = `CONS-${state.counters.cons}`;
-        const c: Consultation = {
-          status: "new",
-          ...data,
-          id,
-          createdAt: new Date().toISOString(),
-        };
-        patch((s) => ({
-          ...s,
-          consultations: [c, ...s.consultations],
-          counters: { ...s.counters, cons: s.counters.cons + 1 },
-        }));
-        return c;
-      },
-
-      updateConsultation: (id, p) =>
-        patch((s) => ({
-          ...s,
-          consultations: s.consultations.map((c) => (c.id === id ? { ...c, ...p } : c)),
-        })),
-
-      createTask: (data) => {
-        const id = `TASK-${state.counters.task}`;
-        const t: OpsTask = {
-          status: "todo",
-          ...data,
-          id,
-          createdAt: new Date().toISOString(),
-        };
-        patch((s) => ({
-          ...s,
-          tasks: [t, ...s.tasks],
-          counters: { ...s.counters, task: s.counters.task + 1 },
-        }));
-        return t;
-      },
-
-      setTaskStatus: (id, status) =>
-        patch((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
-
-      assignTask: (id, assignee) =>
-        patch((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, assignee } : t)) })),
-
-      updateTask: (id, p) =>
-        patch((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...p } : t)) })),
-
-      deleteTask: (id) =>
-        patch((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) })),
-
-      createStaff: (data) => {
-        const staff: StaffMember = {
-          ...data,
-          id: `st-${Math.random().toString(36).slice(2, 9)}`,
-          status: "available",
-          completed: 0,
-        };
-        patch((s) => ({ ...s, staff: [staff, ...s.staff] }));
-        return staff;
-      },
-
-      updateStaff: (id, p) =>
-        patch((s) => ({ ...s, staff: s.staff.map((m) => (m.id === id ? { ...m, ...p } : m)) })),
 
       setBuildStage: (buildId, stage) =>
         patch((s) => ({ ...s, buildOps: upsertOps(s.buildOps, buildId, (o) => ({ ...o, stage })) })),

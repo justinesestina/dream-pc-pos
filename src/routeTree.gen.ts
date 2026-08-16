@@ -19,12 +19,8 @@ import { Route as AppPosRouteImport } from './routes/_app.pos'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppSerialsRouteImport } from './routes/_app.serials'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppStaffRouteImport } from './routes/_app.staff'
-import { Route as AppTasksRouteImport } from './routes/_app.tasks'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
 import { Route as AppBuildsBuildIdRouteImport } from './routes/_app.builds.$buildId'
-import { Route as AppConsultationsIndexRouteImport } from './routes/_app.consultations.index'
-import { Route as AppConsultationsConsultationIdRouteImport } from './routes/_app.consultations.$consultationId'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
 import { Route as AppCustomersCustomerIdRouteImport } from './routes/_app.customers.$customerId'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app.inventory.index'
@@ -102,16 +98,6 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
-const AppStaffRoute = AppStaffRouteImport.update({
-  id: '/staff',
-  path: '/staff',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTasksRoute = AppTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppBuildsIndexRoute = AppBuildsIndexRouteImport.update({
   id: '/builds/',
   path: '/builds/',
@@ -122,17 +108,6 @@ const AppBuildsBuildIdRoute = AppBuildsBuildIdRouteImport.update({
   path: '/builds/$buildId',
   getParentRoute: () => AppRoute,
 } as any)
-const AppConsultationsIndexRoute = AppConsultationsIndexRouteImport.update({
-  id: '/consultations/',
-  path: '/consultations/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppConsultationsConsultationIdRoute =
-  AppConsultationsConsultationIdRouteImport.update({
-    id: '/consultations/$consultationId',
-    path: '/consultations/$consultationId',
-    getParentRoute: () => AppRoute,
-  } as any)
 const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
   id: '/customers/',
   path: '/customers/',
@@ -280,10 +255,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
-  '/staff': typeof AppStaffRoute
-  '/tasks': typeof AppTasksRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
-  '/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
@@ -298,7 +270,6 @@ export interface FileRoutesByFullPath {
   '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/builds/': typeof AppBuildsIndexRoute
-  '/consultations/': typeof AppConsultationsIndexRoute
   '/customers/': typeof AppCustomersIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
@@ -324,10 +295,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
-  '/staff': typeof AppStaffRoute
-  '/tasks': typeof AppTasksRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
-  '/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
@@ -342,7 +310,6 @@ export interface FileRoutesByTo {
   '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/builds': typeof AppBuildsIndexRoute
-  '/consultations': typeof AppConsultationsIndexRoute
   '/customers': typeof AppCustomersIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
   '/orders': typeof AppOrdersIndexRoute
@@ -370,10 +337,7 @@ export interface FileRoutesById {
   '/_app/reports': typeof AppReportsRoute
   '/_app/serials': typeof AppSerialsRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_app/staff': typeof AppStaffRoute
-  '/_app/tasks': typeof AppTasksRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
-  '/_app/consultations/$consultationId': typeof AppConsultationsConsultationIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
@@ -388,7 +352,6 @@ export interface FileRoutesById {
   '/_app/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/_app/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/_app/builds/': typeof AppBuildsIndexRoute
-  '/_app/consultations/': typeof AppConsultationsIndexRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
@@ -416,10 +379,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/serials'
     | '/settings'
-    | '/staff'
-    | '/tasks'
     | '/builds/$buildId'
-    | '/consultations/$consultationId'
     | '/customers/$customerId'
     | '/inventory/$productId'
     | '/orders/$orderId'
@@ -434,7 +394,6 @@ export interface FileRouteTypes {
     | '/suppliers/$supplierId'
     | '/warranty/$warrantyId'
     | '/builds/'
-    | '/consultations/'
     | '/customers/'
     | '/inventory/'
     | '/orders/'
@@ -460,10 +419,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/serials'
     | '/settings'
-    | '/staff'
-    | '/tasks'
     | '/builds/$buildId'
-    | '/consultations/$consultationId'
     | '/customers/$customerId'
     | '/inventory/$productId'
     | '/orders/$orderId'
@@ -478,7 +434,6 @@ export interface FileRouteTypes {
     | '/suppliers/$supplierId'
     | '/warranty/$warrantyId'
     | '/builds'
-    | '/consultations'
     | '/customers'
     | '/inventory'
     | '/orders'
@@ -505,10 +460,7 @@ export interface FileRouteTypes {
     | '/_app/reports'
     | '/_app/serials'
     | '/_app/settings'
-    | '/_app/staff'
-    | '/_app/tasks'
     | '/_app/builds/$buildId'
-    | '/_app/consultations/$consultationId'
     | '/_app/customers/$customerId'
     | '/_app/inventory/$productId'
     | '/_app/orders/$orderId'
@@ -523,7 +475,6 @@ export interface FileRouteTypes {
     | '/_app/suppliers/$supplierId'
     | '/_app/warranty/$warrantyId'
     | '/_app/builds/'
-    | '/_app/consultations/'
     | '/_app/customers/'
     | '/_app/inventory/'
     | '/_app/orders/'
@@ -617,20 +568,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/staff': {
-      id: '/_app/staff'
-      path: '/staff'
-      fullPath: '/staff'
-      preLoaderRoute: typeof AppStaffRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/tasks': {
-      id: '/_app/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AppTasksRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/builds/': {
       id: '/_app/builds/'
       path: '/builds'
@@ -643,20 +580,6 @@ declare module '@tanstack/react-router' {
       path: '/builds/$buildId'
       fullPath: '/builds/$buildId'
       preLoaderRoute: typeof AppBuildsBuildIdRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/consultations/': {
-      id: '/_app/consultations/'
-      path: '/consultations'
-      fullPath: '/consultations/'
-      preLoaderRoute: typeof AppConsultationsIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/consultations/$consultationId': {
-      id: '/_app/consultations/$consultationId'
-      path: '/consultations/$consultationId'
-      fullPath: '/consultations/$consultationId'
-      preLoaderRoute: typeof AppConsultationsConsultationIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/customers/': {
@@ -860,10 +783,7 @@ interface AppRouteChildren {
   AppReportsRoute: typeof AppReportsRoute
   AppSerialsRoute: typeof AppSerialsRoute
   AppSettingsRoute: typeof AppSettingsRoute
-  AppStaffRoute: typeof AppStaffRoute
-  AppTasksRoute: typeof AppTasksRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
-  AppConsultationsConsultationIdRoute: typeof AppConsultationsConsultationIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
@@ -878,7 +798,6 @@ interface AppRouteChildren {
   AppSuppliersSupplierIdRoute: typeof AppSuppliersSupplierIdRoute
   AppWarrantyWarrantyIdRoute: typeof AppWarrantyWarrantyIdRoute
   AppBuildsIndexRoute: typeof AppBuildsIndexRoute
-  AppConsultationsIndexRoute: typeof AppConsultationsIndexRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
@@ -904,10 +823,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReportsRoute: AppReportsRoute,
   AppSerialsRoute: AppSerialsRoute,
   AppSettingsRoute: AppSettingsRoute,
-  AppStaffRoute: AppStaffRoute,
-  AppTasksRoute: AppTasksRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
-  AppConsultationsConsultationIdRoute: AppConsultationsConsultationIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppInventoryProductIdRoute: AppInventoryProductIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
@@ -922,7 +838,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppSuppliersSupplierIdRoute: AppSuppliersSupplierIdRoute,
   AppWarrantyWarrantyIdRoute: AppWarrantyWarrantyIdRoute,
   AppBuildsIndexRoute: AppBuildsIndexRoute,
-  AppConsultationsIndexRoute: AppConsultationsIndexRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
