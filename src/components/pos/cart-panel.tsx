@@ -106,7 +106,10 @@ function SerialPicker({
           {available.length === 0 ? (
             <EmptyState title="No serials in register" description="Type the serial numbers manually to register them on checkout." />
           ) : (
-            <ul className="max-h-48 divide-y divide-border overflow-y-auto rounded border border-border">
+            <ul
+              className="max-h-48 divide-y divide-border overflow-y-auto rounded border border-border"
+              data-lenis-prevent
+            >
               {available.map((sn) => (
                 <li key={sn.id}>
                   <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 hover:bg-elevated">
@@ -239,7 +242,7 @@ export function CartPanel({
         <CustomerSelect />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto" data-lenis-prevent>
         {lines.length === 0 ? (
           <EmptyState
             icon={ShoppingCart}

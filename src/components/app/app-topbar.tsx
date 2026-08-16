@@ -131,7 +131,7 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
               Mark all read
             </Button>
           </div>
-          <ScrollArea className="max-h-[320px]">
+          <ScrollArea className="max-h-[320px]" data-lenis-prevent>
             <ul className="divide-y divide-border">
               {store.notifications.slice(0, 8).map((n) => (
                 <li key={n.id} className="flex gap-2.5 px-3 py-2.5">

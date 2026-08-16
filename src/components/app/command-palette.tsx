@@ -82,7 +82,7 @@ export function CommandPalette({
         value={query}
         onValueChange={setQuery}
       />
-      <CommandList className="max-h-[420px]">
+      <CommandList className="max-h-[420px]" data-lenis-prevent>
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Actions">

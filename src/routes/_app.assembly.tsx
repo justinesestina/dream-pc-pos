@@ -145,7 +145,7 @@ function BuildCard({ build, expanded, onToggle }: { build: Build; expanded: bool
 
           {/* Assembly checklist (compact) */}
           <TechLabel>Assembly</TechLabel>
-          <div className="mb-2 mt-1 max-h-36 space-y-0.5 overflow-y-auto">
+          <div className="mb-2 mt-1 max-h-36 space-y-0.5 overflow-y-auto" data-lenis-prevent>
             {o.assembly.map((a) => (
               <label key={a.label} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 hover:bg-elevated">
                 <Checkbox
@@ -162,7 +162,7 @@ function BuildCard({ build, expanded, onToggle }: { build: Build; expanded: bool
 
           {/* Test results (compact) */}
           <TechLabel>Tests</TechLabel>
-          <div className="mb-2 mt-1 max-h-28 space-y-0.5 overflow-y-auto">
+          <div className="mb-2 mt-1 max-h-28 space-y-0.5 overflow-y-auto" data-lenis-prevent>
             {o.tests.map((t) => (
               <div key={t.label} className="flex items-center justify-between gap-2 rounded px-1.5 py-1">
                 <span className="text-[11.5px] text-muted-foreground">{t.label}</span>

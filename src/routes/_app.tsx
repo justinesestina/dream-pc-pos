@@ -38,6 +38,15 @@ function AppLayout() {
   // Smooth scroll to top on navigation.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const lenis = (
+      window as Window & {
+        __lenis?: { scrollTo: (t: number, o?: { immediate?: boolean }) => void };
+      }
+    ).__lenis;
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+      return;
+    }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
   }, [pathname]);

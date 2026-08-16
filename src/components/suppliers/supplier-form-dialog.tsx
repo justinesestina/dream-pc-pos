@@ -90,7 +90,10 @@ export function SupplierFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit supplier" : "New supplier"}</DialogTitle>
         </DialogHeader>
-        <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
+        <div
+          className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
+          data-lenis-prevent
+        >
           <div className="space-y-1.5">
             <Label htmlFor="sf-name">Name</Label>
             <Input id="sf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nexlogic Distribution" />

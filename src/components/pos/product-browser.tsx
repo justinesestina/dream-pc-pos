@@ -71,7 +71,7 @@ export function ProductBrowser({ loading }: { loading: boolean }) {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto" data-lenis-prevent>
         {loading ? (
           <RowsSkeleton rows={8} />
         ) : results.length === 0 ? (

@@ -15,6 +15,7 @@ import { StoreProvider } from "@/lib/store";
 import { OpsProvider } from "@/lib/ops-store";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SmoothScroll } from "@/components/nexus/smooth-scroll";
 
 function NotFoundComponent() {
   return (
@@ -130,12 +131,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
         <OpsProvider>
-        <TooltipProvider delayDuration={200}>
-          {/* Required: nested routes render here. */}
-          <Outlet />
-          <Toaster position="bottom-right" />
-        </TooltipProvider>
-      </OpsProvider>
+          <TooltipProvider delayDuration={200}>
+            <SmoothScroll />
+            {/* Required: nested routes render here. */}
+            <Outlet />
+            <Toaster position="bottom-right" />
+          </TooltipProvider>
+        </OpsProvider>
       </StoreProvider>
     </QueryClientProvider>
   );

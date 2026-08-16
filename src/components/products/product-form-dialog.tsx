@@ -150,7 +150,10 @@ export function ProductFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit product" : "New product"}</DialogTitle>
         </DialogHeader>
-        <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
+        <div
+          className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
+          data-lenis-prevent
+        >
           <div className="space-y-1.5">
             <Label htmlFor="pf-name">Name</Label>
             <Input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. RTX 5070 Gaming OC" />
