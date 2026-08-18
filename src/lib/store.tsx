@@ -56,7 +56,7 @@ const STORAGE_KEY = "dpc-nexus-demo-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 interface Snapshot {
   schemaVersion: number;
@@ -81,6 +81,7 @@ interface Snapshot {
   heldCarts: { id: string; at: string; lines: CartLine[]; customerId: string | null }[];
   counters: { order: number; quote: number; build: number; service: number; customer: number };
   sidebarCollapsed: boolean;
+  theme: "light" | "dark";
 }
 
 function seed(): Snapshot {
@@ -107,6 +108,7 @@ function seed(): Snapshot {
     heldCarts: [],
     counters: { order: 10483, quote: 10246, build: 10483, service: 10483, customer: 7 },
     sidebarCollapsed: false,
+    theme: "dark",
   };
 }
 
@@ -151,6 +153,7 @@ interface StoreValue extends Snapshot {
   categoryNameOf: (categoryId: string) => string;
   /* ui */
   setSidebarCollapsed: (v: boolean) => void;
+  setTheme: (theme: "light" | "dark") => void;
   /* cart */
   addToCart: (productId: string, qty?: number) => { ok: boolean; error?: string };
   setCartQty: (productId: string, qty: number) => void;
@@ -280,6 +283,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  useEffect(() => {
+    if (state.theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [state.theme]);
+
   const patch = useCallback((fn: (s: Snapshot) => Snapshot) => {
     setState((prev) => fn(prev));
   }, []);
@@ -382,6 +393,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       categoryById,
       categoryNameOf,
       setSidebarCollapsed: (v) => patch((s) => ({ ...s, sidebarCollapsed: v })),
+      setTheme: (theme) => patch((s) => ({ ...s, theme })),
 
       addToCart: (productId, qty = 1) => {
         const p = productById(productId);

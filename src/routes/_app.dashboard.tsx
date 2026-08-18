@@ -251,7 +251,7 @@ function DashboardPage() {
                     <li key={i.productId} className="flex items-center gap-3 px-4 py-2.5">
                       <AlertTriangle className={avail === 0 ? "size-3.5 shrink-0 text-destructive" : "size-3.5 shrink-0 text-warning"} />
                       <div className="min-w-0 flex-1">
-                        <IdLink to="/products/$productId" params={{ productId: p.id }} className="block truncate text-[13px] text-foreground">
+                        <IdLink to="/products/$productId" params={{ productId: p.id }} className="block truncate text-[13.5px] font-medium text-foreground">
                           {p.name}
                         </IdLink>
                         <div className="mt-1.5 flex items-center gap-2">
@@ -261,7 +261,7 @@ function DashboardPage() {
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <span className="mono text-[10.5px] text-subtle">{avail}/{i.onHand}</span>
+                          <span className="mono text-[11px] font-medium text-subtle">{avail}/{i.onHand}</span>
                         </div>
                       </div>
                       <StatusBadge status={avail === 0 ? "out_of_stock" : "low_stock"} label={`${avail} avail`} />
@@ -292,8 +292,8 @@ function DashboardPage() {
                           count > 0 ? "border-border-strong bg-elevated" : "border-border opacity-45",
                         )}
                       >
-                        <span className="label-tech truncate">{phase.label}</span>
-                        <span className="mono text-lg leading-none tabular-nums">{count}</span>
+                        <span className="label-tech truncate font-semibold">{phase.label}</span>
+                        <span className="mono text-lg font-medium leading-none tabular-nums">{count}</span>
                       </div>
                     </Fragment>
                   ))}
@@ -331,11 +331,11 @@ function DashboardPage() {
                 <li key={o.id} className="flex items-center gap-3 px-4 py-2.5">
                   <div className="min-w-0 flex-1">
                     <IdLink to="/orders/$orderId" params={{ orderId: o.id }}>{o.id}</IdLink>
-                    <p className="truncate text-[13px]">{o.items?.[0]?.name ?? "—"}{o.items && o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</p>
-                    <p className="mono mt-0.5 text-[11px] text-subtle">{o.customerName} · {relative(o.createdAt)}</p>
+                    <p className="truncate text-[13.5px] font-medium">{o.items?.[0]?.name ?? "—"}{o.items && o.items.length > 1 ? ` +${o.items.length - 1}` : ""}</p>
+                    <p className="mono mt-0.5 text-[11px] font-medium text-subtle">{o.customerName} · {relative(o.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="mono text-[13px] tabular-nums">{money(o.total)}</p>
+                    <p className="mono text-[13.5px] font-medium tabular-nums">{money(o.total)}</p>
                     <StatusBadge status={o.status} className="mt-1" />
                   </div>
                 </li>

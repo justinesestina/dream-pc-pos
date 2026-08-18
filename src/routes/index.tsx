@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+  AlertCircle,
   ArrowLeft,
   Boxes,
   ChevronRight,
@@ -53,7 +54,7 @@ const ROLE_ICONS: Record<Role, LucideIcon> = {
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   owner: "Full access · store & system",
-  admin: "Workshop, approvals & operations",
+  admin: "Workshop, approvals & ops",
   cashier: "Point-of-sale & orders",
   inventory: "Stock, purchasing & receiving",
 };
@@ -94,162 +95,164 @@ function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8">
-      {/* technical backdrop */}
-      <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-25" />
-      <div className="ambient-glow pointer-events-none absolute inset-x-0 top-0 h-[380px]" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 size-[560px] -translate-x-1/2 -translate-y-[38%] rounded-full bg-info/[0.07] blur-[120px]" />
-
-      <Reveal
-        className="relative w-full max-w-[400px]"
-        as="div"
-        y={24}
-        duration={0.6}
-      >
-        {/* brand */}
-        <div className="relative flex flex-col items-center text-center">
-          <DreamLogo className="size-16 rounded-xl ring-1 ring-border" />
-          <h1 className="mt-5 text-[24px] leading-none font-semibold tracking-tight">
-            Dream PC <span className="text-muted-foreground">Nexus</span>
-          </h1>
-          <div className="label-tech mt-2 flex items-center gap-1.5">
-            <span className="status-dot" />
-            <span>// Operations Console</span>
+    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
+      {/* ── Left Panel (Branding / Showcase) ───────────────────────── */}
+      <div className="relative flex flex-1 flex-col justify-between overflow-hidden border-b border-border bg-surface/30 p-8 lg:border-b-0 lg:border-r lg:p-12">
+        <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-40" />
+        <div className="ambient-glow pointer-events-none absolute inset-0" />
+        <div className="pointer-events-none absolute -left-[10%] top-[20%] size-[500px] rounded-full bg-info/10 blur-[120px]" />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <DreamLogo className="size-10 rounded-lg ring-1 ring-border shadow-sm" />
+            <span className="text-xl font-semibold tracking-tight">DPC Nexus</span>
           </div>
         </div>
 
-        {selected === null ? (
-          /* ── step 1: select profile ──────────────────────────────── */
-          <div
-            key="select"
-            className="chassis-corners mt-7 rounded-2xl border border-border bg-surface/80 p-4 shadow-panel animate-in fade-in-0 zoom-in-95 duration-300"
-          >
-            <div className="flex items-center justify-between px-1 pb-3">
-              <p className="text-[13px] font-medium text-foreground">Select operator profile</p>
-              <span className="mono text-[10px] tracking-[0.12em] text-subtle uppercase">
-                Step 1 / 2
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {LOGIN_ROLES.map((role, i) => {
-                const Icon = ROLE_ICONS[role];
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => selectRole(role)}
-                    style={{ animationDelay: `${120 + i * 60}ms` }}
-                    className="group flex animate-enter flex-col items-start gap-2 rounded-lg border border-border bg-background p-3 text-left transition-all duration-150 hover:border-info/50 hover:shadow-[0_8px_24px_-12px_oklch(0.76_0.11_210/0.35)] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-info/50 focus-visible:outline-none"
-                  >
-                    <span className="flex size-8 items-center justify-center rounded-md border border-border bg-surface text-muted-foreground transition-colors group-hover:border-info/30 group-hover:bg-info/10 group-hover:text-info">
-                      <Icon className="size-3.5" />
-                    </span>
-                    <span className="w-full">
-                      <span className="block text-[12.5px] leading-tight font-medium text-foreground">
-                        {roleLabels[role]}
-                      </span>
-                      <span className="mt-0.5 block text-[10px] leading-snug text-muted-foreground">
-                        {ROLE_DESCRIPTIONS[role]}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          /* ── step 2: credentials ─────────────────────────────────── */
-          <form
-            key={selected}
-            onSubmit={submit}
-            noValidate
-            className="chassis-corners mt-7 rounded-2xl border border-border bg-surface/80 p-4 shadow-panel animate-in fade-in-0 zoom-in-95 duration-300"
-          >
-            <div className="flex items-center justify-between px-1 pb-3">
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ArrowLeft className="size-3.5" /> Change account
-              </button>
-              <span className="mono text-[10px] tracking-[0.12em] text-subtle uppercase">
-                Step 2 / 2
-              </span>
-            </div>
+        <div className="relative z-10 hidden max-w-md lg:block">
+          <h1 className="mb-4 text-4xl font-bold tracking-tight">Operations Console</h1>
+          <p className="leading-relaxed text-muted-foreground">
+            The intelligent internal platform for Dream PC Build & IT Solutions. Seamlessly manage your point-of-sale, custom build pipeline, service tickets, and live inventory from a single, unified command center.
+          </p>
+        </div>
 
-            <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-info/30 bg-info/10 text-sm font-semibold text-info">
-                  {user?.initials ?? <RoleIcon role={selected} />}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{roleLabels[selected]}</p>
-                  {user && (
-                    <p className="mono mt-0.5 truncate text-[11px] text-subtle">{user.email}</p>
-                  )}
-                </div>
+        <div className="relative z-10 hidden items-center gap-2 text-xs font-medium tracking-widest text-subtle uppercase lg:flex">
+          <span className="status-dot-ok" /> System Online · Demo Environment
+        </div>
+      </div>
+
+      {/* ── Right Panel (Auth) ─────────────────────────────────────── */}
+      <div className="relative flex flex-1 items-center justify-center p-6 lg:p-12">
+        <Reveal className="w-full max-w-[420px]" as="div" y={24} duration={0.6}>
+          {selected === null ? (
+            /* ── Step 1: Select Profile ──────────────────────────────── */
+            <div key="select" className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Select your operator profile to continue</p>
               </div>
-
-              <div className="my-3.5 h-px bg-border" />
-
-              <div className="space-y-1.5">
-                <Label htmlFor="login-password" className="text-xs">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-subtle" />
-                  <Input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    autoFocus
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="mono bg-background pr-9 pl-8 text-xs"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-subtle transition-colors hover:text-foreground"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                  </button>
-                </div>
+              
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {LOGIN_ROLES.map((role, i) => {
+                  const Icon = ROLE_ICONS[role];
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => selectRole(role)}
+                      style={{ animationDelay: `${120 + i * 60}ms` }}
+                      className="group relative flex animate-enter flex-col gap-4 rounded-xl border border-border/60 bg-surface/40 p-4 text-left transition-all duration-300 hover:border-info/40 hover:bg-surface/80 hover:shadow-[0_8px_30px_-12px_oklch(0.76_0.11_210/0.2)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/50"
+                    >
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-info/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                      <div className="relative z-10 flex items-center justify-between">
+                        <span className="flex size-10 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:border-info/30 group-hover:bg-info/10 group-hover:text-info">
+                          <Icon className="size-[18px]" />
+                        </span>
+                        <ChevronRight className="size-4 -translate-x-2 text-subtle opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-info group-hover:opacity-100" />
+                      </div>
+                      <div className="relative z-10">
+                        <span className="block text-[13.5px] font-semibold text-foreground">
+                          {roleLabels[role]}
+                        </span>
+                        <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">
+                          {ROLE_DESCRIPTIONS[role]}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              {error && (
-                <p
-                  role="alert"
-                  className="mt-3 rounded-md border border-destructive/35 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+            </div>
+          ) : (
+            /* ── Step 2: Credentials ─────────────────────────────────── */
+            <form
+              key={selected}
+              onSubmit={submit}
+              noValidate
+              className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500"
+            >
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="mb-6 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {error}
-                </p>
-              )}
+                  <ArrowLeft className="size-3.5" /> Back to profiles
+                </button>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Sign in</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Authenticating as {roleLabels[selected]}</p>
+              </div>
 
-              <Button type="submit" className="mt-4 w-full" disabled={pending}>
-                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-                Sign In
-              </Button>
+              <div className="rounded-2xl border border-border bg-surface/50 p-5 shadow-sm backdrop-blur-xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-info/30 bg-info/10 text-lg font-bold text-info shadow-inner">
+                    {user?.initials ?? <RoleIcon role={selected} />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold">{roleLabels[selected]}</p>
+                    {user && (
+                      <p className="mono mt-0.5 truncate text-[11.5px] text-muted-foreground">{user.email}</p>
+                    )}
+                  </div>
+                </div>
 
-              {user?.password && (
-                <p className="mono mt-3 text-center text-[10.5px] text-subtle">
-                  Demo password: <span className="text-muted-foreground">{user.password}</span>
-                </p>
-              )}
-            </div>
-          </form>
-        )}
+                <div className="my-5 h-px bg-border/80" />
 
-        <p className="mono mt-6 flex items-center justify-center gap-2 text-[10px] tracking-[0.14em] text-subtle uppercase">
-          <span className="h-px w-6 bg-border-strong" />
-          Dream PC Build &amp; IT Solutions
-          <span className="h-px w-6 bg-border-strong" />
-        </p>
-      </Reveal>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password" className="text-[12.5px] font-medium">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      autoFocus
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="mono h-11 bg-background/50 pl-10 pr-10 text-[13px] shadow-sm transition-colors focus-visible:bg-background"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute top-1/2 right-3 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <p
+                    role="alert"
+                    className="mt-4 flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[13px] font-medium text-destructive animate-in slide-in-from-top-1"
+                  >
+                    <AlertCircle className="size-4 shrink-0" />
+                    {error}
+                  </p>
+                )}
+
+                <Button type="submit" className="mt-6 h-11 w-full text-[13.5px] font-semibold shadow-sm" disabled={pending}>
+                  {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  Access Workspace
+                </Button>
+
+                {user?.password && (
+                  <div className="mt-5 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2.5 text-center">
+                    <p className="mono flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                      Demo password: <span className="font-semibold text-foreground">{user.password}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </form>
+          )}
+        </Reveal>
+      </div>
     </div>
   );
 }

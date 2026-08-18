@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, Command, Menu, Search } from "lucide-react";
+import { Bell, Command, Menu, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -109,6 +109,16 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
       <span className="mono hidden items-center gap-1.5 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] tracking-wide text-warning uppercase sm:inline-flex">
         Demo mode
       </span>
+
+      <Button 
+        size="icon" 
+        variant="ghost" 
+        onClick={() => store.setTheme(store.theme === "dark" ? "light" : "dark")}
+        title={`Switch to ${store.theme === "dark" ? "light" : "dark"} mode`}
+        className="hidden sm:inline-flex"
+      >
+        {store.theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      </Button>
 
       <Popover>
         <PopoverTrigger asChild>
