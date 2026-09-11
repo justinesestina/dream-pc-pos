@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Pencil } from "lucide-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
@@ -7,6 +8,7 @@ import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
 import { Button } from "@/components/ui/button";
+import { QuoteEditorDialog } from "@/components/quotes/quote-editor-dialog";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { money, dateShort, daysUntil } from "@/lib/format";
 import type { Quote, QuoteStatus } from "@/lib/types";
@@ -41,6 +43,10 @@ function QuotesIndexPage() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [expiringOnly, setExpiringOnly] = useState(false);
+  const [editorId, setEditorId] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  const editorQuote = quotes.find((qt) => qt.id === editorId);
 
   const stats = useMemo(() => {
     const open = quotes.filter((q) => ["draft", "sent", "pending"].includes(q.status));
@@ -109,6 +115,25 @@ function QuotesIndexPage() {
       cell: (qt) => <StatusBadge status={qt.status} />,
       sortValue: (qt) => qt.status,
     },
+    {
+      key: "edit",
+      header: "",
+      align: "right",
+      cell: (qt) => (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 gap-1 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditorId(qt.id);
+            setEditorOpen(true);
+          }}
+        >
+          <Pencil className="size-3" /> Editor
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -150,6 +175,14 @@ function QuotesIndexPage() {
           }
         />
       </Panel>
+
+      {editorQuote && (
+        <QuoteEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          quote={editorQuote}
+        />
+      )}
     </div>
   );
 }

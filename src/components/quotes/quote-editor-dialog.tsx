@@ -1,0 +1,546 @@
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { QuoteClientMessage } from "@/components/quotes/quote-message";
+import { createQuotePdf } from "@/lib/quote-pdf";
+import { useStore, computeTotals } from "@/lib/store";
+import { dateShort, money } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { Quote, QuoteItem } from "@/lib/types";
+
+function templateFor(quote: Quote): string {
+  const firstName = quote.customerName.split(" ")[0] || "valued customer";
+  const lines: string[] = [
+    `Hi ${firstName},`,
+    ``,
+    `Thank you for requesting a quotation from Dream PC Build & IT Solutions.`,
+    ``,
+    `Please find your quotation (${quote.id}) below. I've included a summary of the items, quantities and the total price — everything listed is covered by our standard warranty and service policy.`,
+    ``,
+    `If this looks good to you, simply reply to this message and we'll start preparing your order right away. We're also happy to adjust the configuration, swap components, or look at a different budget if you'd like.`,
+    ``,
+    `This quotation is valid until ${dateShort(quote.expiresAt)}.`,
+    ``,
+    `Looking forward to building with you.`,
+    ``,
+    `Best regards,`,
+    quote.preparedBy,
+    `Dream PC Build & IT Solutions`,
+  ];
+  return lines.join("\n");
+}
+
+function defaultSubjectFor(quote: Quote): string {
+  return `Your quotation ${quote.id} — ${quote.customerName}`;
+}
+
+interface EditableItem {
+  productId: string;
+  qty: string;
+  unitPrice: string;
+}
+
+/**
+ * Full "edit & send" editor for a quotation. The admin picks the customer, edits
+ * every part of the quotation (items, quantities, prices, discount, service
+ * total, notes, validity), optionally adjusts the cover message, then sends the
+ * final quotation straight to the customer's e-mail (simulated).
+ */
+export function QuoteEditorDialog({
+  open,
+  onOpenChange,
+  quote,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  quote: Quote;
+}) {
+  const { products, customers, updateQuote, sendQuote } = useStore();
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [customerId, setCustomerId] = useState<string | null>(quote.customerId);
+  const [lines, setLines] = useState<EditableItem[]>([]);
+  const [discount, setDiscount] = useState("");
+  const [serviceTotal, setServiceTotal] = useState("");
+  const [notes, setNotes] = useState("");
+  const [validDays, setValidDays] = useState("14");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [pdf, setPdf] = useState<{ url: string | URL } | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setStep(1);
+    setCustomerId(quote.customerId);
+    setLines(
+      quote.items.map((i) => ({
+        productId: i.productId,
+        qty: String(i.qty),
+        unitPrice: String(i.unitPrice),
+      })),
+    );
+    setDiscount(quote.discount ? String(quote.discount) : "");
+    setServiceTotal(quote.serviceTotal ? String(quote.serviceTotal) : "");
+    setNotes(quote.notes ?? "");
+    setValidDays(
+      String(Math.max(1, Math.ceil((new Date(quote.expiresAt).getTime() - Date.now()) / 86400000))),
+    );
+    setSubject(quote.subject || defaultSubjectFor(quote));
+    setMessage(quote.message || templateFor(quote));
+    setPdf(null);
+    setPdfBusy(false);
+  }, [open, quote]);
+
+  const activeCustomers = customers.filter((c) => c.status === "active");
+
+  const updateLine = (i: number, patch: Partial<EditableItem>) =>
+    setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  const addLine = () => setLines((prev) => [...prev, { productId: "", qty: "1", unitPrice: "" }]);
+  const removeLine = (i: number) => setLines((prev) => prev.filter((_, idx) => idx !== i));
+
+  const discountNum = Number(discount) || 0;
+  const serviceNum = Number(serviceTotal) || 0;
+  const validDaysNum = Math.max(1, Number(validDays) || 14);
+
+  const resolvedItems = useMemo<QuoteItem[]>(
+    () =>
+      lines
+        .filter((l) => l.productId && Number(l.qty) > 0)
+        .map((l) => {
+          const p = products.find((x) => x.id === l.productId);
+          return {
+            productId: l.productId,
+            name: p?.name ?? l.productId,
+            sku: p?.sku ?? "N/A",
+            qty: Number(l.qty),
+            unitPrice: Number(l.unitPrice) || (p?.price ?? 0),
+          };
+        }),
+    [lines, products],
+  );
+
+  const totals = useMemo(
+    () => computeTotals(resolvedItems, discountNum, serviceNum),
+    [resolvedItems, discountNum, serviceNum],
+  );
+
+  const customerName = activeCustomers.find((c) => c.id === customerId)?.name ?? quote.customerName;
+
+  const previewQuote = useMemo<Quote>(
+    () => ({
+      ...quote,
+      customerId,
+      customerName,
+      items: resolvedItems,
+      discount: discountNum,
+      serviceTotal: serviceNum,
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      total: totals.total,
+      expiresAt: new Date(Date.now() + validDaysNum * 86400000).toISOString(),
+      notes: notes.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+    }),
+    [
+      quote,
+      customerId,
+      customerName,
+      resolvedItems,
+      discountNum,
+      serviceNum,
+      totals,
+      validDaysNum,
+      notes,
+      subject,
+      message,
+    ],
+  );
+
+  const canContinue = Boolean(customerId) && resolvedItems.length > 0;
+  const canSend = canContinue && subject.trim().length > 0 && message.trim().length > 0;
+
+  useEffect(() => {
+    if (!open || step !== 3) return;
+    let active = true;
+    setPdfBusy(true);
+    createQuotePdf(previewQuote).then((created) => {
+      if (!active) return;
+      setPdf({ url: created.url });
+      setPdfBusy(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [open, step, previewQuote]);
+
+  const submit = () => {
+    updateQuote(quote.id, {
+      customerId,
+      items: resolvedItems,
+      discount: discountNum,
+      serviceTotal: serviceNum,
+      notes: notes.trim(),
+      expiresInDays: validDaysNum,
+    });
+    sendQuote(quote.id, { subject: subject.trim(), message: message.trim() });
+    toast.success(`Quote ${quote.id} sent to ${customerName} via e-mail`);
+    onOpenChange(false);
+  };
+
+  const stepBase = "label-tech inline-flex items-center gap-1.5";
+  const activeStep = "text-foreground";
+  const dimStep = "text-subtle";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl sm:rounded-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="size-4 text-muted-foreground" /> Edit &amp; send quotation{" "}
+            <span className="mono">{quote.id}</span>
+          </DialogTitle>
+          <DialogDescription>
+            Customize anything — customer, items, prices, discount, services — then send the final
+            quotation straight to the client&apos;s e-mail.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* step indicator */}
+        <div className="flex items-center gap-2 border-b border-border pb-3">
+          <span className={cn(stepBase, step === 1 ? activeStep : dimStep)}>
+            <span className="grid size-4 place-items-center rounded-full border border-border text-[10px]">
+              1
+            </span>
+            Quotation
+          </span>
+          <ArrowRight className="size-3.5 text-subtle" />
+          <span className={cn(stepBase, step === 2 ? activeStep : dimStep)}>
+            <span className="grid size-4 place-items-center rounded-full border border-border text-[10px]">
+              2
+            </span>
+            Message
+          </span>
+          <ArrowRight className="size-3.5 text-subtle" />
+          <span className={cn(stepBase, step === 3 ? activeStep : dimStep)}>
+            <span className="grid size-4 place-items-center rounded-full border border-border text-[10px]">
+              3
+            </span>
+            Check PDF &amp; send
+          </span>
+        </div>
+
+        {step === 1 ? (
+          <>
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-customer" className="label-tech">
+                    Customer
+                  </label>
+                  <Select value={customerId ?? ""} onValueChange={(v) => setCustomerId(v || null)}>
+                    <SelectTrigger id="qe-customer" className="w-full">
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeCustomers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-discount" className="label-tech">
+                    Discount (₱)
+                  </label>
+                  <Input
+                    id="qe-discount"
+                    type="number"
+                    min={0}
+                    value={discount}
+                    onChange={(e) => setDiscount(e.target.value)}
+                    className="h-9"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-service" className="label-tech">
+                    Service / labor (₱)
+                  </label>
+                  <Input
+                    id="qe-service"
+                    type="number"
+                    min={0}
+                    value={serviceTotal}
+                    onChange={(e) => setServiceTotal(e.target.value)}
+                    className="h-9"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="qe-lines" className="label-tech">
+                    Items
+                  </label>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-xs"
+                    onClick={addLine}
+                  >
+                    <Plus className="size-3.5" /> Add item
+                  </Button>
+                </div>
+                <div className="space-y-2 rounded-md border border-border p-2">
+                  {lines.length === 0 && (
+                    <p className="px-1 py-2 text-xs text-muted-foreground">
+                      No items yet — add at least one product with a quantity.
+                    </p>
+                  )}
+                  {lines.map((l, i) => {
+                    const product = products.find((p) => p.id === l.productId);
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <Select
+                          value={l.productId}
+                          onValueChange={(v) => {
+                            const p = products.find((x) => x.id === v);
+                            updateLine(i, {
+                              productId: v,
+                              unitPrice: p ? String(p.price) : l.unitPrice,
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="h-8 flex-1 text-xs">
+                            <SelectValue placeholder="Product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name} ({p.sku})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={l.qty}
+                          onChange={(e) => updateLine(i, { qty: e.target.value })}
+                          className="h-8 w-16 text-xs"
+                          placeholder="Qty"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={l.unitPrice}
+                          onChange={(e) => updateLine(i, { unitPrice: e.target.value })}
+                          className="h-8 w-28 text-xs"
+                          placeholder={product ? String(product.price) : "Price"}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-7 shrink-0 text-muted-foreground"
+                          onClick={() => removeLine(i)}
+                          disabled={lines.length === 1}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label htmlFor="qe-notes" className="label-tech">
+                    Notes (internal / printed on the quotation)
+                  </label>
+                  <Textarea
+                    id="qe-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[64px] resize-y text-[13px] leading-relaxed"
+                    placeholder="e.g. Editing workstation, prefers quiet operation…"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-valid" className="label-tech">
+                    Valid for (days)
+                  </label>
+                  <Input
+                    id="qe-valid"
+                    type="number"
+                    min={1}
+                    value={validDays}
+                    onChange={(e) => setValidDays(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-surface/40 p-3">
+                <p className="label-tech mb-2">Quotation totals</p>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
+                  <div>
+                    <dt className="text-muted-foreground">Subtotal</dt>
+                    <dd className="mono">{money(totals.subtotal)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Discount −</dt>
+                    <dd className="mono text-destructive">{money(-discountNum)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Services</dt>
+                    <dd className="mono">{money(serviceNum)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">VAT (12%)</dt>
+                    <dd className="mono">{money(totals.tax)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Total</dt>
+                    <dd className="mono text-[13px] font-medium">{money(totals.total)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button disabled={!canContinue} onClick={() => setStep(2)}>
+                Continue to message <ArrowRight className="size-3.5" />
+              </Button>
+            </DialogFooter>
+          </>
+        ) : step === 2 ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Compose */}
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-subject" className="label-tech">
+                    Subject
+                  </label>
+                  <Input
+                    id="qe-subject"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Your quotation …"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-message" className="label-tech">
+                    Message for the client
+                  </label>
+                  <Textarea
+                    id="qe-message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Write the cover message that accompanies the quotation…"
+                    className="min-h-[280px] resize-y text-[13px] leading-relaxed"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  The item summary and totals are generated automatically from your quotation — the
+                  message above sits on top of them.
+                </p>
+              </div>
+
+              {/* Live preview */}
+              <div className="max-h-[420px] overflow-y-auto rounded-lg border border-border">
+                <QuoteClientMessage quote={previewQuote} />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(1)}>
+                <ArrowLeft className="size-3.5" /> Back to quotation
+              </Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button disabled={!canSend} onClick={() => setStep(3)}>
+                Preview PDF <ArrowRight className="size-3.5" />
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <div className="space-y-3">
+              <p className="text-[11px] text-muted-foreground">
+                This is the <strong>actual PDF file</strong> (A4) that ships with the quotation —
+                with the company logo. Check the layout and that everything is readable before you
+                send it.
+              </p>
+              <div className="h-[56vh] w-full overflow-hidden rounded-lg border border-border bg-surface/60">
+                {pdfBusy || !pdf ? (
+                  <div className="grid h-full w-full place-items-center text-xs text-muted-foreground">
+                    Generating PDF…
+                  </div>
+                ) : (
+                  <iframe
+                    title={`${quote.id} PDF preview`}
+                    src={String(pdf.url)}
+                    className="h-full w-full"
+                  />
+                )}
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!pdf}
+                  onClick={() => pdf && window.open(String(pdf.url), "_blank", "noopener")}
+                >
+                  <FileText className="size-3.5" /> Open in browser
+                </Button>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft className="size-3.5" /> Back to message
+              </Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button disabled={!canSend} onClick={submit}>
+                <Send className="size-3.5" /> Send to customer
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

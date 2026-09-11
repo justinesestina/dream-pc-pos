@@ -190,6 +190,9 @@ export interface Quote {
   createdAt: string;
   expiresAt: string;
   notes?: string | undefined;
+  subject?: string | undefined;
+  message?: string | undefined;
+  sentAt?: string | undefined;
   buildId?: string | undefined;
   orderId?: string | undefined;
   preparedBy: string;

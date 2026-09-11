@@ -956,6 +956,10 @@ export const quotes: Quote[] = [
     createdAt: daysAgo(1, 14),
     expiresAt: daysAhead(6),
     notes: "Editing workstation, prefers quiet operation.",
+    subject: "Your quotation QT-10245 — Rafael Ong",
+    message:
+      "Hi Rafael,\n\nThank you for requesting a quotation for your editing workstation. We've prepared a configuration tuned for quiet operation and strong productivity — the quotation (QT-10245) with all items, quantities and the total price is included below.\n\nIf this looks good to you, simply reply to this message and we'll start preparing your order right away. We're also happy to swap components or adjust the budget if you'd like.\n\nBest regards,\nMika Santos\nDream PC Build & IT Solutions",
+    sentAt: daysAgo(1, 11),
     preparedBy: "Mika Santos",
   },
   {
@@ -972,6 +976,10 @@ export const quotes: Quote[] = [
     createdAt: daysAgo(3, 11),
     expiresAt: daysAhead(11),
     notes: "Phase 2 of cafe upgrade.",
+    subject: "Your quotation QT-10244 — Bluewave Internet Cafe",
+    message:
+      "Hi Bluewave team,\n\nThank you for requesting a quotation for Phase 2 of your cafe upgrade. Please find the quotation (QT-10244) below — it covers the Ryzen 5 units, B650M motherboards, and 16GB memory kits you specified.\n\nIf everything looks good, just reply to this message and we'll reserve the parts and start preparing the order.\n\nBest regards,\nJustine Ramos\nDream PC Build & IT Solutions",
+    sentAt: daysAgo(2, 10),
     preparedBy: "Justine Ramos",
   },
   {

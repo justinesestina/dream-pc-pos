@@ -1,10 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
-import { Panel, EmptyState, IdLink } from "@/components/nexus/primitives";
+import { Panel, EmptyState, IdLink, PanelHeader } from "@/components/nexus/primitives";
 import { DemoNote } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { DocumentPreview, PrintButton } from "@/components/nexus/document";
+import { QuoteEditorDialog } from "@/components/quotes/quote-editor-dialog";
+import { QuotePdfDialog } from "@/components/quotes/quote-pdf-dialog";
+import { QuoteClientMessage } from "@/components/quotes/quote-message";
+import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -39,6 +43,8 @@ function QuotesQuoteidPage() {
   const { quotes, customerById, setQuoteStatus, convertQuoteToOrder } = useStore();
   const navigate = useNavigate();
   const quote = quotes.find((q) => q.id === quoteId);
+  const [editOpen, setEditOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
 
   if (!quote) {
     return (
@@ -64,11 +70,12 @@ function QuotesQuoteidPage() {
   const expired = quote.status !== "converted" && days < 0;
 
   const canSend = quote.status === "draft";
+  const canResend = quote.status === "sent" || quote.status === "pending";
   const canApprove = quote.status === "sent" || quote.status === "pending";
   const canReject = quote.status === "sent" || quote.status === "pending";
   const canConvert = quote.status === "approved";
 
-  const handleSetStatus = (status: "sent" | "approved" | "rejected") => {
+  const handleSetStatus = (status: "approved" | "rejected") => {
     setQuoteStatus(quote.id, status);
     toast.success(`Quote ${quote.id} marked ${status}`);
   };
@@ -104,9 +111,12 @@ function QuotesQuoteidPage() {
         actions={
           <>
             <PrintButton label="Print quotation" />
-            {canSend && (
-              <Button size="sm" variant="outline" onClick={() => handleSetStatus("sent")}>
-                Send to customer
+            <Button size="sm" variant="outline" onClick={() => setPdfOpen(true)}>
+              <FileText className="size-3.5" /> View PDF
+            </Button>
+            {(canSend || canResend) && (
+              <Button size="sm" onClick={() => setEditOpen(true)}>
+                {canSend ? "Send to customer" : "Resend / edit message"}
               </Button>
             )}
             {canApprove && (
@@ -152,6 +162,11 @@ function QuotesQuoteidPage() {
           {!["converted"].includes(quote.status) &&
             (expired ? " — expired" : days <= 7 ? ` — ${days}d remaining` : "")}
         </span>
+        {quote.sentAt && (
+          <span>
+            Sent to customer <span className="mono">{dateShort(quote.sentAt)}</span>
+          </span>
+        )}
         {quote.buildId && (
           <span>
             Linked build{" "}
@@ -201,6 +216,22 @@ function QuotesQuoteidPage() {
         }
       />
 
+      {quote.message && (
+        <Panel>
+          <PanelHeader
+            title="Message sent to the client"
+            hint={
+              quote.subject
+                ? `${quote.subject}${quote.sentAt ? ` · sent ${dateShort(quote.sentAt)}` : ""}`
+                : undefined
+            }
+          />
+          <div className="p-4 sm:p-5">
+            <QuoteClientMessage quote={quote} />
+          </div>
+        </Panel>
+      )}
+
       <DemoNote>
         {quote.items.length === 0 && quote.serviceTotal > 0 ? (
           <>
@@ -212,6 +243,10 @@ function QuotesQuoteidPage() {
           "Sending, approval and rejection are simulated status changes — no e-mail or e-signature integration is triggered."
         )}
       </DemoNote>
+
+      <QuoteEditorDialog open={editOpen} onOpenChange={setEditOpen} quote={quote} />
+
+      <QuotePdfDialog open={pdfOpen} onOpenChange={setPdfOpen} quote={quote} customer={customer} />
     </div>
   );
 }

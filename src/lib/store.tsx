@@ -39,6 +39,7 @@ import type {
   PaymentMethod,
   Product,
   Quote,
+  QuoteItem,
   QuoteStatus,
   Role,
   SerialNumber,
@@ -205,6 +206,18 @@ interface StoreValue extends Snapshot {
     expiresInDays: number;
   }) => Quote;
   setQuoteStatus: (quoteId: string, status: QuoteStatus) => void;
+  updateQuote: (
+    quoteId: string,
+    edits: {
+      customerId?: string | null;
+      items?: QuoteItem[];
+      discount?: number;
+      serviceTotal?: number;
+      notes?: string;
+      expiresInDays?: number;
+    },
+  ) => void;
+  sendQuote: (quoteId: string, patch: { subject: string; message: string }) => void;
   convertQuoteToOrder: (quoteId: string) => Order | null;
   createBuild: (data: {
     customerId: string | null;
@@ -869,6 +882,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   kind: "quote",
                 })
               : s.notifications,
+        })),
+
+      updateQuote: (quoteId, edits) => {
+        const existing = state.quotes.find((q) => q.id === quoteId);
+        if (!existing) return;
+        const items = edits.items ?? existing.items;
+        const discount = edits.discount ?? existing.discount;
+        const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
+        const customerId = edits.customerId !== undefined ? edits.customerId : existing.customerId;
+        const customerName =
+          customerId == null
+            ? existing.customerName
+            : customerById(customerId)?.name ?? existing.customerName;
+        const t = computeTotals(items, discount, serviceTotal);
+        const expiresAt =
+          edits.expiresInDays !== undefined
+            ? new Date(Date.now() + edits.expiresInDays * 86400000).toISOString()
+            : existing.expiresAt;
+        patch((s) => ({
+          ...s,
+          quotes: s.quotes.map((q) =>
+            q.id === quoteId
+              ? {
+                  ...q,
+                  customerId,
+                  customerName,
+                  items,
+                  discount,
+                  serviceTotal,
+                  subtotal: t.subtotal,
+                  tax: t.tax,
+                  total: t.total,
+                  notes: edits.notes ?? q.notes,
+                  expiresAt,
+                }
+              : q,
+          ),
+          auditLogs: log(s, `updated quote ${quoteId}`, quoteId),
+        }));
+      },
+
+      sendQuote: (quoteId, msg) =>
+        patch((s) => ({
+          ...s,
+          quotes: s.quotes.map((q) =>
+            q.id === quoteId
+              ? {
+                  ...q,
+                  status: "sent" as const,
+                  subject: msg.subject,
+                  message: msg.message,
+                  sentAt: new Date().toISOString(),
+                }
+              : q,
+          ),
+          auditLogs: log(s, `sent quote ${quoteId} to customer`, quoteId),
+          notifications: notify(s, {
+            title: "Quote sent to customer",
+            body: `${quoteId} was sent to ${state.quotes.find((q) => q.id === quoteId)?.customerName ?? "customer"}.`,
+            priority: "normal",
+            kind: "quote",
+          }),
         })),
 
       convertQuoteToOrder: (quoteId) => {
