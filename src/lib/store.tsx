@@ -348,14 +348,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               products: result.products,
               customers: result.customers,
               orders: result.orders,
-              inventory: result.products.map((p: any) => ({
-                productId: p.id,
-                onHand: p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0),
-                reserved: 0,
-                damaged: 0,
-                sold: 0,
-                reorderPoint: 5,
-              })),
+              inventory: result.products.map((p: any) => {
+                const onHand = p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0);
+                console.log(`Product ${p.id} (${p.name}): stock_quantity=${p.stock_quantity}, stock_status=${p.stock_status}, onHand=${onHand}`);
+                return {
+                  productId: p.id,
+                  onHand: onHand,
+                  reserved: 0,
+                  damaged: 0,
+                  sold: 0,
+                  reorderPoint: 5,
+                };
+              }),
             }));
             console.log("WooCommerce data loaded successfully");
           }

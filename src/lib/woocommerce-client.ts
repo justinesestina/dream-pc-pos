@@ -59,13 +59,13 @@ export function mapWooCommerceProductToPos(wooProduct: any): Product {
     });
   }
 
-  return {
+  const product = {
     id: wooProduct.id.toString(),
     sku: wooProduct.sku || `WC-${wooProduct.id}`,
     name: wooProduct.name,
     brand: wooProduct.attributes?.find((a: any) => a.name === "Brand")?.options?.[0] || "Unknown",
     categoryId: categoryId.toString(),
-    productType: wooProduct.type === "service" ? "service" : "product",
+    productType: (wooProduct.type === "service" ? "service" : "product") as "product" | "service" | "bundle",
     description: wooProduct.short_description || wooProduct.description || "",
     price: parseFloat(wooProduct.regular_price) || parseFloat(wooProduct.price) || 0,
     cost: 0, // WooCommerce doesn't track cost, will need manual entry
@@ -77,6 +77,13 @@ export function mapWooCommerceProductToPos(wooProduct: any): Product {
     isService: wooProduct.type === "service" || wooProduct.virtual,
     archived: wooProduct.status !== "publish",
   };
+
+  // Preserve stock data from WooCommerce
+  (product as any).stock_quantity = wooProduct.stock_quantity;
+  (product as any).stock_status = wooProduct.stock_status;
+  (product as any).manage_stock = wooProduct.manage_stock;
+
+  return product;
 }
 
 /**
