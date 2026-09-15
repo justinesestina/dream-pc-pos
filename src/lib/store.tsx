@@ -113,6 +113,34 @@ function seed(): Snapshot {
   };
 }
 
+function emptyState(): Snapshot {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    user: null,
+    categories: [],
+    products: [],
+    inventory: [],
+    serials: [],
+    customers: [],
+    orders: [],
+    quotes: [],
+    builds: [],
+    services: [],
+    warranties: [],
+    claims: [],
+    movements: [],
+    auditLogs: [],
+    notifications: [],
+    cart: [],
+    cartDiscount: 0,
+    cartCustomerId: null,
+    heldCarts: [],
+    counters: { order: 1, quote: 1, build: 1, service: 1, customer: 1 },
+    sidebarCollapsed: false,
+    theme: "dark",
+  };
+}
+
 /* ------------------------------------------------------------------ pricing */
 
 export interface Totals {
@@ -263,12 +291,19 @@ interface StoreValue extends Snapshot {
   audit: (action: string, entity: string) => void;
   markAllNotificationsRead: () => void;
   resetDemoData: () => void;
+  clearDemoData: () => void;
+  loadWooCommerceData: (data: {
+    categories: Category[];
+    products: Product[];
+    customers: Customer[];
+    orders: Order[];
+  }) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Snapshot>(() => seed());
+  const [state, setState] = useState<Snapshot>(() => emptyState());
   const [hydrated, setHydrated] = useState(false);
   const skipWrite = useRef(true);
 
@@ -292,11 +327,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (skipWrite.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* storage full / unavailable — demo continues in memory */
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        const serialized = JSON.stringify(state);
+        // Only write if data is reasonable size (< 5MB)
+        if (serialized.length < 5 * 1024 * 1024) {
+          localStorage.setItem(STORAGE_KEY, serialized);
+        }
+      } catch {
+        /* storage full / unavailable — demo continues in memory */
+      }
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   }, [state]);
 
   useEffect(() => {
@@ -323,13 +365,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const availableOf = useCallback(
     (productId: string) => {
-      const p = productById(productId);
+      const p = state.products.find((p) => p.id === productId);
       if (p?.isService) return Infinity;
       const inv = state.inventory.find((i) => i.productId === productId);
       if (!inv) return 0;
       return Math.max(0, inv.onHand - inv.reserved);
     },
-    [state.inventory, productById],
+    [state.products, state.inventory],
   );
 
   const customerById = useCallback(
@@ -343,8 +385,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const categoryNameOf = useCallback(
-    (categoryId: string) => categoryById(categoryId)?.name ?? "Uncategorized",
-    [categoryById],
+    (categoryId: string) => state.categories.find((c) => c.id === categoryId)?.name ?? "Uncategorized",
+    [state.categories],
   );
 
   const log = (s: Snapshot, action: string, entity: string): AuditLog[] => [
@@ -1459,8 +1501,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       resetDemoData: () =>
         patch((s) => ({ ...seed(), user: s.user, sidebarCollapsed: s.sidebarCollapsed })),
+
+      clearDemoData: () =>
+        patch((s) => ({ ...emptyState(), user: s.user, sidebarCollapsed: s.sidebarCollapsed })),
+
+      loadWooCommerceData: (data) =>
+        patch((s) => ({
+          ...s,
+          categories: data.categories,
+          products: data.products,
+          customers: data.customers,
+          orders: data.orders,
+          inventory: data.products.map((p) => ({
+            productId: p.id,
+            onHand: 0,
+            reserved: 0,
+            damaged: 0,
+            sold: 0,
+            reorderPoint: 5,
+          })),
+          auditLogs: [
+            {
+              id: `audit-${Date.now()}`,
+              actor: s.user?.name ?? "System",
+              role: s.user?.role ?? "admin",
+              action: "loaded_woocommerce_data",
+              entity: "woocommerce",
+              at: new Date().toISOString(),
+            },
+          ],
+        })),
     };
-  }, [state, hydrated, productById, invFor, availableOf, customerById, categoryById, categoryNameOf, patch]);
+  }, [state, hydrated]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

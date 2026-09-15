@@ -192,11 +192,18 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
 
   useEffect(() => {
     if (skip.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* ignore */
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        const serialized = JSON.stringify(state);
+        // Only write if data is reasonable size (< 5MB)
+        if (serialized.length < 5 * 1024 * 1024) {
+          localStorage.setItem(STORAGE_KEY, serialized);
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   }, [state]);
 
   const patch = useCallback((fn: (s: OpsSnapshot) => OpsSnapshot) => setState(fn), []);
@@ -538,7 +545,7 @@ export function OpsProvider({ children, actor = "Demo User" }: { children: React
 
       resetOpsData: () => patch(() => seed()),
     };
-  }, [state, hydrated, actor, patch]);
+  }, [state, hydrated, actor]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
