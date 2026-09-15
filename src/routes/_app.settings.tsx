@@ -37,11 +37,6 @@ import { useOps } from "@/lib/ops-store";
 import { can, roleLabels, type Capability } from "@/lib/permissions";
 import { VAT_RATE, dateTime, relative } from "@/lib/format";
 import type { Role } from "@/lib/types";
-import { testConnection, fullSyncFromWooCommerce } from "@/lib/woocommerce-sync";
-import {
-  setWooCommerceConfig,
-  getSavedWooCommerceConfig,
-} from "@/lib/woocommerce-config";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
@@ -83,7 +78,6 @@ const ALL_CAPS: Capability[] = [
 
 const SECTIONS = [
   { id: "general", label: "General", icon: Building2, cap: "settings" },
-  { id: "woocommerce", label: "WooCommerce", icon: ShoppingCart, cap: "settings" },
   { id: "appearance", label: "Appearance", icon: Palette, cap: "settings" },
   { id: "tax", label: "VAT & tax", icon: Percent, cap: "settings" },
   { id: "roles", label: "Roles & permissions", icon: Shield, cap: "settings" },
@@ -163,7 +157,6 @@ function SettingsPage() {
 
         <div className="min-w-0 space-y-5" key={activeSection.id}>
           {activeSection.id === "general" && <GeneralSection store={store} ops={ops} />}
-          {activeSection.id === "woocommerce" && <WooCommerceSection />}
           {activeSection.id === "appearance" && <AppearanceSection store={store} />}
           {activeSection.id === "tax" && <TaxSection />}
           {activeSection.id === "roles" && <RolesSection />}
@@ -265,207 +258,6 @@ function GeneralSection({
             <DemoNote>Operations store acting user: {ops.actor}.</DemoNote>
           </div>
         )}
-      </Panel>
-    </>
-  );
-}
-
-function WooCommerceSection() {
-  const store = useStore();
-  const saved = getSavedWooCommerceConfig();
-  const [config, setConfig] = useState({
-    url: saved?.url ?? "",
-    consumerKey: saved?.consumerKey ?? "",
-    consumerSecret: saved?.consumerSecret ?? "",
-  });
-  const [testing, setTesting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"idle" | "success" | "error">("idle");
-  const [syncProgress, setSyncProgress] = useState("");
-
-  const handleSaveConfig = () => {
-    const ok = setWooCommerceConfig(config);
-    if (ok) {
-      toast.success("WooCommerce credentials saved.");
-    } else {
-      toast.error("Invalid credentials. Check URL, consumer key and secret.");
-    }
-    return ok;
-  };
-
-  const handleTestConnection = async () => {
-    if (!handleSaveConfig()) return;
-    setTesting(true);
-    setConnectionStatus("idle");
-    try {
-      const result = await testConnection();
-      setConnectionStatus(result.connected ? "success" : "error");
-      toast(result.connected ? "Connection successful!" : "Connection failed. Check your credentials.");
-    } catch (error) {
-      setConnectionStatus("error");
-      toast.error("Connection test failed");
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const handleFullSync = async () => {
-    if (!handleSaveConfig()) return;
-    setSyncing(true);
-    try {
-      const result = await fullSyncFromWooCommerce((stage, current, total) => {
-        setSyncProgress(`Syncing ${stage} (${current}/${total})`);
-      });
-      
-      // Load the synced data into the store
-      store.loadWooCommerceData(result);
-      
-      toast.success("Sync completed successfully! Demo data cleared and WooCommerce data loaded.");
-      setSyncProgress("");
-    } catch (error) {
-      toast.error("Sync failed. Check connection and try again.");
-      setSyncProgress("");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  return (
-    <>
-      <Panel>
-        <PanelHeader title="WooCommerce API Configuration" hint="Connect your WooCommerce store" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="wc-url" className="label-tech">
-              Store URL
-            </Label>
-            <Input
-              id="wc-url"
-              placeholder="https://your-store.com"
-              value={config.url}
-              onChange={(e) => setConfig((c) => ({ ...c, url: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="wc-key" className="label-tech">
-              Consumer Key
-            </Label>
-            <Input
-              id="wc-key"
-              placeholder="ck_xxxxxxxxxxxx"
-              value={config.consumerKey}
-              onChange={(e) => setConfig((c) => ({ ...c, consumerKey: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="wc-secret" className="label-tech">
-              Consumer Secret
-            </Label>
-            <Input
-              id="wc-secret"
-              type="password"
-              placeholder="cs_xxxxxxxxxxxx"
-              value={config.consumerSecret}
-              onChange={(e) => setConfig((c) => ({ ...c, consumerSecret: e.target.value }))}
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-4 pb-4">
-          <Button
-            size="sm"
-            variant="default"
-            disabled={!config.url || !config.consumerKey || !config.consumerSecret}
-            onClick={handleSaveConfig}
-          >
-            Save
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={testing || !config.url || !config.consumerKey || !config.consumerSecret}
-            onClick={handleTestConnection}
-          >
-            {testing ? "Testing..." : "Test Connection"}
-          </Button>
-          {connectionStatus === "success" && (
-            <span className="text-xs text-success">✓ Connected</span>
-          )}
-          {connectionStatus === "error" && (
-            <span className="text-xs text-danger">✗ Connection failed</span>
-          )}
-        </div>
-        <div className="px-4 pb-4">
-          <DemoNote>
-            Configure your WooCommerce REST API credentials in WooCommerce → Settings → Advanced → REST API.
-            Create API keys with Read/Write permissions for full functionality.
-          </DemoNote>
-        </div>
-      </Panel>
-
-      <Panel>
-        <PanelHeader title="Data Synchronization" hint="Sync products, categories, customers, and orders" />
-        <div className="divide-y divide-border/60">
-          <div className="flex items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-[13px] text-foreground">Load demo data</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Restore the original demo dataset for testing and development
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                store.resetDemoData();
-                toast.success("Demo data restored.");
-              }}
-            >
-              Load Demo Data
-            </Button>
-          </div>
-          <div className="flex items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-[13px] text-foreground">Clear all data</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Remove all data to start fresh
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                store.clearDemoData();
-                toast.success("All data cleared.");
-              }}
-            >
-              Clear Data
-            </Button>
-          </div>
-          <div className="flex items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-[13px] text-foreground">Load from WooCommerce</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Import products, categories, customers, and orders from WooCommerce (clears existing data)
-              </p>
-            </div>
-            <Button
-              size="sm"
-              disabled={syncing || connectionStatus !== "success"}
-              onClick={handleFullSync}
-            >
-              {syncing ? "Syncing..." : "Load WooCommerce Data"}
-            </Button>
-          </div>
-          {syncProgress && (
-            <div className="px-4 py-2 text-xs text-muted-foreground mono">{syncProgress}</div>
-          )}
-        </div>
-        <div className="px-4 pb-4">
-          <DemoNote>
-            The app now starts with empty data by default. Use "Load Demo Data" to restore the original
-            demo dataset, or "Load WooCommerce Data" to import your WooCommerce store data.
-          </DemoNote>
-        </div>
       </Panel>
     </>
   );
