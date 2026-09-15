@@ -171,6 +171,7 @@ export function computeTotals(
 interface StoreValue extends Snapshot {
   products: Product[];
   hydrated: boolean;
+  loadingWooCommerce: boolean;
   /* session */
   signInAs: (role: Role, password: string) => { ok: boolean; error?: string };
   signOut: () => void;
@@ -305,24 +306,45 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Snapshot>(() => emptyState());
   const [hydrated, setHydrated] = useState(false);
+  const [loadingWooCommerce, setLoadingWooCommerce] = useState(false);
   const skipWrite = useRef(true);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Snapshot>;
-        if (parsed.schemaVersion === SCHEMA_VERSION) {
-          setState((prev) => ({ ...prev, ...parsed }));
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
+    async function initializeStore() {
+      try {
+        // Check if WooCommerce credentials exist
+        let hasWooCommerceCredentials = false;
+        try {
+          const { getWooCommerceConfig } = await import("./woocommerce-config");
+          const config = getWooCommerceConfig();
+          hasWooCommerceCredentials = !!config;
+        } catch {
+          hasWooCommerceCredentials = false;
         }
+
+        if (hasWooCommerceCredentials) {
+          // Don't load from localStorage - we'll fetch fresh WooCommerce data
+          console.log("WooCommerce credentials found, will fetch fresh data");
+          setState(() => emptyState());
+        } else {
+          // Load from localStorage for non-WooCommerce users
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Partial<Snapshot>;
+            if (parsed.schemaVersion === SCHEMA_VERSION) {
+              setState((prev) => ({ ...prev, ...parsed }));
+            } else {
+              localStorage.removeItem(STORAGE_KEY);
+            }
+          }
+        }
+      } catch {
+        /* corrupt demo state — fall back to seed */
       }
-    } catch {
-      /* corrupt demo state — fall back to seed */
+      skipWrite.current = false;
+      setHydrated(true);
     }
-    skipWrite.current = false;
-    setHydrated(true);
+    initializeStore();
   }, []);
 
   // Auto-load WooCommerce data if credentials are configured (always sync fresh data)
@@ -331,6 +353,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     async function autoLoadWooCommerce() {
       try {
+        setLoadingWooCommerce(true);
         console.log("Attempting to auto-load WooCommerce data...");
         const { getWooCommerceConfig } = await import("./woocommerce-config");
         const config = getWooCommerceConfig();
@@ -349,7 +372,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               customers: result.customers,
               orders: result.orders,
               inventory: result.products.map((p: any) => {
-                const onHand = p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0);
+                // Handle infinite stock: if stock_quantity is null/undefined but stock_status is instock, use Infinity
+                const onHand = p.stock_quantity !== null && p.stock_quantity !== undefined 
+                  ? p.stock_quantity 
+                  : (p.stock_status === 'instock' ? Infinity : 0);
                 console.log(`Product ${p.id} (${p.name}): stock_quantity=${p.stock_quantity}, stock_status=${p.stock_status}, onHand=${onHand}`);
                 return {
                   productId: p.id,
@@ -366,6 +392,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.warn("Auto-load WooCommerce data failed:", error);
+      } finally {
+        setLoadingWooCommerce(false);
       }
     }
     autoLoadWooCommerce();
@@ -476,6 +504,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       ...state,
       hydrated,
+      loadingWooCommerce,
 
       signInAs: (role, password) => {
         const u = demo.demoUsers.find((u) => u.role === role);
@@ -1560,7 +1589,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           orders: data.orders,
           inventory: data.products.map((p: any) => ({
             productId: p.id,
-            onHand: p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0),
+            onHand: p.stock_quantity !== null && p.stock_quantity !== undefined 
+              ? p.stock_quantity 
+              : (p.stock_status === 'instock' ? Infinity : 0),
             reserved: 0,
             damaged: 0,
             sold: 0,
