@@ -325,10 +325,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Auto-load WooCommerce data if store is empty and credentials are configured
+  // Auto-load WooCommerce data if credentials are configured (always sync fresh data)
   useEffect(() => {
     if (!hydrated) return;
-    if (state.products.length > 0) return; // Don't auto-load if we already have data
 
     async function autoLoadWooCommerce() {
       try {
@@ -366,7 +365,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     }
     autoLoadWooCommerce();
-  }, [hydrated, state.products.length]);
+  }, [hydrated]);
 
   useEffect(() => {
     if (skipWrite.current) return;
