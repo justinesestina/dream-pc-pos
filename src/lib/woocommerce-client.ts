@@ -5,31 +5,38 @@
  * Maps WooCommerce data structures to POS data structures
  */
 
-import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import { getWooCommerceConfig } from "./woocommerce-config";
 import type { Product, Category, Customer, Order, OrderItem, PaymentMethod } from "./types";
 
-// Initialize WooCommerce API client (rebuilt if configuration changes)
-let api: WooCommerceRestApi | null = null;
-let apiKey = "";
-
-function getApi() {
+// Use native fetch instead of WooCommerce package for better compatibility
+async function wooCommerceRequest(endpoint: string, method: string = 'GET', data?: any) {
   const config = getWooCommerceConfig();
   if (!config) {
     throw new Error("WooCommerce configuration is not properly set");
   }
-  const nextKey = `${config.url}|${config.consumerKey}|${config.consumerSecret}`;
-  if (!api || apiKey !== nextKey) {
-    api = new WooCommerceRestApi({
-      url: config.url,
-      consumerKey: config.consumerKey,
-      consumerSecret: config.consumerSecret,
-      version: config.version as any,
-      timeout: config.timeout,
-    });
-    apiKey = nextKey;
+
+  const url = `${config.url}/wp-json/wc/v3/${endpoint}`;
+  const auth = btoa(`${config.consumerKey}:${config.consumerSecret}`);
+
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
+  };
+
+  if (data && method !== 'GET') {
+    options.body = JSON.stringify(data);
   }
-  return api;
+
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    throw new Error(`WooCommerce API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 /* ------------------------------------------------------------- Product Mapping */
@@ -267,8 +274,8 @@ function mapPosOrderStatusToWooCommerce(status: Order["status"]): string {
  */
 export async function fetchWooCommerceProducts(): Promise<Product[]> {
   try {
-    const response = await getApi().get("products", { per_page: 100 });
-    return response.data.map(mapWooCommerceProductToPos);
+    const response = await wooCommerceRequest("products?per_page=100");
+    return response.map(mapWooCommerceProductToPos);
   } catch (error) {
     console.error("Error fetching WooCommerce products:", error);
     throw error;
@@ -280,8 +287,8 @@ export async function fetchWooCommerceProducts(): Promise<Product[]> {
  */
 export async function fetchWooCommerceCategories(): Promise<Category[]> {
   try {
-    const response = await getApi().get("products/categories", { per_page: 100 });
-    return response.data.map(mapWooCommerceCategoryToPos);
+    const response = await wooCommerceRequest("products/categories?per_page=100");
+    return response.map(mapWooCommerceCategoryToPos);
   } catch (error) {
     console.error("Error fetching WooCommerce categories:", error);
     throw error;
@@ -293,8 +300,8 @@ export async function fetchWooCommerceCategories(): Promise<Category[]> {
  */
 export async function fetchWooCommerceCustomers(): Promise<Customer[]> {
   try {
-    const response = await getApi().get("customers", { per_page: 100 });
-    return response.data.map(mapWooCommerceCustomerToPos);
+    const response = await wooCommerceRequest("customers?per_page=100");
+    return response.map(mapWooCommerceCustomerToPos);
   } catch (error) {
     console.error("Error fetching WooCommerce customers:", error);
     throw error;
@@ -306,8 +313,8 @@ export async function fetchWooCommerceCustomers(): Promise<Customer[]> {
  */
 export async function fetchWooCommerceOrders(): Promise<Order[]> {
   try {
-    const response = await getApi().get("orders", { per_page: 100 });
-    return response.data.map(mapWooCommerceOrderToPos);
+    const response = await wooCommerceRequest("orders?per_page=100");
+    return response.map(mapWooCommerceOrderToPos);
   } catch (error) {
     console.error("Error fetching WooCommerce orders:", error);
     throw error;
@@ -320,8 +327,8 @@ export async function fetchWooCommerceOrders(): Promise<Order[]> {
 export async function createWooCommerceProduct(product: Product): Promise<any> {
   try {
     const wooProduct = mapPosProductToWooCommerce(product);
-    const response = await getApi().post("products", wooProduct);
-    return response.data;
+    const response = await wooCommerceRequest("products", "POST", wooProduct);
+    return response;
   } catch (error) {
     console.error("Error creating WooCommerce product:", error);
     throw error;
@@ -334,8 +341,8 @@ export async function createWooCommerceProduct(product: Product): Promise<any> {
 export async function updateWooCommerceProduct(productId: string, product: Product): Promise<any> {
   try {
     const wooProduct = mapPosProductToWooCommerce(product);
-    const response = await getApi().put(`products/${productId}`, wooProduct);
-    return response.data;
+    const response = await wooCommerceRequest(`products/${productId}`, "PUT", wooProduct);
+    return response;
   } catch (error) {
     console.error("Error updating WooCommerce product:", error);
     throw error;
@@ -348,8 +355,8 @@ export async function updateWooCommerceProduct(productId: string, product: Produ
 export async function createWooCommerceOrder(order: Order): Promise<any> {
   try {
     const wooOrder = mapPosOrderToWooCommerce(order);
-    const response = await getApi().post("orders", wooOrder);
-    return response.data;
+    const response = await wooCommerceRequest("orders", "POST", wooOrder);
+    return response;
   } catch (error) {
     console.error("Error creating WooCommerce order:", error);
     throw error;
@@ -362,8 +369,8 @@ export async function createWooCommerceOrder(order: Order): Promise<any> {
 export async function updateWooCommerceOrder(orderId: string, order: Order): Promise<any> {
   try {
     const wooOrder = mapPosOrderToWooCommerce(order);
-    const response = await getApi().put(`orders/${orderId}`, wooOrder);
-    return response.data;
+    const response = await wooCommerceRequest(`orders/${orderId}`, "PUT", wooOrder);
+    return response;
   } catch (error) {
     console.error("Error updating WooCommerce order:", error);
     throw error;
@@ -375,7 +382,7 @@ export async function updateWooCommerceOrder(orderId: string, order: Order): Pro
  */
 export async function testWooCommerceConnection(): Promise<boolean> {
   try {
-    await getApi().get("system_status");
+    await wooCommerceRequest("products?per_page=1");
     return true;
   } catch (error) {
     console.error("WooCommerce connection test failed:", error);
