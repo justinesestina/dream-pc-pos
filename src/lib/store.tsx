@@ -332,13 +332,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     async function autoLoadWooCommerce() {
       try {
+        console.log("Attempting to auto-load WooCommerce data...");
         const { getWooCommerceConfig } = await import("./woocommerce-config");
         const config = getWooCommerceConfig();
+        console.log("WooCommerce config:", config);
         if (config) {
           const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
           const connected = await testConnection();
+          console.log("WooCommerce connection test:", connected);
           if (connected) {
             const result = await fullSyncFromWooCommerce();
+            console.log("WooCommerce sync result:", result);
             setState((prev) => ({
               ...prev,
               categories: result.categories,
@@ -349,8 +353,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 productId: p.id,
                 onHand: 10, // Default stock for WooCommerce products
                 reserved: 0,
+                damaged: 0,
+                sold: 0,
+                reorderPoint: 5,
               })),
             }));
+            console.log("WooCommerce data loaded successfully");
           }
         }
       } catch (error) {
