@@ -325,6 +325,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
+  // Auto-load WooCommerce data if store is empty and credentials are configured
+  useEffect(() => {
+    if (!hydrated) return;
+    if (state.products.length > 0) return; // Don't auto-load if we already have data
+
+    async function autoLoadWooCommerce() {
+      try {
+        const { getWooCommerceConfig } = await import("./woocommerce-config");
+        const config = getWooCommerceConfig();
+        if (config) {
+          const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
+          const connected = await testConnection();
+          if (connected) {
+            const result = await fullSyncFromWooCommerce();
+            setState((prev) => ({
+              ...prev,
+              categories: result.categories,
+              products: result.products,
+              customers: result.customers,
+              orders: result.orders,
+              inventory: result.products.map((p: any) => ({
+                productId: p.id,
+                onHand: 10, // Default stock for WooCommerce products
+                reserved: 0,
+              })),
+            }));
+          }
+        }
+      } catch (error) {
+        console.warn("Auto-load WooCommerce data failed:", error);
+      }
+    }
+    autoLoadWooCommerce();
+  }, [hydrated, state.products.length]);
+
   useEffect(() => {
     if (skipWrite.current) return;
     const timeoutId = setTimeout(() => {
