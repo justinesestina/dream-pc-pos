@@ -61,7 +61,7 @@ function AppLayout() {
       }
       if (e.key === "F1") {
         e.preventDefault();
-        void navigate({ to: "/pos" });
+        void navigate({ to: "/orders" });
       }
       if (e.key === "F2") {
         e.preventDefault();

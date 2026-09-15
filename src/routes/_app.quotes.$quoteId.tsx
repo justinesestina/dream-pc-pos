@@ -8,8 +8,24 @@ import { DocumentPreview, PrintButton } from "@/components/nexus/document";
 import { QuoteEditorDialog } from "@/components/quotes/quote-editor-dialog";
 import { QuotePdfDialog } from "@/components/quotes/quote-pdf-dialog";
 import { QuoteClientMessage } from "@/components/quotes/quote-message";
-import { FileText } from "lucide-react";
+import { FileText, History, CreditCard, Banknote, Smartphone, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +39,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { dateShort, daysUntil } from "@/lib/format";
+import { dateShort, daysUntil, money } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { PaymentMethod } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/quotes/$quoteId")({
   head: () => ({
@@ -45,6 +62,9 @@ function QuotesQuoteidPage() {
   const quote = quotes.find((q) => q.id === quoteId);
   const [editOpen, setEditOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [dpAmount, setDpAmount] = useState("");
+  const [dpMethod, setDpMethod] = useState<PaymentMethod>("cash");
 
   if (!quote) {
     return (
@@ -81,13 +101,16 @@ function QuotesQuoteidPage() {
   };
 
   const handleConvert = () => {
-    const order = convertQuoteToOrder(quote.id);
+    const amount = Number(dpAmount) || 0;
+    const downpayment = amount > 0 ? { amount, method: dpMethod } : undefined;
+    const order = convertQuoteToOrder(quote.id, downpayment);
     if (order) {
-      toast.success(`Converted to order ${order.id}`);
+      toast.success(`Converted to order ${order.id}${downpayment ? ` with ₱${amount.toLocaleString()} downpayment` : ""}`);
       navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
     } else {
       toast.error("Could not convert quote to order.");
     }
+    setConvertOpen(false);
   };
 
   return (
@@ -106,6 +129,11 @@ function QuotesQuoteidPage() {
               quote.customerName
             )}{" "}
             · issued {dateShort(quote.createdAt)}
+            {(quote.version ?? 1) > 1 && (
+              <span className="ml-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                v{quote.version}
+              </span>
+            )}
           </span>
         }
         actions={
@@ -148,7 +176,7 @@ function QuotesQuoteidPage() {
               </AlertDialog>
             )}
             {canConvert && (
-              <Button size="sm" onClick={handleConvert}>
+              <Button size="sm" onClick={() => { setDpAmount(""); setDpMethod("cash"); setConvertOpen(true); }}>
                 Convert to order
               </Button>
             )}
@@ -205,6 +233,7 @@ function QuotesQuoteidPage() {
           { label: "Subtotal", value: quote.subtotal },
           { label: "Discount", value: -quote.discount },
           { label: "Service total", value: quote.serviceTotal },
+          ...(quote.shippingFee ? [{ label: "Shipping", value: quote.shippingFee }] : []),
           { label: "VAT (12%)", value: quote.tax },
           { label: "Total", value: quote.total, strong: true },
         ]}
@@ -244,9 +273,106 @@ function QuotesQuoteidPage() {
         )}
       </DemoNote>
 
+      {/* Revision history */}
+      {(quote.revisions?.length ?? 0) > 0 && (
+        <Panel>
+          <PanelHeader
+            title={<span className="flex items-center gap-1.5"><History className="size-3.5" /> Revision history</span>}
+            hint={`${quote.revisions.length} previous version${quote.revisions.length > 1 ? "s" : ""}`}
+          />
+          <div className="divide-y divide-border">
+            {[...quote.revisions].reverse().map((rev) => (
+              <div key={rev.version} className="flex items-center justify-between px-4 py-3 sm:px-5">
+                <div>
+                  <p className="text-xs font-medium">
+                    Version {rev.version}
+                    <span className="ml-2 text-muted-foreground">{dateShort(rev.at)}</span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {rev.items.length} item{rev.items.length !== 1 ? "s" : ""} · Total: {money(rev.total)}
+                  </p>
+                </div>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  v{rev.version}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
       <QuoteEditorDialog open={editOpen} onOpenChange={setEditOpen} quote={quote} />
 
       <QuotePdfDialog open={pdfOpen} onOpenChange={setPdfOpen} quote={quote} customer={customer} />
+
+      {/* Convert to Order dialog with downpayment */}
+      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Convert {quote.id} to order</DialogTitle>
+            <DialogDescription>
+              Record a downpayment now, or convert without payment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg border border-border bg-surface/40 p-3">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <dt className="text-muted-foreground">Quote total</dt>
+                <dd className="mono font-medium text-right">{money(quote.total)}</dd>
+              </dl>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="dp-amount" className="label-tech">Downpayment amount (₱)</label>
+              <Input
+                id="dp-amount"
+                type="number"
+                min={0}
+                max={quote.total}
+                value={dpAmount}
+                onChange={(e) => setDpAmount(e.target.value)}
+                placeholder="0 = no downpayment"
+                className="h-9"
+              />
+              {Number(dpAmount) > 0 && Number(dpAmount) < quote.total && (
+                <p className="text-[11px] text-muted-foreground">
+                  Balance due: <span className="mono font-medium">{money(quote.total - Number(dpAmount))}</span>
+                </p>
+              )}
+              {Number(dpAmount) >= quote.total && (
+                <p className="text-[11px] text-green-600 dark:text-green-400 font-medium">
+                  ✓ Full payment — order will be marked as paid
+                </p>
+              )}
+            </div>
+            {Number(dpAmount) > 0 && (
+              <div className="space-y-1.5">
+                <label htmlFor="dp-method" className="label-tech">Payment method</label>
+                <Select value={dpMethod} onValueChange={(v) => setDpMethod(v as PaymentMethod)}>
+                  <SelectTrigger id="dp-method" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash"><span className="flex items-center gap-1.5"><Banknote className="size-3.5" /> Cash</span></SelectItem>
+                    <SelectItem value="gcash"><span className="flex items-center gap-1.5"><Smartphone className="size-3.5" /> GCash</span></SelectItem>
+                    <SelectItem value="bank"><span className="flex items-center gap-1.5"><Building2 className="size-3.5" /> Bank transfer</span></SelectItem>
+                    <SelectItem value="card"><span className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> Credit / Debit card</span></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertOpen(false)}>Cancel</Button>
+            <Button onClick={handleConvert}>
+              {Number(dpAmount) > 0
+                ? Number(dpAmount) >= quote.total
+                  ? "Convert with full payment"
+                  : `Convert with ₱${Number(dpAmount).toLocaleString()} downpayment`
+                : "Convert without payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

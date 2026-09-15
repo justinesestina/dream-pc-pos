@@ -90,7 +90,7 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         className="hidden h-8 w-64 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-left text-xs text-muted-foreground transition-colors hover:border-border-strong md:flex xl:w-80"
       >
         <Search className="size-3.5" />
-        <span className="flex-1 truncate">Search products, orders, serials…</span>
+        <span className="flex-1 truncate">Search products, orders, customers…</span>
         <kbd className="mono rounded border border-border bg-elevated px-1 py-0.5 text-[10px]">
           ⌘K
         </kbd>
@@ -110,9 +110,9 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         Demo mode
       </span>
 
-      <Button 
-        size="icon" 
-        variant="ghost" 
+      <Button
+        size="icon"
+        variant="ghost"
         onClick={() => store.setTheme(store.theme === "dark" ? "light" : "dark")}
         title={`Switch to ${store.theme === "dark" ? "light" : "dark"} mode`}
         className="hidden sm:inline-flex"

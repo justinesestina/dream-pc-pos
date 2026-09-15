@@ -54,9 +54,9 @@ const ROLE_ICONS: Record<Role, LucideIcon> = {
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   owner: "Full access · store & system",
-  admin: "Workshop, approvals & ops",
-  cashier: "Point-of-sale & orders",
-  inventory: "Stock, purchasing & receiving",
+  admin: "Approvals & operations",
+  cashier: "Orders, quotes & customers",
+  inventory: "Catalog, products & stock levels",
 };
 
 function LoginPage() {
@@ -77,7 +77,8 @@ function LoginPage() {
 
   const selectRole = (role: Role) => {
     setSelected(role);
-    setPassword("");
+    const u = demoUsers.find((x) => x.role === role);
+    setPassword(u?.password || "");
     setError(null);
   };
 
@@ -101,7 +102,7 @@ function LoginPage() {
         <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-40" />
         <div className="ambient-glow pointer-events-none absolute inset-0" />
         <div className="pointer-events-none absolute -left-[10%] top-[20%] size-[500px] rounded-full bg-info/10 blur-[120px]" />
-        
+
         <div className="relative z-10">
           <div className="flex items-center gap-3">
             <DreamLogo className="size-10 rounded-lg ring-1 ring-border shadow-sm" />
@@ -112,7 +113,9 @@ function LoginPage() {
         <div className="relative z-10 hidden max-w-md lg:block">
           <h1 className="mb-4 text-4xl font-bold tracking-tight">Operations Console</h1>
           <p className="leading-relaxed text-muted-foreground">
-            The intelligent internal platform for Dream PC Build & IT Solutions. Seamlessly manage your point-of-sale, custom build pipeline, service tickets, and live inventory from a single, unified command center.
+            The intelligent internal platform for Dream PC Build & IT Solutions. Seamlessly manage
+            your online orders, quotations, product catalog, and live inventory from a single,
+            unified command center.
           </p>
         </div>
 
@@ -126,12 +129,19 @@ function LoginPage() {
         <Reveal className="w-full max-w-[420px]" as="div" y={24} duration={0.6}>
           {selected === null ? (
             /* ── Step 1: Select Profile ──────────────────────────────── */
-            <div key="select" className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+            <div
+              key="select"
+              className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500"
+            >
               <div>
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">Welcome back</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Select your operator profile to continue</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+                  Welcome back
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Select your operator profile to continue
+                </p>
               </div>
-              
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {LOGIN_ROLES.map((role, i) => {
                   const Icon = ROLE_ICONS[role];
@@ -180,7 +190,9 @@ function LoginPage() {
                   <ArrowLeft className="size-3.5" /> Back to profiles
                 </button>
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground">Sign in</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Authenticating as {roleLabels[selected]}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Authenticating as {roleLabels[selected]}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-surface/50 p-5 shadow-sm backdrop-blur-xl">
@@ -191,7 +203,9 @@ function LoginPage() {
                   <div className="min-w-0">
                     <p className="text-base font-semibold">{roleLabels[selected]}</p>
                     {user && (
-                      <p className="mono mt-0.5 truncate text-[11.5px] text-muted-foreground">{user.email}</p>
+                      <p className="mono mt-0.5 truncate text-[11.5px] text-muted-foreground">
+                        {user.email}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -236,7 +250,11 @@ function LoginPage() {
                   </p>
                 )}
 
-                <Button type="submit" className="mt-6 h-11 w-full text-[13.5px] font-semibold shadow-sm" disabled={pending}>
+                <Button
+                  type="submit"
+                  className="mt-6 h-11 w-full text-[13.5px] font-semibold shadow-sm"
+                  disabled={pending}
+                >
                   {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                   Access Workspace
                 </Button>
@@ -244,7 +262,8 @@ function LoginPage() {
                 {user?.password && (
                   <div className="mt-5 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2.5 text-center">
                     <p className="mono flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-                      Demo password: <span className="font-semibold text-foreground">{user.password}</span>
+                      Demo password:{" "}
+                      <span className="font-semibold text-foreground">{user.password}</span>
                     </p>
                   </div>
                 )}

@@ -57,7 +57,7 @@ const STORAGE_KEY = "dpc-nexus-demo-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 interface Snapshot {
   schemaVersion: number;
@@ -129,9 +129,10 @@ export function computeTotals(
   lines: { qty: number; unitPrice: number }[],
   discount = 0,
   serviceTotal = 0,
+  shippingFee = 0,
 ): Totals {
   const gross = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
-  const net = Math.max(0, gross + serviceTotal - discount);
+  const net = Math.max(0, gross + serviceTotal + shippingFee - discount);
   const subtotal = Math.round((net / (1 + VAT_RATE)) * 100) / 100;
   const tax = Math.round((net - subtotal) * 100) / 100;
   return { gross, discount, serviceTotal, net, subtotal, tax, total: net };
@@ -202,6 +203,7 @@ interface StoreValue extends Snapshot {
     items: { productId: string; qty: number }[];
     discount: number;
     serviceTotal: number;
+    shippingFee?: number;
     notes?: string;
     expiresInDays: number;
   }) => Quote;
@@ -213,12 +215,13 @@ interface StoreValue extends Snapshot {
       items?: QuoteItem[];
       discount?: number;
       serviceTotal?: number;
+      shippingFee?: number;
       notes?: string;
       expiresInDays?: number;
     },
   ) => void;
   sendQuote: (quoteId: string, patch: { subject: string; message: string }) => void;
-  convertQuoteToOrder: (quoteId: string) => Order | null;
+  convertQuoteToOrder: (quoteId: string, downpayment?: { amount: number; method: PaymentMethod }) => Order | null;
   createBuild: (data: {
     customerId: string | null;
     purpose: string;
@@ -531,7 +534,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           discount: state.cartDiscount,
           tax: t.tax,
           serviceTotal,
+          shippingFee: 0,
           total: t.total,
+          amountPaid: t.total,
+          balanceDue: 0,
           payment,
           createdAt: at,
           notes: opts.notes,
@@ -829,7 +835,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `set order ${orderId} to ${status}`, orderId),
         })),
 
-      createQuote: ({ customerId, items, discount, serviceTotal, notes, expiresInDays }) => {
+      createQuote: ({ customerId, items, discount, serviceTotal, shippingFee = 0, notes, expiresInDays }) => {
         const lines = items.map((i) => {
           const p = productById(i.productId);
           return {
@@ -840,7 +846,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             unitPrice: p?.price ?? 0,
           };
         });
-        const t = computeTotals(lines, discount, serviceTotal);
+        const t = computeTotals(lines, discount, serviceTotal, shippingFee);
         const id = `QT-${state.counters.quote}`;
         const customer = customerById(customerId);
         const quote: Quote = {
@@ -851,9 +857,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           items: lines,
           discount,
           serviceTotal,
+          shippingFee,
           subtotal: t.subtotal,
           tax: t.tax,
           total: t.total,
+          version: 1,
+          revisions: [],
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + expiresInDays * 86400000).toISOString(),
           notes,
@@ -887,19 +896,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateQuote: (quoteId, edits) => {
         const existing = state.quotes.find((q) => q.id === quoteId);
         if (!existing) return;
+        // Save current state as a revision before applying edits
+        const revision = {
+          version: existing.version ?? 1,
+          at: new Date().toISOString(),
+          items: existing.items,
+          subtotal: existing.subtotal,
+          discount: existing.discount,
+          serviceTotal: existing.serviceTotal,
+          shippingFee: existing.shippingFee ?? 0,
+          tax: existing.tax,
+          total: existing.total,
+          notes: existing.notes,
+        };
         const items = edits.items ?? existing.items;
         const discount = edits.discount ?? existing.discount;
         const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
+        const shippingFee = edits.shippingFee ?? existing.shippingFee ?? 0;
         const customerId = edits.customerId !== undefined ? edits.customerId : existing.customerId;
         const customerName =
           customerId == null
             ? existing.customerName
             : customerById(customerId)?.name ?? existing.customerName;
-        const t = computeTotals(items, discount, serviceTotal);
+        const t = computeTotals(items, discount, serviceTotal, shippingFee);
         const expiresAt =
           edits.expiresInDays !== undefined
             ? new Date(Date.now() + edits.expiresInDays * 86400000).toISOString()
             : existing.expiresAt;
+        const nextVersion = (existing.version ?? 1) + 1;
         patch((s) => ({
           ...s,
           quotes: s.quotes.map((q) =>
@@ -911,15 +935,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   items,
                   discount,
                   serviceTotal,
+                  shippingFee,
                   subtotal: t.subtotal,
                   tax: t.tax,
                   total: t.total,
                   notes: edits.notes ?? q.notes,
                   expiresAt,
+                  version: nextVersion,
+                  revisions: [...(q.revisions ?? []), revision],
                 }
               : q,
           ),
-          auditLogs: log(s, `updated quote ${quoteId}`, quoteId),
+          auditLogs: log(s, `updated quote ${quoteId} to v${nextVersion}`, quoteId),
         }));
       },
 
@@ -946,24 +973,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         })),
 
-      convertQuoteToOrder: (quoteId) => {
+      convertQuoteToOrder: (quoteId, downpayment) => {
         const quote = state.quotes.find((q) => q.id === quoteId);
         if (!quote) return null;
         const id = `DPC-${state.counters.order}`;
         const at = new Date().toISOString();
+        const amountPaid = downpayment?.amount ?? 0;
+        const balanceDue = Math.max(0, quote.total - amountPaid);
+        const payment: Payment | null = downpayment
+          ? { id: `pay-${id}`, method: downpayment.method, amount: downpayment.amount, at }
+          : null;
+        const isPaid = amountPaid >= quote.total;
         const newOrder: Order = {
           id,
           customerId: quote.customerId,
           customerName: quote.customerName,
           type: quote.buildId ? "custom_build" : "retail",
-          status: "pending",
+          status: isPaid ? "paid" : "pending",
           items: quote.items,
           subtotal: quote.subtotal,
           discount: quote.discount,
           tax: quote.tax,
           serviceTotal: quote.serviceTotal,
+          shippingFee: quote.shippingFee ?? 0,
           total: quote.total,
-          payment: null,
+          amountPaid,
+          balanceDue,
+          payment,
           createdAt: at,
           quoteId: quote.id,
           buildId: quote.buildId,
@@ -975,8 +1011,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               actor: state.user?.name,
               state: "done",
             },
-            { label: "Awaiting payment", at, state: "active" },
-            { label: "Parts reserved", at: "", state: "pending" },
+            downpayment
+              ? {
+                  label: isPaid
+                    ? `Full payment received (₱${amountPaid.toLocaleString()})`
+                    : `Downpayment received (₱${amountPaid.toLocaleString()} of ₱${quote.total.toLocaleString()})`,
+                  at,
+                  actor: state.user?.name,
+                  state: "done" as const,
+                }
+              : { label: "Awaiting payment", at, state: "active" as const },
+            { label: isPaid ? "Ready for release" : "Balance due", at: isPaid ? at : "", state: isPaid ? "active" : "pending" },
             { label: "Released", at: "", state: "pending" },
           ],
         };
@@ -1009,7 +1054,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return { ...sn, status: "reserved" as const, orderId: id };
           }),
           counters: { ...s.counters, order: s.counters.order + 1 },
-          auditLogs: log(s, `converted quote ${quoteId} into order ${id}`, id),
+          auditLogs: log(s, `converted quote ${quoteId} into order ${id}${downpayment ? ` with ₱${amountPaid.toLocaleString()} downpayment` : ""}`, id),
+          notifications: notify(s, {
+            title: downpayment ? "Quote converted with downpayment" : "Quote converted to order",
+            body: `${quoteId} → ${id}${downpayment ? ` — ₱${amountPaid.toLocaleString()} received, ₱${balanceDue.toLocaleString()} remaining` : ""}`,
+            priority: "high",
+            kind: "quote",
+          }),
         }));
         if (quote.buildId) emitBuildStatus(quote.buildId, "parts_reserved");
         return newOrder;
@@ -1170,9 +1221,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           items: lines,
           discount: 0,
           serviceTotal,
+          shippingFee: 0,
           subtotal: t.subtotal,
           tax: t.tax,
           total: t.total,
+          version: 1,
+          revisions: [],
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 14 * 86400000).toISOString(),
           buildId: build.id,

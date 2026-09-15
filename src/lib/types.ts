@@ -155,7 +155,10 @@ export interface Order {
   discount: number;
   tax: number;
   serviceTotal: number;
+  shippingFee: number;
   total: number;
+  amountPaid: number;
+  balanceDue: number;
   payment: Payment | null;
   createdAt: string;
   buildId?: string | undefined;
@@ -176,6 +179,19 @@ export interface QuoteItem {
   unitPrice: number;
 }
 
+export interface QuoteRevision {
+  version: number;
+  at: string;
+  items: QuoteItem[];
+  subtotal: number;
+  discount: number;
+  serviceTotal: number;
+  shippingFee: number;
+  tax: number;
+  total: number;
+  notes?: string | undefined;
+}
+
 export interface Quote {
   id: string;
   customerId: string | null;
@@ -184,9 +200,12 @@ export interface Quote {
   items: QuoteItem[];
   discount: number;
   serviceTotal: number;
+  shippingFee: number;
   subtotal: number;
   tax: number;
   total: number;
+  version: number;
+  revisions: QuoteRevision[];
   createdAt: string;
   expiresAt: string;
   notes?: string | undefined;

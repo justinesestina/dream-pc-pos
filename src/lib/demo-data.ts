@@ -751,8 +751,8 @@ const item = (productId: string, qty = 1) => {
   return { productId, name: p.name, sku: p.sku, qty, unitPrice: p.price };
 };
 
-function totals(items: { qty: number; unitPrice: number }[], discount = 0, serviceTotal = 0) {
-  const gross = items.reduce((s, i) => s + i.qty * i.unitPrice, 0) + serviceTotal;
+function totals(items: { qty: number; unitPrice: number }[], discount = 0, serviceTotal = 0, shippingFee = 0) {
+  const gross = items.reduce((s, i) => s + i.qty * i.unitPrice, 0) + serviceTotal + shippingFee;
   const net = gross - discount;
   const subtotal = Math.round((net / 1.12) * 100) / 100;
   const tax = Math.round((net - subtotal) * 100) / 100;
@@ -783,7 +783,10 @@ function order(
     serviceTotal,
     subtotal: t.subtotal,
     tax: t.tax,
+    shippingFee: opts.shippingFee ?? 0,
     total: t.total,
+    amountPaid: opts.amountPaid ?? t.total,
+    balanceDue: opts.balanceDue ?? 0,
     payment: opts.payment ?? {
       id: `pay-${id}`,
       method: "cash",
@@ -950,9 +953,12 @@ export const quotes: Quote[] = [
     ],
     discount: 1500,
     serviceTotal: 4000,
+    shippingFee: 0,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(1, 14),
     expiresAt: daysAhead(6),
     notes: "Editing workstation, prefers quiet operation.",
@@ -970,9 +976,12 @@ export const quotes: Quote[] = [
     items: [item("p-cpu-7600", 6), item("p-mb-b650m", 6), item("p-ram-vengeance16", 12)],
     discount: 6000,
     serviceTotal: 9000,
+    shippingFee: 500,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(3, 11),
     expiresAt: daysAhead(11),
     notes: "Phase 2 of cafe upgrade.",
@@ -990,9 +999,12 @@ export const quotes: Quote[] = [
     items: [item("p-mon-odyssey", 4)],
     discount: 2000,
     serviceTotal: 0,
+    shippingFee: 0,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(5, 10),
     expiresAt: daysAhead(9),
     preparedBy: "Mika Santos",
@@ -1005,9 +1017,12 @@ export const quotes: Quote[] = [
     items: [item("p-gpu-9070"), item("p-psu-mag850")],
     discount: 0,
     serviceTotal: 500,
+    shippingFee: 0,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(2, 16),
     expiresAt: daysAhead(12),
     preparedBy: "Paolo Cruz",
@@ -1020,9 +1035,12 @@ export const quotes: Quote[] = [
     items: [item("p-cpu-7800x3d"), item("p-gpu-5070"), item("p-mb-b650m")],
     discount: 2000,
     serviceTotal: 4000,
+    shippingFee: 0,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(9, 15),
     expiresAt: daysAgo(-5),
     orderId: "DPC-10482",
@@ -1037,9 +1055,12 @@ export const quotes: Quote[] = [
     items: [item("p-kb-k70"), item("p-mouse-g502")],
     discount: 0,
     serviceTotal: 0,
+    shippingFee: 0,
     subtotal: 0,
     tax: 0,
     total: 0,
+    version: 1,
+    revisions: [],
     createdAt: daysAgo(40, 12),
     expiresAt: daysAgo(26),
     preparedBy: "Paolo Cruz",
@@ -1048,7 +1069,7 @@ export const quotes: Quote[] = [
 
 // normalize quote totals
 for (const q of quotes) {
-  const t = totals(q.items, q.discount, q.serviceTotal);
+  const t = totals(q.items, q.discount, q.serviceTotal, q.shippingFee);
   q.subtotal = t.subtotal;
   q.tax = t.tax;
   q.total = t.total;

@@ -80,6 +80,7 @@ export function QuoteEditorDialog({
   const [lines, setLines] = useState<EditableItem[]>([]);
   const [discount, setDiscount] = useState("");
   const [serviceTotal, setServiceTotal] = useState("");
+  const [shippingFee, setShippingFee] = useState("");
   const [notes, setNotes] = useState("");
   const [validDays, setValidDays] = useState("14");
   const [subject, setSubject] = useState("");
@@ -100,6 +101,7 @@ export function QuoteEditorDialog({
     );
     setDiscount(quote.discount ? String(quote.discount) : "");
     setServiceTotal(quote.serviceTotal ? String(quote.serviceTotal) : "");
+    setShippingFee(quote.shippingFee ? String(quote.shippingFee) : "");
     setNotes(quote.notes ?? "");
     setValidDays(
       String(Math.max(1, Math.ceil((new Date(quote.expiresAt).getTime() - Date.now()) / 86400000))),
@@ -120,6 +122,7 @@ export function QuoteEditorDialog({
 
   const discountNum = Number(discount) || 0;
   const serviceNum = Number(serviceTotal) || 0;
+  const shippingNum = Number(shippingFee) || 0;
   const validDaysNum = Math.max(1, Number(validDays) || 14);
 
   const resolvedItems = useMemo<QuoteItem[]>(
@@ -140,8 +143,8 @@ export function QuoteEditorDialog({
   );
 
   const totals = useMemo(
-    () => computeTotals(resolvedItems, discountNum, serviceNum),
-    [resolvedItems, discountNum, serviceNum],
+    () => computeTotals(resolvedItems, discountNum, serviceNum, shippingNum),
+    [resolvedItems, discountNum, serviceNum, shippingNum],
   );
 
   const customerName = activeCustomers.find((c) => c.id === customerId)?.name ?? quote.customerName;
@@ -154,6 +157,7 @@ export function QuoteEditorDialog({
       items: resolvedItems,
       discount: discountNum,
       serviceTotal: serviceNum,
+      shippingFee: shippingNum,
       subtotal: totals.subtotal,
       tax: totals.tax,
       total: totals.total,
@@ -169,6 +173,7 @@ export function QuoteEditorDialog({
       resolvedItems,
       discountNum,
       serviceNum,
+      shippingNum,
       totals,
       validDaysNum,
       notes,
@@ -200,6 +205,7 @@ export function QuoteEditorDialog({
       items: resolvedItems,
       discount: discountNum,
       serviceTotal: serviceNum,
+      shippingFee: shippingNum,
       notes: notes.trim(),
       expiresInDays: validDaysNum,
     });
@@ -295,6 +301,20 @@ export function QuoteEditorDialog({
                     min={0}
                     value={serviceTotal}
                     onChange={(e) => setServiceTotal(e.target.value)}
+                    className="h-9"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="qe-shipping" className="label-tech">
+                    Shipping fee (₱)
+                  </label>
+                  <Input
+                    id="qe-shipping"
+                    type="number"
+                    min={0}
+                    value={shippingFee}
+                    onChange={(e) => setShippingFee(e.target.value)}
                     className="h-9"
                     placeholder="0.00"
                   />
@@ -407,7 +427,7 @@ export function QuoteEditorDialog({
 
               <div className="rounded-lg border border-border bg-surface/40 p-3">
                 <p className="label-tech mb-2">Quotation totals</p>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-6">
                   <div>
                     <dt className="text-muted-foreground">Subtotal</dt>
                     <dd className="mono">{money(totals.subtotal)}</dd>
@@ -419,6 +439,10 @@ export function QuoteEditorDialog({
                   <div>
                     <dt className="text-muted-foreground">Services</dt>
                     <dd className="mono">{money(serviceNum)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Shipping</dt>
+                    <dd className="mono">{money(shippingNum)}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">VAT (12%)</dt>
