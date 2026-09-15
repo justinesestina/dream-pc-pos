@@ -350,7 +350,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               orders: result.orders,
               inventory: result.products.map((p: any) => ({
                 productId: p.id,
-                onHand: 10, // Default stock for WooCommerce products
+                onHand: p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0),
                 reserved: 0,
                 damaged: 0,
                 sold: 0,
@@ -1554,9 +1554,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           products: data.products,
           customers: data.customers,
           orders: data.orders,
-          inventory: data.products.map((p) => ({
+          inventory: data.products.map((p: any) => ({
             productId: p.id,
-            onHand: 0,
+            onHand: p.stock_quantity !== null && p.stock_quantity !== undefined ? p.stock_quantity : (p.stock_status === 'instock' ? 10 : 0),
             reserved: 0,
             damaged: 0,
             sold: 0,
