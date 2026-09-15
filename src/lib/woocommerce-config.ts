@@ -40,9 +40,9 @@ function loadRuntimeOverrides(): Partial<WooCommerceConfig> | null {
  * Prefers credentials entered in Settings (persisted locally, masked in the UI), then environment variables.
  */
 export let woocommerceConfig: WooCommerceConfig = {
-  url: import.meta.env["VITE_WOOCOMMERCE_URL"] || "https://your-store.com",
-  consumerKey: import.meta.env["VITE_WOOCOMMERCE_CONSUMER_KEY"] || "your_consumer_key",
-  consumerSecret: import.meta.env["VITE_WOOCOMMERCE_CONSUMER_SECRET"] || "your_consumer_secret",
+  url: (import.meta.env && import.meta.env["VITE_WOOCOMMERCE_URL"]) || "https://your-store.com",
+  consumerKey: (import.meta.env && import.meta.env["VITE_WOOCOMMERCE_CONSUMER_KEY"]) || "your_consumer_key",
+  consumerSecret: (import.meta.env && import.meta.env["VITE_WOOCOMMERCE_CONSUMER_SECRET"]) || "your_consumer_secret",
   wpApi: true,
   version: "wc/v3",
   timeout: 15000,
