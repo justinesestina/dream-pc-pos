@@ -31,6 +31,7 @@ type Tab = "products" | "categories" | "archived";
 type ArchivedView = "products" | "categories";
 
 function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_stock" | "out_of_stock" {
+  if (onHand === Infinity) return "in_stock"; // Infinite stock is always in stock
   if (onHand <= 0) return "out_of_stock";
   if (onHand <= reorderPoint) return "low_stock";
   return "in_stock";
@@ -91,7 +92,10 @@ function ProductsIndexPage() {
     for (const p of activeProducts) {
       const inv = invFor(p.id);
       if (!inv) continue;
-      value += inv.onHand * p.cost;
+      // Skip products with cost 0 or infinite stock from catalog value calculation
+      if (p.cost > 0 && inv.onHand !== Infinity) {
+        value += inv.onHand * p.cost;
+      }
       const status = stockStatus(inv.onHand, inv.reorderPoint);
       if (status === "low_stock") low++;
       if (status === "out_of_stock") out++;
@@ -155,7 +159,7 @@ function ProductsIndexPage() {
         const status = stockStatus(onHand, inv?.reorderPoint ?? 0);
         return (
           <div className="flex items-center justify-end gap-2">
-            <span className="mono tabular-nums">{num(onHand)}</span>
+            <span className="mono tabular-nums">{onHand === Infinity ? "∞" : num(onHand)}</span>
             {status !== "in_stock" && <StatusBadge status={status} />}
           </div>
         );

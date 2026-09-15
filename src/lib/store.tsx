@@ -325,7 +325,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (hasWooCommerceCredentials) {
           // Don't load from localStorage - we'll fetch fresh WooCommerce data
           console.log("WooCommerce credentials found, will fetch fresh data");
-          setState(() => emptyState());
+          setState((prev) => ({ ...emptyState(), user: prev.user })); // Preserve user session
         } else {
           // Load from localStorage for non-WooCommerce users
           const raw = localStorage.getItem(STORAGE_KEY);
