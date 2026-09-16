@@ -35,13 +35,13 @@
   .muted { color: #9aa3b2; font-size: 12px; }
   .pill { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #22293a; }
   pre#lastResponse { background: #0a0c10; border: 1px solid #2a2f3a; padding: 10px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
-  #editModal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 10; padding: 30px 12px; overflow: auto; }
-  #editModal.open { display: flex; }
-  #editModal .card { background: #171b22; border: 1px solid #3a4150; border-radius: 12px; width: 640px; max-width: 100%; padding: 18px; }
-  #editModal .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  #editModal .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9aa3b2; }
-  #editModal .grid .full { grid-column: 1 / -1; }
-  #editModal .actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  #editModal, #catEditModal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 10; padding: 30px 12px; overflow: auto; }
+  #editModal.open, #catEditModal.open { display: flex; }
+  #editModal .card, #catEditModal .card { background: #171b22; border: 1px solid #3a4150; border-radius: 12px; width: 640px; max-width: 100%; padding: 18px; }
+  #editModal .grid, #catEditModal .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #editModal .grid label, #catEditModal .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9aa3b2; }
+  #editModal .grid .full, #catEditModal .grid .full { grid-column: 1 / -1; }
+  #editModal .actions, #catEditModal .actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
   .kv { font-size: 12px; }
   .kv b { color: #9aa3b2; font-weight: 600; }
 </style>
