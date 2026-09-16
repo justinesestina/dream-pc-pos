@@ -174,6 +174,7 @@ interface StoreValue extends Snapshot {
   loadingWooCommerce: boolean;
   /* session */
   signInAs: (role: Role, password: string) => { ok: boolean; error?: string };
+  signInWithUser: (user: User) => void;
   signOut: () => void;
   /* lookups */
   productById: (id: string) => Product | undefined;
@@ -517,6 +518,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         patch((s) => ({ ...s, user: u }));
         return { ok: true };
       },
+      signInWithUser: (u) => patch((s) => ({ ...s, user: u })),
       signOut: () => patch((s) => ({ ...s, user: null })),
 
       productById,
