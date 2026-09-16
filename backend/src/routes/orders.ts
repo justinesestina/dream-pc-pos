@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { requireAuth, type AppVars } from "../middleware/auth.js";
 import { ok, ApiError } from "../lib/errors.js";
 import { woocommerce, type WcOrder } from "../lib/woocommerce.js";
+import { isQuoteOrder } from "./quotes.js";
 import type { Order, OrderStatus } from "../types/dto.js";
 
 const WC_STATUS_TO_ORDER: Record<string, OrderStatus> = {
@@ -60,8 +61,8 @@ export function ordersRoutes() {
   app.get("/", requireAuth, async (c) => {
     const search = c.req.query("search") ?? "";
     const params = search ? `&search=${encodeURIComponent(search)}` : "";
-    const raw = await woocommerce.orders(params);
-    const orders = raw.map(mapWcOrderToDto);
+    const raw = await woocommerce.ordersAll(params);
+    const orders = raw.filter((o) => !isQuoteOrder(o)).map(mapWcOrderToDto);
     return c.json(ok(orders, { total: orders.length }));
   });
 
@@ -90,9 +91,12 @@ export function ordersRoutes() {
     };
     if (body.customerName) {
       const [first = "", last = ""] = String(body.customerName).split(" ");
+      // Ensure last_name is not empty - WooCommerce requires both first_name and last_name
+      const billingFirst = first || "Guest";
+      const billingLast = last || "Customer";
       payload["billing"] = {
-        first_name: first,
-        last_name: last,
+        first_name: billingFirst,
+        last_name: billingLast,
         email: String(body.email ?? ""),
       };
     }
