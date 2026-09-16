@@ -108,7 +108,7 @@
       </div>
     </div>
     <table>
-      <thead><tr><th>ID</th><th>Name</th><th>Slug</th><th>Parent</th><th>Display</th><th>Image</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Name</th><th>Slug</th><th>Parent</th><th>Display</th><th>Image</th><th>Actions</th></tr></thead>
       <tbody id="catalogBody"><tr><td colspan="7" class="muted">Log in and pick a type above.</td></tr></tbody>
     </table>
   </section>
@@ -592,14 +592,14 @@ async function renderCatalog() {
     const isAttr = catalogKind === "attributes";
     $("catalogBody").innerHTML = r.data.map((it) => `<tr>
       <td>${esc(it.id)}</td>
-      <td>${esc(it.name)}</td>
+      <td><strong>${esc(it.name)}</strong></td>
       ${isCat ? `<td class="muted">${esc(it.slug ?? "")}</td>
       <td class="muted">${it.parentId ? esc(it.parentId) : "—"}</td>
       <td class="muted">${esc(it.display ?? "default")}</td>
       <td>${it.image ? `<img src="${esc(it.image)}" style="height:30px;border-radius:4px;">` : "—"}</td>` : `<td colspan="4" class="muted">${isAttr ? esc(it.type) : "count " + (it.count ?? "?")}</td>`}
       <td>
-        ${isCat ? `<button class="small catedit" data-id="${esc(it.id)}">Edit</button>` : ""}
-        <button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">Delete</button>
+        ${isCat ? `<button class="small catedit" data-id="${esc(it.id)}" style="margin-right:8px;">✏️ Edit</button>` : ""}
+        <button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">🗑️ Delete</button>
       </td>
     </tr>`).join("") || `<tr><td colspan="7" class="muted">None yet.</td></tr>`;
   } catch (e) { showError(e.message); }
