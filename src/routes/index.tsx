@@ -111,6 +111,24 @@ function LoginPage() {
     setPending(true);
     const { loginToBackend } = await import("@/lib/api-client");
     const res = await loginToBackend(wpUser, wpPassword);
+    if (!res.ok && res.error?.startsWith("Could not reach backend.")) {
+      const direct = await authenticateWordPress(wpUser, wpPassword);
+      setPending(false);
+      if (!direct.ok || !direct.user) {
+        setError(direct.error ?? res.error ?? "Sign in failed.");
+        return;
+      }
+      try {
+        localStorage.setItem(
+          "dpc-nexus-wp-credentials",
+          JSON.stringify({ username: wpUser, appPassword: wpPassword }),
+        );
+      } catch {
+        /* storage may be unavailable; session login can still proceed */
+      }
+      store.signInWithUser(direct.user);
+      return;
+    }
     setPending(false);
     if (!res.ok || !res.user) {
       setError(res.error ?? "Sign in failed.");
