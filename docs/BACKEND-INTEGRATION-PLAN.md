@@ -244,7 +244,61 @@ next phase ships, so a broken backend never bricks the app.
 
 ---
 
-## 10. Open decisions (to confirm before P1)
+## 10. Repository & contributor workflow (one codebase, two mirrors)
+
+Right now the **same codebase lives in two GitHub repos**:
+
+| Remote | Repo | Role |
+|---|---|---|
+| `origin` | `github.com/Vanflame/dreampc-pos.git` | Canonical (default) |
+| `alt` | `github.com/justinesestina/dream-pc-pos.git` | Mirror (kept in sync) |
+
+Both are owned by the same person (Justine / Vanflame); anyone added as a GitHub
+collaborator can contribute. The **source of truth is one codebase** — the two repos are
+just two doors into it.
+
+### Recommended: consolidate to ONE canonical repo
+
+**Yes, one repo is the cleaner setup.** Recommended decision:
+
+1. Keep **`Vanflame/dreampc-pos`** as the **canonical repo** (it's the current `origin`).
+2. Treat **`justinesestina/dream-pc-pos`** as a **read-only mirror**, or archive it in
+   GitHub Settings once the next push confirms it's identical.
+3. Push to both until archived using a shared alias (see below); delete the `alt` remote
+   after archiving.
+
+### Sync commands
+
+```bash
+git push origin main   # canonical (always)
+git push alt main:main # mirror (only while both are active)
+```
+
+To push to both with one command, add an alias once:
+
+```bash
+git remote add all https://github.com/Vanflame/dreampc-pos.git       # if not set
+git set-url --add --push all https://github.com/justinesestina/dream-pc-pos.git
+git push all main
+```
+
+### Working rules (applies to every contributor)
+
+1. **Always pull before you push**: `git pull --rebase origin main` (try to keep local
+   commits on top).
+2. Push to `main` **only via fast-forward** — never force-push, rebase, or amend pushed
+   commits (Lovable + both mirrors depend on a stable history).
+3. Never push secrets. `.env*`, `backend/.env*` stay git-ignored (`VITE_*` values are
+   public; server secrets are not committed).
+4. Feature/hidden-module branches: push to either repo, PR into `main` on the canonical
+   repo.
+5. If a push to `alt` is ever rejected because it fell behind, fetch + fast-forward it:
+   `git fetch alt; git push alt main:main` (never rewrite).
+6. Backend work that lives in-repo goes in `backend/` (never under `src/`), per §1/§9.
+
+---
+
+## 11. Open decisions (to confirm before P1)
 
 - [ ] Backend host: **Supabase** (recommended, already architected) first, or a Node/Nitro
       service in this repo?
@@ -255,6 +309,7 @@ next phase ships, so a broken backend never bricks the app.
       shop_manager→admin, editor→inventory, custom `nexus_*` roles otherwise).
 - [ ] Keep the demo dataset as an offline fallback (`VITE_USE_BACKEND=false`), or remove
       it once P3 is live?
+- [ ] Consolidate to a single canonical repo now, or keep the mirror alive a bit longer?
 
 ---
 
