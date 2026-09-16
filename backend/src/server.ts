@@ -37,7 +37,18 @@ import { notificationsRoutes } from "./routes/notifications.js";
 
 export const app = new Hono();
 
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin) => origin || "*",
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Authorization", "Content-Type"],
+    exposeHeaders: ["Content-Length"],
+    maxAge: 86400,
+  }),
+);
+
+app.options("*", (c) => c.body(null, 204));
 
 app.get("/api/v1/health", (c) => {
   return c.json({

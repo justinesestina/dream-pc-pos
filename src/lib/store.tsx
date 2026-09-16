@@ -873,8 +873,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ],
           auditLogs: log(s, `created product ${product.name} (${sku})`, id),
         }));
-        // Fire-and-forget background sync
-        createBackendProduct(product).catch(e => console.error("Failed to create product in backend", e));
+        createBackendProduct({
+          ...product,
+          stock_quantity: onHand,
+          manage_stock: true,
+        })
+          .then((remoteProduct) => {
+            if (!remoteProduct) return;
+            patch((s) => ({
+              ...s,
+              products: s.products.map((p) => (p.id === id ? remoteProduct : p)),
+              inventory: s.inventory.map((i) =>
+                i.productId === id
+                  ? {
+                      ...i,
+                      productId: remoteProduct.id,
+                      onHand:
+                        remoteProduct.stock_quantity !== null &&
+                        remoteProduct.stock_quantity !== undefined
+                          ? Number(remoteProduct.stock_quantity)
+                          : i.onHand,
+                    }
+                  : i,
+              ),
+            }));
+          })
+          .catch((e) => console.error("Failed to create product in backend", e));
         return { ok: true, product };
       },
 
@@ -890,6 +914,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (next.productType === undefined && next.isService !== undefined) {
           next.productType = next.isService ? "service" : "product";
         }
+        const syncedProduct: Product = {
+          ...existing,
+          ...next,
+          stock_quantity: opts.onHand ?? existing.stock_quantity,
+          manage_stock: opts.onHand !== undefined ? true : existing.manage_stock,
+        };
         patch((s) => {
           const newMovements =
             hasStockPatch && opts.onHand !== undefined
@@ -924,11 +954,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             auditLogs: log(s, `updated product ${productId} (${sku})`, productId),
           };
         });
-        // Fire-and-forget background sync
-        const current = productById(productId);
-        if (current) {
-          updateBackendProduct(productId, current).catch(e => console.error("Failed to update product in backend", e));
-        }
+        updateBackendProduct(productId, syncedProduct)
+          .then((remoteProduct) => {
+            if (!remoteProduct) return;
+            patch((s) => ({
+              ...s,
+              products: s.products.map((p) => (p.id === productId ? { ...p, ...remoteProduct } : p)),
+              inventory: s.inventory.map((i) =>
+                i.productId === productId &&
+                remoteProduct.stock_quantity !== null &&
+                remoteProduct.stock_quantity !== undefined
+                  ? { ...i, onHand: Number(remoteProduct.stock_quantity) }
+                  : i,
+              ),
+            }));
+          })
+          .catch((e) => console.error("Failed to update product in backend", e));
         return { ok: true };
       },
 

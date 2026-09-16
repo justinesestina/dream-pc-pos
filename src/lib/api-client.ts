@@ -39,12 +39,15 @@ function getWpCredentials(): { username: string; appPassword: string } | null {
 async function apiRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
-  body?: unknown
+  body?: unknown,
+  opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  const contentType = opts.contentType ?? "json";
+  if (body !== undefined) {
+    headers["Content-Type"] = contentType === "text" ? "text/plain" : "application/json";
+  }
+  const token = opts.auth === false ? null : getAuthToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -93,7 +96,7 @@ export async function loginToBackend(username: string, appPassword: string): Pro
   const res = await apiRequest<{ token: string; user: User }>("/api/v1/auth/login", "POST", {
     username,
     appPassword,
-  });
+  }, { auth: false, contentType: "text" });
   
   if (res.ok && res.data) {
     localStorage.setItem("dpc-nexus-auth-token", res.data.token);
