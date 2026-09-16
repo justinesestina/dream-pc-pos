@@ -1,10 +1,12 @@
 /**
- * DPC NEXUS backend — API server.
+ * DPC NEXUS backend — the Hono application (framework-agnostic part).
  *
- * Vercel/hosted Node target, mounted under /api/v1. Every response uses the
- * envelope from lib/errors.ts unless the route returns raw `{ data }`.
+ * No listen()/serve() here, so this file can be imported by both the local
+ * runner (src/dev.ts) and the Vercel entrypoint (src/server.ts).
+ *
+ * Every response uses the envelope from lib/errors.ts unless the route returns
+ * raw `{ data }`.
  */
-import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { config, wpConfigured } from "./config.js";
@@ -27,7 +29,7 @@ import { releasesRoutes } from "./routes/releases.js";
 import { auditRoutes } from "./routes/audit.js";
 import { notificationsRoutes } from "./routes/notifications.js";
 
-const app = new Hono();
+export const app = new Hono();
 
 app.use("*", cors());
 
@@ -78,13 +80,3 @@ app.onError((err, c) => {
     (known?.status as 400 | 401 | 403 | 404 | 409 | 422 | 500) ?? 500,
   );
 });
-
-const port = config.port;
-
-if (config.nodeEnv !== "test") {
-  serve({ fetch: app.fetch, port }, (info) => {
-    console.log(`[dpc-nexus] API listening on http://localhost:${info.port}/api/v1`);
-  });
-}
-
-export default app;

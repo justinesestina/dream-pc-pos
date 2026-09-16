@@ -22,13 +22,32 @@ so it cannot collide with the TanStack Start frontend — see
 cd backend
 cp .env.example .env        # add WooCommerce keys + a strong JWT_SECRET
 bun install
-bun run dev                 # API at http://localhost:8787/api/v1
+npm run dev                 # API at http://localhost:8787/api/v1
 ```
 
 Discovered routes: hit `GET /api/v1/health` to see the domain list and whether
 WooCommerce/Supabase are configured. The `/auth/login` endpoint verifies a
 WordPress username + application password against the live site and returns a
 Bearer JWT you can use against every other route.
+
+## Deploy on Vercel (root directory = `backend`)
+
+Vercel auto-detects the Hono app via the default export in `src/server.ts`
+(zero-config Hono preset — no `vercel.json` needed).
+
+1. In Vercel, add this repo and set **Root Directory → `backend`** (Project
+   Settings → General). Framework Preset auto-detects **Hono**.
+2. Add these **Environment Variables** in Project Settings (they are the
+   server-only `backend/.env` values — the hosted app does not read the file):
+   - `JWT_SECRET` (generate: `openssl rand -hex 32`)
+   - `WOOCOMMERCE_URL`, `WOOCOMMERCE_CONSUMER_KEY`, `WOOCOMMERCE_CONSUMER_SECRET`
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (when Phase P4 lands)
+3. Deploy. The API base URL will be `https://<your-project>.vercel.app/api/v1`.
+4. Point the frontend at it: set `VITE_API_BASE_URL` in the frontend's
+   production `.env` (the `src/lib/api/*` seam reads this — plan §3.2).
+
+The `src/index.ts` local listener was split into `src/dev.ts` (local only) so
+`app.ts` + `src/server.ts` stay Vercel-safe and never open a stray port.
 
 ## Contract (what the frontend expects)
 
