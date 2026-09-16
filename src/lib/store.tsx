@@ -25,6 +25,8 @@ import {
   fetchBackendOrders,
   fetchBackendCustomers,
   fetchBackendQuotes,
+  fetchBackendCategories,
+  getAuthToken,
   createBackendProduct,
   updateBackendProduct,
   createBackendOrder,
@@ -121,6 +123,32 @@ function seed(): Snapshot {
     sidebarCollapsed: false,
     theme: "dark",
   };
+}
+
+/** Map catalog products (Woo / backend DTO) onto local inventory rows POS uses. */
+function inventoryFromProducts(
+  products: Product[],
+  previous: InventoryItem[] = [],
+): InventoryItem[] {
+  const prevById = new Map(previous.map((item) => [String(item.productId), item]));
+  return products.map((p) => {
+    const qty = p.stock_quantity;
+    let onHand = 0;
+    if (qty !== null && qty !== undefined && Number.isFinite(Number(qty))) {
+      onHand = Number(qty);
+    } else if (p.stock_status === "instock") {
+      onHand = Number.POSITIVE_INFINITY;
+    }
+    const prev = prevById.get(String(p.id));
+    return {
+      productId: String(p.id),
+      onHand,
+      reserved: prev?.reserved ?? 0,
+      damaged: prev?.damaged ?? 0,
+      sold: prev?.sold ?? 0,
+      reorderPoint: prev?.reorderPoint ?? 5,
+    };
+  });
 }
 
 function emptyState(): Snapshot {
@@ -377,34 +405,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { getWooCommerceConfig } = await import("./woocommerce-config");
         const config = getWooCommerceConfig();
         console.log("WooCommerce config:", config);
-        if (config) {
+        if (config && getAuthToken()) {
           const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
           const connected = await testConnection();
           console.log("WooCommerce connection test:", connected);
           if (connected) {
             const result = await fullSyncFromWooCommerce();
             console.log("WooCommerce sync result:", result);
+            if (result.products.length === 0) {
+              console.warn("Skipping auto-load: backend returned no products (auth or empty catalog)");
+              return;
+            }
             setState((prev) => ({
               ...prev,
-              categories: result.categories,
+              categories: result.categories.length > 0 ? result.categories : prev.categories,
               products: result.products,
-              customers: result.customers,
-              orders: result.orders,
-              inventory: result.products.map((p: any) => {
-                // Handle infinite stock: if stock_quantity is null/undefined but stock_status is instock, use Infinity
-                const onHand = p.stock_quantity !== null && p.stock_quantity !== undefined 
-                  ? p.stock_quantity 
-                  : (p.stock_status === 'instock' ? Infinity : 0);
-                console.log(`Product ${p.id} (${p.name}): stock_quantity=${p.stock_quantity}, stock_status=${p.stock_status}, onHand=${onHand}`);
-                return {
-                  productId: p.id,
-                  onHand: onHand,
-                  reserved: 0,
-                  damaged: 0,
-                  sold: 0,
-                  reorderPoint: 5,
-                };
-              }),
+              customers: result.customers.length > 0 ? result.customers : prev.customers,
+              orders: result.orders.length > 0 ? result.orders : prev.orders,
+              inventory: inventoryFromProducts(result.products, prev.inventory),
             }));
             console.log("WooCommerce data loaded successfully");
           }
@@ -458,9 +476,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const availableOf = useCallback(
     (productId: string) => {
-      const p = state.products.find((p) => p.id === productId);
+      const p = state.products.find((prod) => String(prod.id) === String(productId));
       if (p?.isService) return Infinity;
-      const inv = state.inventory.find((i) => i.productId === productId);
+      const inv = state.inventory.find((i) => String(i.productId) === String(productId));
       if (!inv) return 0;
       return Math.max(0, inv.onHand - inv.reserved);
     },
@@ -545,18 +563,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       
       syncWithBackend: async () => {
         try {
-          const [products, orders, customers, quotes] = await Promise.all([
+          const [products, orders, customers, quotes, categories] = await Promise.all([
             fetchBackendProducts(),
             fetchBackendOrders(),
             fetchBackendCustomers(),
-            fetchBackendQuotes()
+            fetchBackendQuotes(),
+            fetchBackendCategories(),
           ]);
           patch((s) => ({
             ...s,
             products: products.length > 0 ? products : s.products,
+            inventory:
+              products.length > 0 ? inventoryFromProducts(products, s.inventory) : s.inventory,
             orders: orders.length > 0 ? orders : s.orders,
             customers: customers.length > 0 ? customers : s.customers,
             quotes: quotes.length > 0 ? quotes : s.quotes,
+            categories: categories.length > 0 ? categories : s.categories,
           }));
         } catch (e) {
           console.error("Failed to sync with backend", e);
@@ -1684,16 +1706,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           products: data.products,
           customers: data.customers,
           orders: data.orders,
-          inventory: data.products.map((p: any) => ({
-            productId: p.id,
-            onHand: p.stock_quantity !== null && p.stock_quantity !== undefined 
-              ? p.stock_quantity 
-              : (p.stock_status === 'instock' ? Infinity : 0),
-            reserved: 0,
-            damaged: 0,
-            sold: 0,
-            reorderPoint: 5,
-          })),
+          inventory: inventoryFromProducts(data.products, s.inventory),
           auditLogs: [
             {
               id: `audit-${Date.now()}`,

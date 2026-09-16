@@ -56,6 +56,10 @@ export interface Product {
   specs: ProductSpecs;
   isService?: boolean | undefined;
   archived?: boolean | undefined;
+  /** WooCommerce stock fields — used to populate POS inventory after API sync. */
+  stock_quantity?: number | null;
+  stock_status?: string;
+  manage_stock?: boolean;
 }
 
 export interface InventoryItem {

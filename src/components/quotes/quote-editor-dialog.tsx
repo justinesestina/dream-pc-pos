@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, FileText, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { QuoteClientMessage } from "@/components/quotes/quote-message";
 import { createQuotePdf } from "@/lib/quote-pdf";
 import { useStore, computeTotals } from "@/lib/store";
@@ -89,6 +98,7 @@ export function QuoteEditorDialog({
   const [message, setMessage] = useState("");
   const [pdf, setPdf] = useState<{ url: string | URL } | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [customerOpen, setCustomerOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -114,9 +124,16 @@ export function QuoteEditorDialog({
     setMessage(quote.message || templateFor(quote));
     setPdf(null);
     setPdfBusy(false);
+    setCustomerOpen(false);
   }, [open, quote]);
 
-  const activeCustomers = customers.filter((c) => c.status === "active");
+  const selectableCustomers = useMemo(() => {
+    const list = customers.filter((c) => c.status !== "inactive");
+    return list.length > 0 ? list : customers;
+  }, [customers]);
+
+  const selectedCustomer = selectableCustomers.find((c) => c.id === customerId);
+  const customerName = selectedCustomer?.name ?? quote.customerName;
 
   const updateLine = (i: number, patch: Partial<EditableItem>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -171,8 +188,6 @@ export function QuoteEditorDialog({
 
   const profitMarginAmount = (totals.total - totals.tax) - totalCost;
   const profitMarginPercent = totals.total - totals.tax > 0 ? (profitMarginAmount / (totals.total - totals.tax)) * 100 : 0;
-
-  const customerName = activeCustomers.find((c) => c.id === customerId)?.name ?? quote.customerName;
 
   const previewQuote = useMemo<Quote>(
     () => ({
@@ -251,7 +266,7 @@ export function QuoteEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl sm:rounded-lg">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto overflow-x-visible sm:rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="size-4 text-muted-foreground" /> Edit &amp; send quotation{" "}
@@ -295,37 +310,98 @@ export function QuoteEditorDialog({
                   <label htmlFor="qe-customer" className="label-tech">
                     Customer
                   </label>
-                  <Select value={customerId ?? ""} onValueChange={(v) => setCustomerId(v || null)}>
-                    <SelectTrigger id="qe-customer" className="w-full">
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeCustomers.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={customerOpen} onOpenChange={setCustomerOpen} modal>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="qe-customer"
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={customerOpen}
+                        className="h-9 w-full justify-between font-normal"
+                      >
+                        <span className="truncate">
+                          {selectedCustomer?.name ?? (customerId ? customerName : "Select customer")}
+                        </span>
+                        <ChevronDown className="size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="z-[300] w-[var(--radix-popover-trigger-width)] p-0"
+                    >
+                      <Command>
+                        <CommandInput placeholder="Search customers…" className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>No customer found.</CommandEmpty>
+                          <CommandGroup>
+                            {selectableCustomers.map((c) => (
+                              <CommandItem
+                                key={c.id}
+                                value={`${c.name} ${c.email} ${c.phone} ${c.id}`}
+                                onSelect={() => {
+                                  setCustomerId(c.id);
+                                  setCustomerOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "size-3.5",
+                                    customerId === c.id ? "opacity-100" : "opacity-0",
+                                  )}
+                                />
+                                <span className="min-w-0">
+                                  <span className="block truncate">{c.name}</span>
+                                  <span className="mono block truncate text-[10.5px] text-subtle">
+                                    {c.email || c.phone}
+                                  </span>
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="qe-discount" className="label-tech">
                     Discount
                   </label>
                   <div className="flex gap-1">
-                    <Select value={discountType} onValueChange={(v: "amount" | "percentage") => setDiscountType(v)}>
-                      <SelectTrigger className="w-16 h-9 px-2 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="amount">₱</SelectItem>
-                        <SelectItem value="percentage">%</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex shrink-0 rounded-md border border-input p-0.5">
+                      <button
+                        type="button"
+                        aria-pressed={discountType === "amount"}
+                        onClick={() => setDiscountType("amount")}
+                        className={cn(
+                          "h-8 min-w-9 rounded px-2 text-xs font-medium",
+                          discountType === "amount"
+                            ? "bg-foreground/10 text-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        ₱
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={discountType === "percentage"}
+                        onClick={() => setDiscountType("percentage")}
+                        className={cn(
+                          "h-8 min-w-9 rounded px-2 text-xs font-medium",
+                          discountType === "percentage"
+                            ? "bg-foreground/10 text-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        %
+                      </button>
+                    </div>
                     <Input
                       id="qe-discount"
                       type="number"
                       min={0}
+                      max={discountType === "percentage" ? 100 : undefined}
                       value={discountType === "percentage" ? discountPercentage : discount}
                       onChange={(e) => {
                         if (discountType === "percentage") {
@@ -335,7 +411,7 @@ export function QuoteEditorDialog({
                         }
                       }}
                       className="h-9 flex-1"
-                      placeholder="0.00"
+                      placeholder={discountType === "percentage" ? "0" : "0.00"}
                     />
                   </div>
                 </div>
