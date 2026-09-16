@@ -237,6 +237,8 @@ const errBox = $("errorBox");
 
 function safeGetToken() { try { return (localStorage.getItem("dpc_token") || "").trim(); } catch { return ""; } }
 function safeSetToken(t) { try { localStorage.setItem("dpc_token", t); } catch {} }
+function safeGetUser() { try { return (localStorage.getItem("dpc_username") || "").trim(); } catch { return ""; } }
+function safeSetUser(u) { try { localStorage.setItem("dpc_username", u); } catch {} }
 function showError(msg) { if (msg) { errBox.textContent = String(msg); errBox.style.display = "block"; } else errBox.style.display = "none"; }
 function setAuthStatus(okMsg, isOk) {
   const el = $("authStatus");
@@ -283,6 +285,7 @@ $("btnLogin").addEventListener("click", async () => {
     });
     token = r.data.token;
     safeSetToken(token);
+    safeSetUser(username);
     setAuthStatus("logged in as " + username, true);
     showError("");
     checkHealth();
@@ -396,7 +399,12 @@ $("m_uploadBtn").addEventListener("click", async () => {
       r.onerror = () => reject(new Error("could not read file"));
       r.readAsDataURL(file);
     });
-    const r = await api("/media", { method: "POST", body: JSON.stringify({ filename: file.name, data }) });
+    const r = await api("/media", { method: "POST", body: JSON.stringify({
+      filename: file.name,
+      data,
+      username: $("wpUser").value.trim() || safeGetUser(),
+      appPassword: $("wpPass").value.trim(),
+    }) });
     $("m_image").value = r.data.url;
     updateImagePreview();
     status.textContent = "uploaded → " + r.data.url + " (press Save to attach)";
@@ -643,6 +651,7 @@ $("quotesBody").addEventListener("click", async (e) => {
 /* ------------------------------------------------------------- bootstrap */
 (function init() {
   checkHealth();
+  $("wpUser").value = safeGetUser();
   if (token) { setAuthStatus("session from localStorage", true); loadProducts(); loadCategories(); loadOrders(); loadQuotes(); }
 })();
 </script>

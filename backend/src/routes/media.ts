@@ -4,14 +4,14 @@
  * (product images only accept URLs, so "upload" = upload to WP media + URL).
  *
  *   POST /api/v1/media
- *     { "filename": "rtx-4060.png", "data": "data:image/png;base64,iVBORw0KGgo..." }
+ *     { "filename": "rtx-4060.png", "data": "data:image/png;base64,iVBORw0KGgo...",
+ *       "username": "jeo", "appPassword": "xxxx xxxx xxxx xxxx xxxx xxxx" }
  *   → 201 { "data": { "mediaId": "123", "url": "https://…/wp-content/uploads/…/file.png" } }
  *
- * Uses a dedicated WordPress application password (env WP_MEDIA_USERNAME +
- * WP_MEDIA_APP_PASSWORD) because WC consumer keys only work on the /wc/v3
- * namespace — WP core media (wp/v2/media) needs a real WP user. Set those two
- * vars in backend/.env and in the Vercel dashboard; otherwise 503
- * MEDIA_NOT_CONFIGURED.
+ * Auth: uses the SAME WordPress application password the user logged in with
+ * (pass it back in the body — the frontend already holds it at login). We never
+ * store it. It also works with JWT-only sessions when env WP_MEDIA_USERNAME +
+ * WP_MEDIA_APP_PASSWORD are set (a dedicated backend account); that's optional.
  */
 import { Hono } from "hono";
 import { requireAuth, type AppVars } from "../middleware/auth.js";
@@ -32,15 +32,31 @@ export function mediaRoutes() {
   const app = new Hono<{ Variables: AppVars }>();
 
   app.post("/", requireAuth, async (c) => {
-    if (!mediaConfigured) {
-      throw new ApiError(503, "MEDIA_NOT_CONFIGURED", "Set WP_MEDIA_USERNAME + WP_MEDIA_APP_PASSWORD in backend/.env (a WordPress application password)");
-    }
-
     const body = await c.req.json().catch(() => ({}));
     const filename = String(body.filename ?? "");
     const data = String(body.data ?? "");
     if (!filename || !data) throw new ApiError(400, "BAD_REQUEST", "filename and data (base64) are required");
     const { ext, mime } = mimeFor(filename);
+
+    // Reuse the user's own app password from login when provided; fall back to
+    // an optional dedicated backend account via env.
+    const bodyUsername = String(body.username ?? "").trim();
+    const bodyPassword = String(body.appPassword ?? "").trim();
+    let wpUser = "";
+    let wpPass = "";
+    if (bodyUsername && bodyPassword) {
+      wpUser = bodyUsername;
+      wpPass = bodyPassword;
+    } else if (mediaConfigured) {
+      wpUser = config.wp.mediaUsername;
+      wpPass = config.wp.mediaAppPassword;
+    } else {
+      throw new ApiError(
+        401,
+        "MEDIA_NOT_AUTHED",
+        "Enter your WordPress username + app password in the tester header (then Log in) — or set WP_MEDIA_USERNAME / WP_MEDIA_APP_PASSWORD in backend/.env",
+      );
+    }
 
     // Accept either a full data URL ("data:image/png;base64,…") or bare base64.
     const b64 = data.includes(";base64,") ? data.slice(data.indexOf(",") + 1) : data;
@@ -49,7 +65,7 @@ export function mediaRoutes() {
     if (buf.length > MAX_BYTES) throw new ApiError(400, "BAD_REQUEST", "image too large — max 10 MB");
 
     const safeName = `${filename.replace(/[^a-zA-Z0-9.-]/g, "-").replace(/\.(png|jpe?g|webp|gif)$/i, "") || "upload"}-${Date.now()}.${ext}`;
-    const credentials = Buffer.from(`${config.wp.mediaUsername}:${config.wp.mediaAppPassword}`).toString("base64");
+    const credentials = Buffer.from(`${wpUser}:${wpPass}`).toString("base64");
 
     let res: Response;
     try {
@@ -72,7 +88,7 @@ export function mediaRoutes() {
         typeof json === "object" && json !== null && "message" in (json as Record<string, unknown>)
           ? (json as { message?: unknown }).message
           : "HTTP " + res.status;
-      throw new ApiError(400, "MEDIA_UPLOAD_FAILED", String(wcMessage));
+      throw new ApiError(401, "MEDIA_UPLOAD_FAILED", `WordPress rejected the upload: ${String(wcMessage)} (your app password needs upload permission)`);
     }
     const media = json as { id?: unknown; source_url?: unknown };
     const url = typeof media.source_url === "string" ? media.source_url : "";

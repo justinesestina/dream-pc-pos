@@ -28,8 +28,9 @@ each endpoint returns. Architecture decisions live in
 | Inventory ledger, serials | ⏳ stub (401/empty) | Supabase (planned P1) | `GET /inventory`, `GET /serials` |
 | Customers, builds, services, warranty, returns, shifts, releases, audit, notifications | ⏳ stub | Supabase (planned P2–P5) | mounted, return stubs |
 
-\* **Media upload** needs `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` set in
-`backend/.env` (and Vercel) — until then it returns `503 MEDIA_NOT_CONFIGURED`.
+\* **Media upload** reuses the app password you logged in with — no setup. The
+optional env pair `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` (a dedicated
+backend account) is only a fallback for JWT-only clients.
 
 \* **Quotations reset on server restart / Vercel cold start** — they are stored
 in process memory on purpose, until the Postgres phase (P3). Products and orders
@@ -86,8 +87,10 @@ every button you press.
 2. **Root Directory → `backend`** (Framework Preset auto-detects **Hono**).
 3. **Environment Variables** (same names as `backend/.env`):
    `JWT_SECRET`, `WOOCOMMERCE_URL`, `WOOCOMMERCE_CONSUMER_KEY`,
-   `WOOCOMMERCE_CONSUMER_SECRET`, `WP_MEDIA_USERNAME`, `WP_MEDIA_APP_PASSWORD`,
+   `WOOCOMMERCE_CONSUMER_SECRET`,
    `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+   `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` are **optional** — media upload
+   can reuse each user's login app password instead.
 4. **Deployment Protection → off** so the app + tester are publicly reachable.
 5. Tester lives at `https://<your-project>.vercel.app/test.html`, API at
    `https://<your-project>.vercel.app/api/v1`.
@@ -214,16 +217,19 @@ WooCommerce can only be URLs, so this uploads into the WP media library and
 returns the hosted URL to put in the product's `imageUrl`:
 
 ```json
-{ "filename": "rtx-5080.png", "data": "data:image/png;base64,iVBORw0KGgo…" }
+{ "filename": "rtx-5080.png", "data": "data:image/png;base64,iVBORw0KGgo…",
+  "username": "jeo", "appPassword": "xxxx xxxx xxxx xxxx xxxx xxxx" }
 ```
 
 Response → `201 { "data": { "mediaId": "123", "url": "https://dreampcbuild.com/wp-content/uploads/2026/09/rtx-5080.png" } }`
 
-Rules: `png / jpg / jpeg / webp / gif`, max 10 MB. Requires `WP_MEDIA_USERNAME` +
-`WP_MEDIA_APP_PASSWORD` (a WP **application password** for an admin user —
-create one under Users → Profile → Application Passwords → "DPC backend"). The
-tester's Edit modal has an "…or upload from this computer" button that does this
-for you automatically.
+Rules: `png / jpg / jpeg / webp / gif`, max 10 MB. **Uses the same WordPress
+app password the user logged in with** (sent in the body) — nothing to set up.
+The tester's Edit modal has an "…or upload from this computer" button that does
+this automatically. If you'd rather the server not trust the client's password,
+set `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` (a dedicated WP app password,
+Users → Profile → Application Passwords → "DPC backend") and the upload works
+with just the Bearer token.
 
 ### 4.6 Orders
 
