@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #545b62;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .response.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .response.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .image-preview {
+            max-width: 200px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .thumbnail {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Category API Test</h1>
+        
+        <div class="form-group">
+            <label>API Base URL:</label>
+            <input type="text" id="apiUrl" value="http://localhost:3001/api/v1" placeholder="http://localhost:3001/api/v1">
+        </div>
+        
+        <div class="form-group">
+            <label>Auth Token:</label>
+            <input type="text" id="authToken" placeholder="Bearer your-token-here">
+        </div>
+
+        <h2>Create/Update Category</h2>
+        <div class="form-group">
+            <label>Category ID (leave empty to create new):</label>
+            <input type="text" id="categoryId" placeholder="e.g., 123">
+        </div>
+        
+        <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="name" placeholder="CPU Cooler">
+        </div>
+        
+        <div class="form-group">
+            <label>Slug:</label>
+            <input type="text" id="slug" placeholder="cpu-cooler">
+        </div>
+        
+        <div class="form-group">
+            <label>Parent Category ID:</label>
+            <input type="text" id="parentId" placeholder="e.g., 45 (leave empty for no parent)">
+        </div>
+        
+        <div class="form-group">
+            <label>Description:</label>
+            <textarea id="description" placeholder="Description of the category..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Display Type:</label>
+            <select id="display">
+                <option value="default">Default</option>
+                <option value="products">Products</option>
+                <option value="subcategories">Subcategories</option>
+                <option value="both">Both</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Image URL:</label>
+            <input type="text" id="imageUrl" placeholder="https://example.com/image.jpg">
+            <img id="imagePreview" class="image-preview" style="display: none;">
+        </div>
+        
+        <button onclick="saveCategory()">Save Category</button>
+        <button class="secondary" onclick="loadCategories()">Load All Categories</button>
+        <button class="secondary" onclick="loadCategory()">Load Category by ID</button>
+        <button class="secondary" onclick="deleteCategory()">Delete Category</button>
+        
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        const apiUrl = document.getElementById('apiUrl').value;
+        const authToken = document.getElementById('authToken').value;
+
+        document.getElementById('imageUrl').addEventListener('input', function() {
+            const preview = document.getElementById('imagePreview');
+            if (this.value) {
+                preview.src = this.value;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        async function makeRequest(method, endpoint, data = null) {
+            const baseUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('authToken').value;
+            const url = `${baseUrl}${endpoint}`;
+            
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': token } : {})
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                displayResponse(result, response.ok);
+                return result;
+            } catch (error) {
+                displayResponse({ error: error.message }, false);
+                return null;
+            }
+        }
+
+        function displayResponse(data, success) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response ' + (success ? 'success' : 'error');
+            responseDiv.innerHTML = `
+                <strong>${success ? 'Success' : 'Error'}:</strong>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        async function saveCategory() {
+            const categoryId = document.getElementById('categoryId').value.trim();
+            const data = {
+                name: document.getElementById('name').value.trim(),
+                slug: document.getElementById('slug').value.trim(),
+                parentId: document.getElementById('parentId').value.trim() || undefined,
+                description: document.getElementById('description').value.trim() || undefined,
+                display: document.getElementById('display').value,
+                image: document.getElementById('imageUrl').value.trim() || undefined
+            };
+            
+            if (!data.name) {
+                displayResponse({ error: 'Name is required' }, false);
+                return;
+            }
+            
+            const method = categoryId ? 'PUT' : 'POST';
+            const endpoint = categoryId ? `/categories/${categoryId}` : '/categories';
+            
+            await makeRequest(method, endpoint, data);
+        }
+
+        async function loadCategories() {
+            await makeRequest('GET', '/categories');
+        }
+
+        async function loadCategory() {
+            const categoryId = document.getElementById('categoryId').value.trim();
+            if (!categoryId) {
+                displayResponse({ error: 'Category ID is required' }, false);
+                return;
+            }
+            const result = await makeRequest('GET', `/categories/${categoryId}`);
+            
+            if (result && result.data) {
+                const cat = result.data;
+                document.getElementById('name').value = cat.name || '';
+                document.getElementById('slug').value = cat.slug || '';
+                document.getElementById('parentId').value = cat.parentId || '';
+                document.getElementById('description').value = cat.description || '';
+                document.getElementById('display').value = cat.display || 'default';
+                document.getElementById('imageUrl').value = cat.image || '';
+                
+                if (cat.image) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = cat.image;
+                    preview.style.display = 'block';
+                }
+            }
+        }
+
+        async function deleteCategory() {
+            const categoryId = document.getElementById('categoryId').value.trim();
+            if (!categoryId) {
+                displayResponse({ error: 'Category ID is required' }, false);
+                return;
+            }
+            if (!confirm('Are you sure you want to delete this category?')) {
+                return;
+            }
+            await makeRequest('DELETE', `/categories/${categoryId}`);
+        }
+    </script>
+</body>
+</html>

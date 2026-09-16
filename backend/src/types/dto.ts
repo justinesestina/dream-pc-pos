@@ -52,6 +52,11 @@ export type ProductType = "product" | "service" | "bundle";
 export interface Category {
   id: string;
   name: string;
+  slug: string;
+  parentId?: string;
+  description?: string;
+  display?: "default" | "products" | "subcategories" | "both";
+  image?: string;
   archived: boolean;
   createdAt: string;
   key?: string;

@@ -73,6 +73,7 @@ export interface WcTaxonomy {
   parent?: number;
   image?: string | { src?: string } | null;
   count?: number;
+  display?: string;
 }
 
 export interface WcAttribute {
