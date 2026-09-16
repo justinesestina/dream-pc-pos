@@ -47,6 +47,12 @@ export function mapWcProductToDto(raw: WcProduct): ProductDetail {
   const first = raw.categories[0];
   const attrs: Record<string, string> = {};
   let brand = str(meta(raw, "_dpc_brand"), "");
+  const rb = raw.brand;
+  if (!brand && rb) {
+    if (Array.isArray(rb)) brand = str(rb[0]?.name ?? "");
+    else if (typeof rb === "object") brand = str((rb as { name?: unknown }).name ?? "");
+    else brand = str(rb);
+  }
   for (const attr of raw.attributes ?? []) {
     const label = attr.name;
     const value = (attr.options ?? []).join(", ");
@@ -81,6 +87,8 @@ export function mapWcProductToDto(raw: WcProduct): ProductDetail {
   };
 }
 
+const STOCK_STATUSES = ["instock", "outofstock", "onbackorder"] as const;
+
 /** Builds the WC update/create payload for the fields the UI can edit. */
 function toWcPayload(body: Record<string, unknown>): Record<string, unknown> {
   const name = String(body.name ?? "").trim();
@@ -100,12 +108,23 @@ function toWcPayload(body: Record<string, unknown>): Record<string, unknown> {
     payload["manage_stock"] = body.manage_stock === false ? false : true;
   }
   if (body.manage_stock !== undefined) payload["manage_stock"] = Boolean(body.manage_stock);
+  if (typeof body.stock_status === "string" && body.stock_status) {
+    const s = body.stock_status;
+    if (!STOCK_STATUSES.includes(s as (typeof STOCK_STATUSES)[number])) {
+      throw new ApiError(400, "BAD_REQUEST", "stock_status must be one of: instock, outofstock, onbackorder");
+    }
+    payload["stock_status"] = s;
+  }
   if (body.sku !== undefined) payload["sku"] = String(body.sku);
   if (body.description !== undefined) payload["description"] = String(body.description);
   if (typeof body.status === "string" && body.status) payload["status"] = body.status;
   if (body.categoryId) {
     const catId = Number(body.categoryId);
     if (Number.isFinite(catId)) payload["categories"] = [{ id: catId }];
+  }
+  if (body.imageUrl !== undefined) {
+    const img = String(body.imageUrl).trim();
+    payload["images"] = img ? [{ src: img }] : [];
   }
 
   // Local-only metadata persisted via WC custom fields.

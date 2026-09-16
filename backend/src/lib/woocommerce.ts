@@ -47,6 +47,26 @@ export interface WcCategory {
   parent: number;
 }
 
+/** Taxonomy entities: categories, tags, brands (and attribute terms). */
+export interface WcTaxonomy {
+  id: number;
+  name: string;
+  slug?: string;
+  description?: string;
+  parent?: number;
+  image?: string | { src?: string } | null;
+  count?: number;
+}
+
+export interface WcAttribute {
+  id: number;
+  name: string;
+  slug: string;
+  type: string;
+  order_by: string;
+  has_archives: boolean;
+}
+
 export interface WcMetaDatum {
   key: string;
   value: string | number | boolean | null;
@@ -146,6 +166,60 @@ export const woocommerce = {
   /** Create a storefront order (the "orders" tab in the test page). */
   async createOrder(body: Record<string, unknown>): Promise<WcOrder> {
     return (await wcFetch("orders", { method: "POST", body: JSON.stringify(body) })) as WcOrder;
+  },
+
+  /* ----------- taxonomy CRUD (categories / tags / brands / attributes) ----------- */
+
+  async listTaxonomy(route: string): Promise<WcTaxonomy[]> {
+    return (await wcFetch(`${route}?per_page=100&orderby=name&order=asc`)) as WcTaxonomy[];
+  },
+
+  async getTaxonomy(route: string): Promise<WcTaxonomy> {
+    return (await wcFetch(route)) as WcTaxonomy;
+  },
+
+  async createTaxonomy(route: string, body: Record<string, unknown>): Promise<WcTaxonomy> {
+    return (await wcFetch(route, { method: "POST", body: JSON.stringify(body) })) as WcTaxonomy;
+  },
+
+  async updateTaxonomy(route: string, body: Record<string, unknown>): Promise<WcTaxonomy> {
+    return (await wcFetch(route, { method: "PUT", body: JSON.stringify(body) })) as WcTaxonomy;
+  },
+
+  async deleteTaxonomy(route: string): Promise<WcTaxonomy> {
+    return (await wcFetch(`${route}?force=true`, { method: "DELETE" })) as WcTaxonomy;
+  },
+
+  async listAttributes(): Promise<WcAttribute[]> {
+    return (await wcFetch("products/attributes?per_page=100&orderby=name&order=asc")) as WcAttribute[];
+  },
+
+  async createAttribute(body: Record<string, unknown>): Promise<WcAttribute> {
+    return (await wcFetch("products/attributes", { method: "POST", body: JSON.stringify(body) })) as WcAttribute;
+  },
+
+  async attributeTerms(attributeId: string | number): Promise<WcTaxonomy[]> {
+    return (await wcFetch(`products/attributes/${attributeId}/terms?per_page=100`)) as WcTaxonomy[];
+  },
+
+  async createAttributeTerm(attributeId: string | number, body: Record<string, unknown>): Promise<WcTaxonomy> {
+    return (await wcFetch(`products/attributes/${attributeId}/terms`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as WcTaxonomy;
+  },
+
+  async setAttributeTerm(attributeId: string | number, termId: string | number, body: Record<string, unknown>): Promise<WcTaxonomy> {
+    return (await wcFetch(`products/attributes/${attributeId}/terms/${termId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })) as WcTaxonomy;
+  },
+
+  async deleteAttributeTerm(attributeId: string | number, termId: string | number): Promise<WcTaxonomy> {
+    return (await wcFetch(`products/attributes/${attributeId}/terms/${termId}?force=true`, {
+      method: "DELETE",
+    })) as WcTaxonomy;
   },
 };
 

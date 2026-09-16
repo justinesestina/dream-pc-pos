@@ -58,6 +58,7 @@
 
 <div class="tabs">
   <button data-tab="products" class="active">Products</button>
+  <button data-tab="catalog">Catalog</button>
   <button data-tab="orders">Orders</button>
   <button data-tab="quotes">Quotations</button>
 </div>
@@ -80,13 +81,35 @@
         <input id="npSku" placeholder="SKU">
         <input id="npPrice" placeholder="Price" type="number" step="0.01" style="width:90px">
         <input id="npStock" placeholder="Stock" type="number" style="width:80px">
+        <select id="npCategory"><option value="">— category —</option></select>
+        <input id="npImage" placeholder="Image URL" style="min-width:180px">
         <input id="npDescription" placeholder="Description" style="min-width:200px">
         <button id="npCreate">Create (syncs to WooCommerce)</button>
       </div>
     </details>
     <table>
-      <thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Price</th><th>Sale</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody id="productsBody"><tr><td colspan="8" class="muted">Press "Refresh products" or log in first.</td></tr></tbody>
+      <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>SKU</th><th>Price</th><th>Sale</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="productsBody"><tr><td colspan="9" class="muted">Press "Refresh products" or log in first.</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="tab-catalog" style="display:none">
+    <div class="toolbar">
+      <button class="secondary catbtn active" data-kind="categories">Categories</button>
+      <button class="secondary catbtn" data-kind="brands">Brands</button>
+      <button class="secondary catbtn" data-kind="tags">Tags</button>
+      <button class="secondary catbtn" data-kind="attributes">Attributes</button>
+    </div>
+    <div class="panel" style="padding-top:10px">
+      <div class="row">
+        <input id="catAddName" placeholder="New name">
+        <button id="catAddBtn">Add (syncs to WooCommerce)</button>
+        <span class="muted" id="catHint">Category list powers the product dropdowns; brands/tags/attributes are full CRUD on the store.</span>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Extra</th><th></th></tr></thead>
+      <tbody id="catalogBody"><tr><td colspan="4" class="muted">Log in and pick a type above.</td></tr></tbody>
     </table>
   </section>
 
@@ -160,13 +183,17 @@
       <label>Name *<input id="m_name"></label>
       <label>SKU<input id="m_sku"></label>
       <label>Brand<input id="m_brand"></label>
-      <label>Category id<input id="m_categoryId" placeholder="WC category id"></label>
+      <label>Category<select id="m_categoryId"><option value="">— loading —</option></select></label>
       <label>Type<select id="m_type"><option>simple</option><option>variable</option><option>external</option><option>grouped</option></select></label>
       <label>WC status<select id="m_status"><option value="publish">publish</option><option value="private">private</option><option value="draft">draft</option><option value="pending">pending</option></select></label>
       <label>Price<input id="m_price" type="number" step="0.01"></label>
       <label>Sale price<input id="m_salePrice" type="number" step="0.01"></label>
       <label>Stock qty<input id="m_stock" type="number"></label>
-      <label>Stock status<input id="m_stockStatus" placeholder="instock / outofstock"></label>
+      <label>Stock status<select id="m_stockStatus">
+        <option value="instock">instock — available</option>
+        <option value="outofstock">outofstock</option>
+        <option value="onbackorder">onbackorder</option>
+      </select></label>
       <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_manageStock"> Manage stock (WC)</label>
       <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_serialTracked"> Serial tracked (DPC meta)</label>
       <label>Cost (₱, DPC meta)<input id="m_cost" type="number" step="0.01"></label>
@@ -248,7 +275,7 @@ $("btnLogin").addEventListener("click", async () => {
     setAuthStatus("logged in as " + username, true);
     showError("");
     checkHealth();
-    loadProducts(); loadOrders(); loadQuotes();
+    loadProducts(); loadCategories(); loadOrders(); loadQuotes();
   } catch (e) { setAuthStatus("login failed", false); showError(e.message); }
 });
 
@@ -287,6 +314,7 @@ $("npCreate").addEventListener("click", async () => {
       body: JSON.stringify({
         name: $("npName").value.trim(), sku: $("npSku").value.trim(),
         price: Number($("npPrice").value || 0), stock_quantity: Number($("npStock").value || 0),
+        categoryId: $("npCategory").value, imageUrl: $("npImage").value.trim(),
         description: $("npDescription").value.trim() || undefined,
       }),
     });
@@ -295,7 +323,7 @@ $("npCreate").addEventListener("click", async () => {
 });
 
 async function loadProducts() {
-  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="8" class="muted">Log in first (top-right).</td></tr>`; return; }
+  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="9" class="muted">Log in first (top-right).</td></tr>`; return; }
   try {
     const search = $("productSearch").value.trim();
     const r = await api("/products" + (search ? "?search=" + encodeURIComponent(search) : ""));
@@ -303,6 +331,7 @@ async function loadProducts() {
     $("productsBody").innerHTML = r.data.map((p) => `<tr>
       <td>${esc(p.id)}</td>
       <td>${esc(p.name)}</td>
+      <td class="muted">${esc(p.categoryName ?? "–")}</td>
       <td>${esc(p.sku)}</td>
       <td>₱${Number(p.price).toLocaleString()}</td>
       <td>${p.salePrice ? "₱" + Number(p.salePrice).toLocaleString() : "–"}</td>
@@ -311,9 +340,9 @@ async function loadProducts() {
       <td>
         <button class="small edit-btn" data-id="${esc(p.id)}">Edit</button>
         <button class="small danger del-btn" data-id="${esc(p.id)}">Delete</button>
-      </td></tr>`).join("") || `<tr><td colspan="8" class="muted">No products found.</td></tr>`;
+      </td></tr>`).join("") || `<tr><td colspan="9" class="muted">No products found.</td></tr>`;
     fillProductOptions(r.data);
-  } catch (e) { $("productsBody").innerHTML = `<tr><td colspan="8">${esc("<i>fetch failed</i>")}</td></tr>`; showError(e.message); }
+  } catch (e) { $("productsBody").innerHTML = `<tr><td colspan="9">${esc("<i>fetch failed</i>")}</td></tr>`; showError(e.message); }
 }
 
 $("productsBody").addEventListener("click", async (e) => {
@@ -337,7 +366,7 @@ function setVal(id, v, fallback = "") { const el = $(id); el.value = (v === unde
 
 async function openEdit(id) {
   try {
-    const r = await api("/products/" + id); // full detail from the API
+    const [r] = await Promise.all([api("/products/" + id), loadCategories()]); // full detail + category dropdown
     const p = r.data;
     $("m_title").textContent = "· " + p.name;
     $("m_id").textContent = p.id;
@@ -345,12 +374,13 @@ async function openEdit(id) {
     $("m_created").textContent = new Date(p.dateCreated || "").toLocaleString() || "–";
     $("m_modified").textContent = new Date(p.dateModified || "").toLocaleString() || "–";
     setVal("m_name", p.name); setVal("m_sku", p.sku);
-    setVal("m_brand", p.brand); setVal("m_categoryId", p.categoryId);
+    setVal("m_brand", p.brand);
+    setVal("m_categoryId", p.categoryId);
     setVal("m_type", p.productType || "simple");
     setVal("m_status", p.status || "publish");
     setVal("m_price", p.price ?? 0); setVal("m_salePrice", p.salePrice ?? "");
     setVal("m_stock", p.stock_quantity ?? 0);
-    setVal("m_stockStatus", p.stock_status || "");
+    setVal("m_stockStatus", p.stock_status || "instock");
     $("m_manageStock").checked = !!p.manage_stock;
     $("m_serialTracked").checked = !!p.serialTracked;
     setVal("m_cost", p.cost ?? 0); setVal("m_warranty", p.warrantyMonths ?? 0);
@@ -376,10 +406,11 @@ $("m_save").addEventListener("click", async () => {
     name: $("m_name").value.trim(),
     sku: $("m_sku").value.trim(),
     brand: $("m_brand").value.trim(),
-    categoryId: $("m_categoryId").value.trim(),
+    categoryId: $("m_categoryId").value,
     price: Number($("m_price").value || 0),
     salePrice: $("m_salePrice").value === "" ? "" : Number($("m_salePrice").value),
     stock_quantity: Number($("m_stock").value || 0),
+    stock_status: $("m_stockStatus").value,
     manage_stock: $("m_manageStock").checked,
     serialTracked: $("m_serialTracked").checked,
     cost: Number($("m_cost").value || 0),
@@ -387,6 +418,7 @@ $("m_save").addEventListener("click", async () => {
     location: $("m_location").value.trim(),
     supplier: $("m_supplier").value.trim(),
     status: $("m_status").value,
+    imageUrl: $("m_image").value.trim(),
     description: $("m_description").value,
   };
   try {
@@ -404,6 +436,74 @@ function fillProductOptions(products) {
 $("nqProduct").addEventListener("change", (e) => {
   const opt = e.target.selectedOptions[0];
   if (opt) $("nqPrice").value = opt.dataset.price;
+});
+
+/* ------------------------------------------------------------- catalog */
+let categoriesCache = [];
+let catalogKind = "categories";
+
+function refillCategorySelects() {
+  const opts = '<option value="">— none —</option>' +
+    categoriesCache.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  $("m_categoryId").innerHTML = opts;
+  $("npCategory").innerHTML = '<option value="">— category —</option>' +
+    categoriesCache.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+}
+
+async function loadCategories() {
+  try {
+    const r = await api("/categories");
+    categoriesCache = r.data || [];
+  } catch { categoriesCache = []; }
+  refillCategorySelects();
+  if (catalogKind === "categories") renderCatalog();
+}
+
+async function renderCatalog() {
+  if (!token) { $("catalogBody").innerHTML = `<tr><td colspan="4" class="muted">Log in first.</td></tr>`; return; }
+  try {
+    const r = await api("/" + catalogKind);
+    const isAttr = catalogKind === "attributes";
+    $("catalogBody").innerHTML = r.data.map((it) => `<tr>
+      <td>${esc(it.id)}</td>
+      <td>${esc(it.name)}</td>
+      <td class="muted">${isAttr ? esc(it.type) : "count " + (it.count ?? "?")}</td>
+      <td><button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">Delete</button></td>
+    </tr>`).join("") || `<tr><td colspan="4" class="muted">None yet.</td></tr>`;
+  } catch (e) { showError(e.message); }
+}
+
+document.querySelectorAll(".catbtn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    catalogKind = btn.dataset.kind;
+    document.querySelectorAll(".catbtn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderCatalog();
+  });
+});
+
+$("catAddBtn").addEventListener("click", async () => {
+  const name = $("catAddName").value.trim();
+  if (!name) { showError("Enter a name first."); return; }
+  try {
+    await api("/" + catalogKind, { method: "POST", body: JSON.stringify({ name }) });
+    $("catAddName").value = "";
+    showError("");
+    renderCatalog();
+    if (catalogKind === "categories") loadCategories();
+  } catch (e) { showError(e.message); }
+});
+
+$("catalogBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button.catdel");
+  if (!btn) return;
+  if (!confirm("Delete from WooCommerce permanently?")) return;
+  try {
+    await api("/" + btn.dataset.kind + "/" + btn.dataset.id, { method: "DELETE" });
+    showError("");
+    renderCatalog();
+    if (btn.dataset.kind === "categories") loadCategories();
+  } catch (err) { showError(err.message); }
 });
 
 /* ----------------------------------------------------------------- orders */
@@ -503,7 +603,7 @@ $("quotesBody").addEventListener("click", async (e) => {
 /* ------------------------------------------------------------- bootstrap */
 (function init() {
   checkHealth();
-  if (token) { setAuthStatus("session from localStorage", true); loadProducts(); loadOrders(); loadQuotes(); }
+  if (token) { setAuthStatus("session from localStorage", true); loadProducts(); loadCategories(); loadOrders(); loadQuotes(); }
 })();
 </script>
 </body>

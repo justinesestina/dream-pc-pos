@@ -17,6 +17,11 @@ each endpoint returns. Architecture decisions live in
 | Products — create / edit | ✅ works | WooCommerce (live) | `POST /products`, `PUT /products/:id` |
 | Products — stock set | ✅ works | WooCommerce (live) | `PUT /products/:id/stock` |
 | Products — delete | ✅ works | WooCommerce (live) | `DELETE /products/:id` |
+| Products — image + stock-status | ✅ works | WooCommerce (live) | `imageUrl` / `stock_status` on `POST` / `PUT` |
+| Categories CRUD | ✅ works | WooCommerce (live) | `GET/POST/PUT/DELETE /categories` |
+| Brands CRUD | ✅ works | WooCommerce (live, brand plugin) | `GET/POST/PUT/DELETE /brands` |
+| Tags CRUD | ✅ works | WooCommerce (live) | `GET/POST/PUT/DELETE /tags` |
+| Attributes + terms CRUD | ✅ works | WooCommerce (live) | `/attributes`, `/attributes/:id/terms`… |
 | Orders — list / create | ✅ works | WooCommerce (live) | `GET /orders`, `POST /orders` |
 | Quotations — list / create / update / delete | ✅ works* | **in-memory** | `GET /quotes`, `POST /quotes`, `PUT /quotes/:id`, `DELETE /quotes/:id` |
 | Inventory ledger, serials | ⏳ stub (401/empty) | Supabase (planned P1) | `GET /inventory`, `GET /serials` |
@@ -54,8 +59,16 @@ WordPress **application password** (not your regular password):
 2. **Application Passwords** → **Add New** (name it `DPC POS`) → copy the 24-char code
 3. In the tester: **username = WP login**, **password = the 24-char code** → **Log in**
 
-The tester has an *"Last API call"* panel that shows exactly what the server
-returned for every button you press.
+The tester has tabs that mirror the store:
+- **Products** — list, search, **Edit** (full-detail modal with a category
+  dropdown and a valid `stock_status` dropdown), **+ New product** (category,
+  image URL), delete.
+- **Catalog** — CRUD for **Categories / Brands / Tags / Attributes** straight
+  to WooCommerce (uses the category list for the product dropdowns).
+- **Orders / Quotations** — create and manage orders and quotes.
+
+Plus an *"Last API call"* panel that shows exactly what the server returned for
+every button you press.
 
 > If login says `rest_not_logged_in` even with the app password, your hosting
 > is stripping the `Authorization` header — tell the dev team (we'd switch to
@@ -148,14 +161,17 @@ Returns:
 `POST /products` — body (all optional except `name`):
 ```json
 { "name": "RTX 5080", "sku": "GPU-RTX5080", "price": 47950,
-  "stock_quantity": 3, "description": "…", "categoryId": "17",
+  "stock_quantity": 3, "stock_status": "instock",
+  "imageUrl": "https://…/image.jpg", "description": "…", "categoryId": "17",
   "cost": 45000, "brand": "MSI", "warrantyMonths": 36,
   "serialTracked": true, "location": "A-1", "supplier": "PC Express" }
 ```
 Creates the product in WooCommerce → `201` with the created product.
 
 `PUT /products/:id` — same body represents an **edit**; fields you don't send are
-kept by WooCommerce. `cost`, `brand`, `serialTracked`, `warrantyMonths`,
+kept by WooCommerce. `imageUrl` is stored as the WC product image (`images`),
+`stock_status` must be one of `instock | outofstock | onbackorder` (anything
+else → `400`). `cost`, `brand`, `serialTracked`, `warrantyMonths`,
 `location`, `supplier` are saved as WC custom fields (`_dpc_*`) so they survive.
 
 `PUT /products/:id/stock` — body `{ "stock_quantity": 12 }` → sets stock (and
@@ -165,7 +181,28 @@ enables manage-stock) in WooCommerce.
 `{ "data": { "id": "123", "deleted": true } }`.
 (WC may refuse if the product already has orders.)
 
-### 4.4 Orders
+### 4.4 Catalog taxonomies
+
+All four are full CRUD straight into WooCommerce and share the same shape
+(auth required):
+
+| Route | Lists | Creates `{ name }` | Edits | Deletes |
+| --- | --- | --- | --- | --- |
+| `/categories` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
+| `/brands` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
+| `/tags` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
+| `/attributes` | `GET` | `POST` | — | — |
+| `/attributes/:id/terms` | `GET` | `POST` | `PUT /:id/terms/:termId` | `DELETE /:id/terms/:termId` |
+
+Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`
+(attributes add `type`: `text | color | select | button`; categories add
+`parentId`; create returns `201`).
+
+> Verified against the live store: brands come from a brand plugin
+> (`products/brands`), so they CRUD exactly like categories. The **Catalog** tab
+> in the tester exercises all of these.
+
+### 4.5 Orders
 
 `GET /orders?search=…` → array mapped to the frontend Order shape:
 ```json
@@ -188,7 +225,7 @@ enables manage-stock) in WooCommerce.
 Creates a **real WooCommerce order** → `201`. (POS payment/serials logic comes
 in the P2 Supabase phase.)
 
-### 4.5 Quotations
+### 4.6 Quotations
 
 `GET /quotes` → array of Quote objects (see `dto.ts`).
 
@@ -212,8 +249,11 @@ Creates a draft quote, computes subtotal/total server-side → `201` with the qu
 2. `npm run dev` → `/api/v1/health` shows `"status": "ok"`.
 3. Tester at `http://localhost:8787/test.html`:
    - Log in (app password) → products should load from the live storefront.
-   - Click **Edit** on a product → full detail modal → change price/stock →
-     **Save** → confirm the "Last API call" panel shows `200/201`.
+   - Click **Edit** on a product → full detail modal → change price/stock/category
+     (dropdown) / stock-status (dropdown) / image URL → **Save** → confirm the
+     "Last API call" panel shows `200/201`.
+   - Catalog tab → **Brands/Tags/Categories/Attributes** → add + delete an item
+     → confirm it appears/disappears on the storefront too.
    - Set stock in the Products table → stock column updates after refresh.
    - Delete a throwaway product → confirm it disappears from the storefront too.
    - Orders tab → **+ New order** → pick a product → creates a WC order.
@@ -228,6 +268,9 @@ Creates a draft quote, computes subtotal/total server-side → `201` with the qu
 - Products/orders are WooCommerce-backed; the future Postgres ledger supersedes
   the WC proxy for internal stock/serials (P1/P5).
 - `cost`/`brand`/etc. are WC custom fields — readable in wp-admin under the
-  product's "Custom fields" section.
+  product's "Custom fields" section. Product **brand** may also come from the
+  store's brand taxonomy when assigned.
+- `stock_status` is validated server-side (`instock | outofstock | onbackorder`);
+  the tester enforces it with a dropdown.
 - Delete is a force-delete; WC refuses products already attached to orders.
 - Serial tracking and cash-drawer reconciliation are not wired yet.

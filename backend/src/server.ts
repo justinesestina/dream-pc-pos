@@ -14,6 +14,10 @@ import { config, wpConfigured } from "./config.js";
 import { ApiError, ok } from "./lib/errors.js";
 import { authRoutes } from "./routes/auth.js";
 import { productsRoutes } from "./routes/products.js";
+import { categoriesRoutes } from "./routes/categories.js";
+import { tagsRoutes } from "./routes/tags.js";
+import { brandsRoutes } from "./routes/brands.js";
+import { attributesRoutes } from "./routes/attributes.js";
 import { inventoryRoutes } from "./routes/inventory.js";
 import { serialsRoutes } from "./routes/serials.js";
 import { ordersRoutes } from "./routes/orders.js";
@@ -42,7 +46,8 @@ app.get("/api/v1/health", (c) => {
     wpLoginAvailable: Boolean(config.wp.url),
     supabaseConfigured: Boolean(config.supabaseUrl && config.supabaseServiceRoleKey),
     domains: [
-      "auth", "products", "inventory", "serials", "orders", "quotes", "customers",
+      "auth", "products", "categories", "tags", "brands", "attributes",
+      "inventory", "serials", "orders", "quotes", "customers",
       "builds", "services", "warranty", "returns", "purchasing", "receiving",
       "shifts", "releases", "audit", "notifications",
     ],
@@ -51,6 +56,10 @@ app.get("/api/v1/health", (c) => {
 
 app.route("/api/v1/auth", authRoutes());
 app.route("/api/v1/products", productsRoutes());
+app.route("/api/v1/categories", categoriesRoutes());
+app.route("/api/v1/tags", tagsRoutes());
+app.route("/api/v1/brands", brandsRoutes());
+app.route("/api/v1/attributes", attributesRoutes());
 app.route("/api/v1/inventory", inventoryRoutes());
 app.route("/api/v1/serials", serialsRoutes());
 app.route("/api/v1/orders", ordersRoutes());
