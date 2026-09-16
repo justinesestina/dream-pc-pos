@@ -1,10 +1,11 @@
 /**
  * Vercel entrypoint.
  *
- * Vercel's Hono preset (zero-config) detects a default-exported Hono app at
- * src/server.ts — keep this file free of any `serve()`/`listen()` call.
- * See https://vercel.com/docs/frameworks/backend/hono
+ * Vercel's framework detector looks for a DEFAULT-exported Hono app in one of:
+ * app / index / server / src/app / src/index / src/server. So `app-core.ts`
+ * deliberately does NOT match those names (a no-default-export `src/app.ts`
+ * makes Vercel fail with "Invalid export"). Only this file exports default.
  */
-import { app } from "./app.js";
+import { app } from "./app-core.js";
 
 export default app;
