@@ -108,8 +108,8 @@
       </div>
     </div>
     <table>
-      <thead><tr><th>ID</th><th>Name</th><th>Extra</th><th></th></tr></thead>
-      <tbody id="catalogBody"><tr><td colspan="4" class="muted">Log in and pick a type above.</td></tr></tbody>
+      <thead><tr><th>ID</th><th>Name</th><th>Slug</th><th>Parent</th><th>Display</th><th>Image</th><th></th></tr></thead>
+      <tbody id="catalogBody"><tr><td colspan="7" class="muted">Log in and pick a type above.</td></tr></tbody>
     </table>
   </section>
 
@@ -219,6 +219,37 @@
       <button class="secondary" id="m_cancel">Cancel</button>
       <button class="danger" id="m_delete">Delete</button>
       <button id="m_save">Save (syncs to WooCommerce)</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== category edit modal =================== -->
+<div id="catEditModal">
+  <div class="card">
+    <h2 style="margin-top:0">Edit category <span id="cat_title" class="muted"></span></h2>
+    <div class="kv" style="margin-bottom:12px">
+      <span><b>ID:</b> <span id="cat_id"></span></span>
+    </div>
+    <div class="grid">
+      <label class="full">Name *<input id="cat_name"></label>
+      <label>Slug<input id="cat_slug"></label>
+      <label>Parent ID<input id="cat_parentId" type="number"></label>
+      <label>Display type<select id="cat_display">
+        <option value="default">Default</option>
+        <option value="products">Products</option>
+        <option value="subcategories">Subcategories</option>
+        <option value="both">Both</option>
+      </select></label>
+      <label class="full">Description<textarea id="cat_description" rows="3"></textarea></label>
+      <label class="full">Image URL<input id="cat_image"></label>
+      <div class="full" style="display:flex; gap:10px; align-items:center">
+        <img id="cat_imagePreview" alt="preview" style="height:70px; border-radius:6px; border:1px solid #2a2f3a; background:#0a0c10; display:none">
+        <span class="muted" id="cat_imageHint">Preview updates as you type.</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="cat_cancel">Cancel</button>
+      <button id="cat_save">Save (syncs to WooCommerce)</button>
     </div>
   </div>
 </div>
@@ -376,6 +407,7 @@ $("productsBody").addEventListener("click", async (e) => {
 
 /* ------------------------------------------------- product edit modal */
 const modal = $("editModal");
+const catModal = $("catEditModal");
 function setVal(id, v, fallback = "") { const el = $(id); el.value = (v === undefined || v === null) ? fallback : String(v); }
 function updateImagePreview() {
   const src = $("m_image").value.trim();
@@ -384,7 +416,15 @@ function updateImagePreview() {
   img.onload = () => { img.style.display = ""; $("m_imageHint").textContent = "Looks reachable. Save to attach it — WooCommerce downloads and hosts it."; };
   if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("m_imageHint").textContent = "Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below."; }
 }
+function updateCategoryImagePreview() {
+  const src = $("cat_image").value.trim();
+  const img = $("cat_imagePreview");
+  img.onerror = () => { img.style.display = "none"; $("cat_imageHint").textContent = "Could not load that URL."; };
+  img.onload = () => { img.style.display = ""; $("cat_imageHint").textContent = "Looks reachable."; };
+  if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("cat_imageHint").textContent = "Preview updates as you type."; }
+}
 $("m_image").addEventListener("input", updateImagePreview);
+$("cat_image").addEventListener("input", updateCategoryImagePreview);
 
 $("m_uploadBtn").addEventListener("click", async () => {
   const file = $("m_fileAccept").files && $("m_fileAccept").files[0];
@@ -476,6 +516,43 @@ $("m_save").addEventListener("click", async () => {
   } catch (e) { showError(e.message); }
 });
 
+/* ------------------------------------------------- category edit modal */
+async function openCategoryEdit(id) {
+  try {
+    const r = await api("/categories/" + id);
+    const cat = r.data;
+    $("cat_title").textContent = "· " + cat.name;
+    $("cat_id").textContent = cat.id;
+    setVal("cat_name", cat.name);
+    setVal("cat_slug", cat.slug);
+    setVal("cat_parentId", cat.parentId);
+    setVal("cat_display", cat.display || "default");
+    setVal("cat_description", cat.description);
+    setVal("cat_image", cat.image || "");
+    updateCategoryImagePreview();
+    catModal.classList.add("open");
+  } catch (e) { showError(e.message); }
+}
+
+$("cat_cancel").addEventListener("click", () => catModal.classList.remove("open"));
+$("cat_save").addEventListener("click", async () => {
+  const id = $("cat_id").textContent;
+  const body = {
+    name: $("cat_name").value.trim(),
+    slug: $("cat_slug").value.trim(),
+    parentId: $("cat_parentId").value ? Number($("cat_parentId").value) : undefined,
+    display: $("cat_display").value,
+    description: $("cat_description").value.trim() || undefined,
+    image: $("cat_image").value.trim() || undefined,
+  };
+  if (!body.name) { showError("Name is required."); return; }
+  try {
+    const r = await api("/categories/" + id, { method: "PUT", body: JSON.stringify(body) });
+    $("cat_title").textContent = "· " + r.data.name;
+    showError(""); loadCategories(); renderCatalog();
+  } catch (e) { showError(e.message); }
+});
+
 function fillProductOptions(products) {
   const opts = products.map((p) => `<option value="${esc(p.id)}" data-price="${Number(p.price) || 0}">${esc(p.name)}</option>`).join("");
   $("noProduct").innerHTML = '<option value="">— select product —</option>' + opts;
@@ -508,16 +585,23 @@ async function loadCategories() {
 }
 
 async function renderCatalog() {
-  if (!token) { $("catalogBody").innerHTML = `<tr><td colspan="4" class="muted">Log in first.</td></tr>`; return; }
+  if (!token) { $("catalogBody").innerHTML = `<tr><td colspan="7" class="muted">Log in first.</td></tr>`; return; }
   try {
     const r = await api("/" + catalogKind);
+    const isCat = catalogKind === "categories";
     const isAttr = catalogKind === "attributes";
     $("catalogBody").innerHTML = r.data.map((it) => `<tr>
       <td>${esc(it.id)}</td>
       <td>${esc(it.name)}</td>
-      <td class="muted">${isAttr ? esc(it.type) : "count " + (it.count ?? "?")}</td>
-      <td><button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">Delete</button></td>
-    </tr>`).join("") || `<tr><td colspan="4" class="muted">None yet.</td></tr>`;
+      ${isCat ? `<td class="muted">${esc(it.slug ?? "")}</td>
+      <td class="muted">${it.parentId ? esc(it.parentId) : "—"}</td>
+      <td class="muted">${esc(it.display ?? "default")}</td>
+      <td>${it.image ? `<img src="${esc(it.image)}" style="height:30px;border-radius:4px;">` : "—"}</td>` : `<td colspan="4" class="muted">${isAttr ? esc(it.type) : "count " + (it.count ?? "?")}</td>`}
+      <td>
+        ${isCat ? `<button class="small catedit" data-id="${esc(it.id)}">Edit</button>` : ""}
+        <button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">Delete</button>
+      </td>
+    </tr>`).join("") || `<tr><td colspan="7" class="muted">None yet.</td></tr>`;
   } catch (e) { showError(e.message); }
 }
 
@@ -543,15 +627,19 @@ $("catAddBtn").addEventListener("click", async () => {
 });
 
 $("catalogBody").addEventListener("click", async (e) => {
-  const btn = e.target.closest("button.catdel");
+  const btn = e.target.closest("button");
   if (!btn) return;
-  if (!confirm("Delete from WooCommerce permanently?")) return;
-  try {
-    await api("/" + btn.dataset.kind + "/" + btn.dataset.id, { method: "DELETE" });
-    showError("");
-    renderCatalog();
-    if (btn.dataset.kind === "categories") loadCategories();
-  } catch (err) { showError(err.message); }
+  if (btn.classList.contains("catdel")) {
+    if (!confirm("Delete from WooCommerce permanently?")) return;
+    try {
+      await api("/" + btn.dataset.kind + "/" + btn.dataset.id, { method: "DELETE" });
+      showError("");
+      renderCatalog();
+      if (btn.dataset.kind === "categories") loadCategories();
+    } catch (err) { showError(err.message); }
+  } else if (btn.classList.contains("catedit")) {
+    openCategoryEdit(btn.dataset.id);
+  }
 });
 
 /* ----------------------------------------------------------------- orders */
