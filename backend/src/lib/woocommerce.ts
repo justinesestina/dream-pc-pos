@@ -68,8 +68,13 @@ export interface WcOrder {
   id: number;
   status: string;
   total: string;
+  total_tax?: string;
+  discount_total?: string;
+  shipping_total?: string;
   customer_id: number;
-  line_items: { product_id: number; name: string; quantity: number; total: string }[];
+  customer_note?: string;
+  billing?: { first_name?: string; last_name?: string; email?: string };
+  line_items: { product_id: number; name: string; sku?: string; quantity: number; total: string }[];
   date_created: string;
 }
 
@@ -91,6 +96,10 @@ export const woocommerce = {
     return (await wcFetch(`products?per_page=100&orderby=id&order=desc&${params}`)) as WcProduct[];
   },
 
+  async product(id: string | number): Promise<WcProduct> {
+    return (await wcFetch(`products/${id}`)) as WcProduct;
+  },
+
   async orders(params = ""): Promise<WcOrder[]> {
     return (await wcFetch(`orders?per_page=100&orderby=date&order=desc&${params}`)) as WcOrder[];
   },
@@ -104,12 +113,27 @@ export const woocommerce = {
     return (await wcFetch("products", { method: "POST", body: JSON.stringify(body) })) as WcProduct;
   },
 
+  /** Update existing WC product by id. */
+  async updateProduct(id: string | number, body: Record<string, unknown>): Promise<WcProduct> {
+    return (await wcFetch(`products/${id}`, { method: "PUT", body: JSON.stringify(body) })) as WcProduct;
+  },
+
+  /** Permanently delete a product (could error if WC refuses due to orders). */
+  async deleteProduct(id: string | number): Promise<WcProduct> {
+    return (await wcFetch(`products/${id}?force=true`, { method: "DELETE" })) as WcProduct;
+  },
+
   /** Push a stock correction to WooCommerce after receiving/selling. */
-  async setStock(productId: number, stockQuantity: number): Promise<WcProduct> {
-    return (await wcFetch(`products/${productId}`, {
-      method: "PUT",
-      body: JSON.stringify({ stock_quantity: stockQuantity, manage_stock: true }),
-    })) as WcProduct;
+  async setStock(productId: string | number, stockQuantity: number): Promise<WcProduct> {
+    return this.updateProduct(productId, {
+      stock_quantity: stockQuantity,
+      manage_stock: true,
+    });
+  },
+
+  /** Create a storefront order (the "orders" tab in the test page). */
+  async createOrder(body: Record<string, unknown>): Promise<WcOrder> {
+    return (await wcFetch("orders", { method: "POST", body: JSON.stringify(body) })) as WcOrder;
   },
 };
 

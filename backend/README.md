@@ -49,6 +49,26 @@ Vercel auto-detects the Hono app via the default export in `src/server.ts`
 The `src/index.ts` local listener was split into `src/dev.ts` (local only) so
 `app.ts` + `src/server.ts` stay Vercel-safe and never open a stray port.
 
+## Test page (temporary, single-page)
+
+Vercel serves `public/**` from the CDN, so a quick tester ships with the app:
+
+```
+https://<your-project>.vercel.app/test.html
+```
+
+What it does today (real, WC-backed):
+- **Products** — list, search, create, edit (name/price/stock), inline stock
+  setter, force-delete. All synced to WooCommerce via `lib/woocommerce.ts`.
+- **Orders** — list storefront orders + create a new order (product picker,
+  qty, customer, payment method, mark paid).
+- **Quotations** — create/list/edit status/delete; stored in-memory on the
+  server (NOTE: resets on cold start until the Postgres phase P3).
+
+Login with a WordPress username + application password (client never sees the
+WooCommerce keys). Route inventory: see the top of `src/routes/products.ts`,
+`orders.ts`, `quotes.ts`.
+
 ## Contract (what the frontend expects)
 
 - Every list route returns `{ data: T[], meta: { page, perPage, total } }`.
