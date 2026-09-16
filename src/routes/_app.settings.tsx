@@ -329,7 +329,7 @@ function WooCommerceSection() {
         setSyncProgress(`Syncing ${stage} (${current}/${total})`);
       });
       
-      // Load the synced data into the store
+      // Load the synced data into the store with proper stock quantities
       store.loadWooCommerceData(result);
       
       toast.success("Sync completed successfully! Demo data cleared and WooCommerce data loaded.");

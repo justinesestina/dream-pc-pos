@@ -1,4 +1,4 @@
-import { FileText, LayoutDashboard, Receipt, Settings } from "lucide-react";
+import { FileText, LayoutDashboard, Package, Receipt, Settings } from "lucide-react";
 import type { Capability } from "@/lib/permissions";
 
 export interface NavItem {
@@ -25,6 +25,10 @@ export const navGroups: NavGroup[] = [
       { label: "Orders", to: "/orders", icon: Receipt, cap: "orders" },
       { label: "Quotation", to: "/quotes", icon: FileText, cap: "quotes" },
     ],
+  },
+  {
+    label: "Inventory",
+    items: [{ label: "Products", to: "/products", icon: Package, cap: "products" }],
   },
   {
     label: "System",
