@@ -1,8 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "env": {
-    "NITRO_PRESET": "vercel",
-    "NITRO_PRERENDER": "false"
+  "functions": {
+    "src/server.ts": {
+      "maxDuration": 30
+    }
   },
   "headers": [
     {

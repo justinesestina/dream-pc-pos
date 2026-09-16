@@ -40,10 +40,24 @@ export const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: (origin) => origin || "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Authorization", "Content-Type"],
+    origin: (origin) => {
+      // Allow specific origins in production
+      const allowedOrigins = [
+        "https://dpcmain.dreampcbuild.com",
+        "https://dreampcbuild.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+      ];
+      // Allow the origin if it's in the allowed list or if it's a local development request
+      if (!origin || allowedOrigins.includes(origin)) {
+        return origin || "*";
+      }
+      return null; // Block other origins
+    },
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
     exposeHeaders: ["Content-Length"],
+    credentials: true,
     maxAge: 86400,
   }),
 );

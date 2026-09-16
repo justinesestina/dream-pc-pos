@@ -9,7 +9,9 @@ import type { User, Product, Order, Quote, Category, Customer } from "./types";
 /** Base URL of the backend API. Defaults to localhost:8787 in dev. */
 const API_BASE =
   (import.meta.env?.["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/+$/, "") ||
-  "http://localhost:8787";
+  (typeof window !== "undefined" && window.location.hostname === "dpcmain.dreampcbuild.com"
+    ? "https://backend-shard55.vercel.app"
+    : "http://localhost:8787");
 
 let backendPausedUntil = 0;
 let backendPauseReason: string | null = null;
