@@ -38,6 +38,8 @@ app.get("/api/v1/health", (c) => {
   return c.json({
     status: "ok",
     wpConfigured,
+    /** Login via WordPress only needs the site URL — the WC keys are for products/orders. */
+    wpLoginAvailable: Boolean(config.wp.url),
     supabaseConfigured: Boolean(config.supabaseUrl && config.supabaseServiceRoleKey),
     domains: [
       "auth", "products", "inventory", "serials", "orders", "quotes", "customers",

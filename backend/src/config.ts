@@ -1,7 +1,16 @@
 /**
  * Server-side configuration. Reads backend/.env — NEVER expose these to the
  * browser. Frontend uses its own VITE_-prefixed variables in .env.local.
+ *
+ * Loads backend/.env when present (Vercel injects env vars from the dashboard,
+ * so process.loadEnvFile() just no-ops there).
  */
+try {
+  process.loadEnvFile();
+} catch {
+  /* no .env present — rely on real environment (e.g. Vercel dashboard) */
+}
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT || 8787),

@@ -51,6 +51,8 @@
   <button data-tab="quotes">Quotations</button>
 </div>
 
+<p class="muted" id="serverStatus" style="padding:0 16px 4px">checking server…</p>
+
 <main>
   <div class="error" id="errorBox" style="display:none"></div>
 
@@ -138,12 +140,14 @@
 const API = (location.origin.startsWith("http") ? location.origin : "http://localhost:8787") + "/api/v1";
 document.getElementById("apiBase").textContent = "→ " + API;
 
-let token = (localStorage.getItem("dpc_token") || "").trim();
+let token = safeGetToken();
 let productsCache = [];
 
 const $ = (id) => document.getElementById(id);
 const errBox = $("errorBox");
 
+function safeGetToken() { try { return (localStorage.getItem("dpc_token") || "").trim(); } catch { return ""; } }
+function safeSetToken(t) { try { localStorage.setItem("dpc_token", t); } catch {} }
 function showError(msg) { if (msg) { errBox.textContent = String(msg); errBox.style.display = "block"; } else errBox.style.display = "none"; }
 function setAuthStatus(okMsg, isOk) {
   const el = $("authStatus");
@@ -176,12 +180,26 @@ $("btnLogin").addEventListener("click", async () => {
       headers: {}, // no bearer yet
     });
     token = r.data.token;
-    localStorage.setItem("dpc_token", token);
+    safeSetToken(token);
     setAuthStatus("logged in as " + username, true);
     showError("");
+    checkHealth();
     loadProducts(); loadOrders(); loadQuotes();
   } catch (e) { setAuthStatus("login failed", false); showError(e.message); }
 });
+
+async function checkHealth() {
+  const el = $("serverStatus");
+  try {
+    const r = await fetch(API + "/health");
+    const j = await r.json();
+    const login = j.wpLoginAvailable ? "WP login ENABLED" : "WP login disabled (set WOOCOMMERCE_URL in backend/.env)";
+    const wc = j.wpConfigured ? "WooCommerce configured" : "WooCommerce keys not set";
+    el.textContent = `server ok · ${login} · ${wc} · session: ${token ? "yes" : "NO — log in with your WP username + app password above"}`;
+  } catch {
+    el.textContent = "Cannot reach " + API + " — is `npm run dev` running in backend/? (use http://localhost:8787/test.html, not the file:// path)";
+  }
+}
 
 /* ---------------------------------------------------------------- tabs */
 document.querySelectorAll(".tabs button").forEach((btn) => {
@@ -379,6 +397,7 @@ $("quotesBody").addEventListener("click", async (e) => {
 
 /* ------------------------------------------------------------- bootstrap */
 (function init() {
+  checkHealth();
   if (token) { setAuthStatus("session from localStorage", true); loadProducts(); loadOrders(); loadQuotes(); }
 })();
 </script>
