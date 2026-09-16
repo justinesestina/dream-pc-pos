@@ -1,0 +1,55 @@
+# DPC NEXUS — backend
+
+The server-side half of DreamPC POS. Lives in its own folder (never under `src/`)
+so it cannot collide with the TanStack Start frontend — see
+[`docs/BACKEND-INTEGRATION-PLAN.md`](../docs/BACKEND-INTEGRATION-PLAN.md) §1.
+
+## What this folder is for
+
+| File | Purpose |
+| --- | --- |
+| `src/routes/*.ts` | One API module per frontend `src/lib/api/*` domain |
+| `src/lib/woocommerce.ts` | Server-side WooCommerce REST bridge (keys never reach the browser) |
+| `src/lib/wordpress-auth.ts` | WordPress login → POS role mapping (replaced by Supabase Auth in P4) |
+| `src/lib/token.ts` | HS256 JWTs for the POS session (replaced by Supabase Auth JWTs in P4) |
+| `src/middleware/auth.ts` | Validates the Bearer token and sets `c.var.user` |
+| `src/types/dto.ts` | **The contract the frontend needs** — mirrors `src/lib/types.ts` + `src/lib/ops-types.ts` |
+| `src/config.ts` | Server-only env (`.env` in this folder — **no** `VITE_` vars) |
+
+## Run it
+
+```bash
+cd backend
+cp .env.example .env        # add WooCommerce keys + a strong JWT_SECRET
+bun install
+bun run dev                 # API at http://localhost:8787/api/v1
+```
+
+Discovered routes: hit `GET /api/v1/health` to see the domain list and whether
+WooCommerce/Supabase are configured. The `/auth/login` endpoint verifies a
+WordPress username + application password against the live site and returns a
+Bearer JWT you can use against every other route.
+
+## Contract (what the frontend expects)
+
+- Every list route returns `{ data: T[], meta: { page, perPage, total } }`.
+- Every error returns `{ error: { code, message, details? } }` — the frontend
+  `src/lib/api/*` functions unwrap this envelope.
+- Domain DTO shapes live in `src/types/dto.ts`. **The frontend owns the shape**;
+  if `src/lib/types.ts` changes, `dto.ts` must change with it (plan §1).
+- Until Phase P0/P1 they return typed empty arrays/501s so the frontend can
+  wire up config, error handling and loading states with zero backend surprises.
+
+## Phase mapping (see plan §5)
+
+| Phase | What starts returning real data |
+| --- | --- |
+| P1 | products, categories, inventory, serials, audit, notifications |
+| P2 | orders, payments, customers, returns |
+| P3 | quotes, builds, services |
+| P4 | warranty, releases, Supabase Auth swap |
+| P5 | purchasing, receiving, shifts + WooCommerce push/pull |
+| P6 | reporting, retention, cleanup of the demo seam |
+
+Rotation note: rotate `WOOCOMMERCE_CONSUMER_KEY`/`SECRET` (they were committed in
+`.env.example`) before this backend goes live (plan §9).
