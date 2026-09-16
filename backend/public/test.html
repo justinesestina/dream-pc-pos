@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DPC NEXUS API tester</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #e6e6e6; }
+  header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #2a2f3a; position: sticky; top: 0; background: #0f1115; flex-wrap: wrap; z-index: 5; }
+  header h1 { font-size: 16px; margin: 0 16px 0 0; }
+  input, select, textarea, button { padding: 7px 10px; border-radius: 8px; border: 1px solid #3a4150; background: #171b22; color: inherit; font-size: 14px; }
+  textarea { font-family: ui-monospace, monospace; }
+  button { cursor: pointer; background: #2563eb; border-color: #2563eb; font-weight: 600; }
+  button.secondary { background: #1e2632; border-color: #3a4150; }
+  button.danger { background: #b91c1c; border-color: #b91c1c; }
+  button.small { padding: 3px 8px; font-size: 12px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .status { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #2a2f3a; }
+  .status.ok { background: #14532d; }
+  .status.err { background: #7f1d1d; }
+  .tabs { display: flex; gap: 4px; padding: 10px 16px 0; }
+  .tabs button { border-radius: 8px 8px 0 0; background: transparent; border-color: transparent; }
+  .tabs button.active { background: #171b22; border-color: #3a4150; border-bottom: 2px solid #2563eb; }
+  main { padding: 16px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #20242d; vertical-align: middle; }
+  th { color: #9aa3b2; font-weight: 600; }
+  .panel { background: #171b22; border: 1px solid #2a2f3a; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .panel h2 { margin: 0 0 10px; font-size: 14px; }
+  .panel .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+  .error { color: #fca5a5; font-size: 13px; white-space: pre-wrap; }
+  .muted { color: #9aa3b2; font-size: 12px; }
+  .pill { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #22293a; }
+  pre#lastResponse { background: #0a0c10; border: 1px solid #2a2f3a; padding: 10px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
+  #editModal, #catEditModal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 10; padding: 30px 12px; overflow: auto; }
+  #editModal.open, #catEditModal.open { display: flex; }
+  #editModal .card, #catEditModal .card { background: #171b22; border: 1px solid #3a4150; border-radius: 12px; width: 640px; max-width: 100%; padding: 18px; }
+  #editModal .grid, #catEditModal .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #editModal .grid label, #catEditModal .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9aa3b2; }
+  #editModal .grid .full, #catEditModal .grid .full { grid-column: 1 / -1; }
+  #editModal .actions, #catEditModal .actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  .kv { font-size: 12px; }
+  .kv b { color: #9aa3b2; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DPC NEXUS · API tester</h1>
+  <span class="muted" id="apiBase"></span>
+  <input id="wpUser" placeholder="WP username" style="width:140px">
+  <input id="wpPass" type="password" placeholder="app password" style="width:160px">
+  <button id="btnLogin">Log in</button>
+  <span id="authStatus" class="status">no session</span>
+</header>
+
+<div class="tabs">
+  <button data-tab="products" class="active">Products</button>
+  <button data-tab="catalog">Catalog</button>
+  <button data-tab="orders">Orders</button>
+  <button data-tab="quotes">Quotations</button>
+</div>
+
+<p class="muted" id="serverStatus" style="padding:0 16px 4px">checking server…</p>
+
+<main>
+  <div class="error" id="errorBox" style="display:none"></div>
+
+  <section id="tab-products">
+    <div class="toolbar">
+      <button id="loadProducts">Refresh products</button>
+      <button class="secondary" id="newProductBtn">+ New product</button>
+      <input id="productSearch" placeholder="search…" style="width:180px">
+    </div>
+    <details class="panel" id="newProductPanel" style="padding-top:10px">
+      <summary>+ New product</summary>
+      <div class="row" style="margin-top:10px">
+        <input id="npName" placeholder="Name *">
+        <input id="npSku" placeholder="SKU">
+        <input id="npPrice" placeholder="Price" type="number" step="0.01" style="width:90px">
+        <input id="npStock" placeholder="Stock" type="number" style="width:80px">
+        <select id="npCategory"><option value="">— category —</option></select>
+        <input id="npImage" placeholder="Image URL" style="min-width:180px">
+        <input id="npDescription" placeholder="Description" style="min-width:200px">
+        <button id="npCreate">Create (syncs to WooCommerce)</button>
+      </div>
+    </details>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>SKU</th><th>Price</th><th>Sale</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="productsBody"><tr><td colspan="9" class="muted">Press "Refresh products" or log in first.</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="tab-catalog" style="display:none">
+    <div class="toolbar">
+      <button class="secondary catbtn active" data-kind="categories">Categories</button>
+      <button class="secondary catbtn" data-kind="brands">Brands</button>
+      <button class="secondary catbtn" data-kind="tags">Tags</button>
+      <button class="secondary catbtn" data-kind="attributes">Attributes</button>
+    </div>
+    <div class="panel" style="padding-top:10px">
+      <div class="row">
+        <input id="catAddName" placeholder="New name">
+        <button id="catAddBtn">Add (syncs to WooCommerce)</button>
+        <span class="muted" id="catHint">Category list powers the product dropdowns; brands/tags/attributes are full CRUD on the store.</span>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Slug</th><th>Parent</th><th>Display</th><th>Image</th><th>Actions</th></tr></thead>
+      <tbody id="catalogBody"><tr><td colspan="7" class="muted">Log in and pick a type above.</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="tab-orders" style="display:none">
+    <div class="toolbar">
+      <button id="loadOrders">Refresh orders</button>
+      <button class="secondary" id="newOrderBtn">+ New order</button>
+    </div>
+    <details class="panel" id="newOrderPanel">
+      <summary>+ New order (creates a real WooCommerce order)</summary>
+      <div class="row" style="margin-top:10px">
+        <select id="noProduct"><option value="">— load products first —</option></select>
+        <input id="noQty" type="number" value="1" style="width:70px">
+        <input id="noCustomer" placeholder="Customer name">
+        <input id="noEmail" placeholder="Email">
+        <select id="noPay">
+          <option value="bacs">Bank transfer</option>
+          <option value="cod">Cash on delivery</option>
+        </select>
+        <label class="muted"><input type="checkbox" id="noPaid"> mark paid</label>
+        <button id="noCreate">Create</button>
+      </div>
+    </details>
+    <table>
+      <thead><tr><th>ID</th><th>Status</th><th>Customer</th><th>Items</th><th>Total</th><th>Created</th></tr></thead>
+      <tbody id="ordersBody"><tr><td colspan="6" class="muted">Log in and press "Refresh orders".</td></tr></tbody>
+    </table>
+  </section>
+
+  <section id="tab-quotes" style="display:none">
+    <div class="toolbar">
+      <button id="loadQuotes">Refresh quotes</button>
+      <button class="secondary" id="newQuoteBtn">+ New quotation</button>
+    </div>
+    <details class="panel" id="newQuotePanel">
+      <summary>+ New quotation</summary>
+      <div class="row" style="margin-top:10px">
+        <input id="nqCustomer" placeholder="Customer name" style="width:180px">
+        <select id="nqProduct"><option value="">— load products first —</option></select>
+        <input id="nqQty" type="number" value="1" style="width:70px">
+        <input id="nqPrice" placeholder="Unit price" type="number" step="0.01" style="width:90px">
+        <input id="nqDiscount" placeholder="Discount" type="number" step="0.01" style="width:90px">
+        <button id="nqCreate">Create quote</button>
+      </div>
+      <p class="muted" style="margin-top:8px">Unit price auto-fills for products; you can override before creating.</p>
+    </details>
+    <table>
+      <thead><tr><th>ID</th><th>Customer</th><th>Version</th><th>Items</th><th>Total</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody id="quotesBody"><tr><td colspan="8" class="muted">Log in and press "Refresh quotes".</td></tr></tbody>
+    </table>
+  </section>
+
+  <div class="panel">
+    <h2>Last API call (method · path → status · response body)</h2>
+    <pre id="lastResponse">no calls yet
+(switch to the Products tab, press "Refresh products", then click "Edit" on a row to see full product detail)</pre>
+  </div>
+</main>
+
+<!-- =================== product edit modal =================== -->
+<div id="editModal">
+  <div class="card">
+    <h2 style="margin-top:0">Edit product <span id="m_title" class="muted"></span></h2>
+    <div class="kv" style="margin-bottom:12px">
+      <span><b>ID:</b> <span id="m_id"></span></span> ·
+      <span><b>WC id:</b> <span id="m_wcid"></span></span> ·
+      <span><b>Created:</b> <span id="m_created"></span></span> ·
+      <span><b>Modified:</b> <span id="m_modified"></span></span>
+    </div>
+    <div class="grid">
+      <label>Name *<input id="m_name"></label>
+      <label>SKU<input id="m_sku"></label>
+      <label>Brand<input id="m_brand"></label>
+      <label>Category<select id="m_categoryId"><option value="">— loading —</option></select></label>
+      <label>Type<select id="m_type"><option>simple</option><option>variable</option><option>external</option><option>grouped</option></select></label>
+      <label>WC status<select id="m_status"><option value="publish">publish</option><option value="private">private</option><option value="draft">draft</option><option value="pending">pending</option></select></label>
+      <label>Price<input id="m_price" type="number" step="0.01"></label>
+      <label>Sale price<input id="m_salePrice" type="number" step="0.01"></label>
+      <label>Stock qty<input id="m_stock" type="number"></label>
+      <label>Stock status<select id="m_stockStatus">
+        <option value="instock">instock — available</option>
+        <option value="outofstock">outofstock</option>
+        <option value="onbackorder">onbackorder</option>
+      </select></label>
+      <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_manageStock"> Manage stock (WC)</label>
+      <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_serialTracked"> Serial tracked (DPC meta)</label>
+      <label>Cost (₱, DPC meta)<input id="m_cost" type="number" step="0.01"></label>
+      <label>Warranty (months)<input id="m_warranty" type="number"></label>
+      <label>Location<input id="m_location"></label>
+      <label>Supplier<input id="m_supplier"></label>
+      <label class="full">Image URL<input id="m_image"></label>
+      <div class="full" style="display:flex; gap:10px; align-items:center">
+        <img id="m_imagePreview" alt="preview" style="height:70px; border-radius:6px; border:1px solid #2a2f3a; background:#0a0c10; display:none">
+        <span class="muted" id="m_imageHint">Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below.</span>
+      </div>
+      <label class="full">…or upload from this computer
+        <div style="display:flex; gap:8px; align-items:center">
+          <input type="file" id="m_fileAccept" accept="image/png,image/jpeg,image/webp,image/gif">
+          <button class="secondary" id="m_uploadBtn">Upload to site & use</button>
+          <span class="muted" id="m_uploadStatus"></span>
+        </div>
+      </label>
+      <label class="full">Description<textarea id="m_description" rows="3"></textarea></label>
+      <label class="full">Specs (read-only attributes from WooCommerce)<input id="m_specs" disabled></label>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="m_cancel">Cancel</button>
+      <button class="danger" id="m_delete">Delete</button>
+      <button id="m_save">Save (syncs to WooCommerce)</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== category edit modal =================== -->
+<div id="catEditModal">
+  <div class="card">
+    <h2 style="margin-top:0">Edit category <span id="cat_title" class="muted"></span></h2>
+    <div class="kv" style="margin-bottom:12px">
+      <span><b>ID:</b> <span id="cat_id"></span></span>
+    </div>
+    <div class="grid">
+      <label class="full">Name *<input id="cat_name"></label>
+      <label>Slug<input id="cat_slug"></label>
+      <label>Parent ID<input id="cat_parentId" type="number"></label>
+      <label>Display type<select id="cat_display">
+        <option value="default">Default</option>
+        <option value="products">Products</option>
+        <option value="subcategories">Subcategories</option>
+        <option value="both">Both</option>
+      </select></label>
+      <label class="full">Description<textarea id="cat_description" rows="3"></textarea></label>
+      <label class="full">Image URL<input id="cat_image"></label>
+      <div class="full" style="display:flex; gap:10px; align-items:center">
+        <img id="cat_imagePreview" alt="preview" style="height:70px; border-radius:6px; border:1px solid #2a2f3a; background:#0a0c10; display:none">
+        <span class="muted" id="cat_imageHint">Preview updates as you type.</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="cat_cancel">Cancel</button>
+      <button id="cat_save">Save (syncs to WooCommerce)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const API = (location.origin.startsWith("http") ? location.origin : "http://localhost:8787") + "/api/v1";
+document.getElementById("apiBase").textContent = "→ " + API;
+
+let token = safeGetToken();
+let productsCache = [];
+let lastResponse = null;
+
+const $ = (id) => document.getElementById(id);
+const errBox = $("errorBox");
+
+function safeGetToken() { try { return (localStorage.getItem("dpc_token") || "").trim(); } catch { return ""; } }
+function safeSetToken(t) { try { localStorage.setItem("dpc_token", t); } catch {} }
+function safeGetUser() { try { return (localStorage.getItem("dpc_username") || "").trim(); } catch { return ""; } }
+function safeSetUser(u) { try { localStorage.setItem("dpc_username", u); } catch {} }
+function showError(msg) { if (msg) { errBox.textContent = String(msg); errBox.style.display = "block"; } else errBox.style.display = "none"; }
+function setAuthStatus(okMsg, isOk) {
+  const el = $("authStatus");
+  el.textContent = okMsg;
+  el.className = "status " + (isOk ? "ok" : "err");
+}
+
+function renderLast(method, path, status, body) {
+  try { body = typeof body === "string" ? body : JSON.stringify(body, null, 2).slice(0, 6000); } catch {}
+  $("lastResponse").textContent = `${method} ${path}  →  HTTP ${status}\n${body}`;
+}
+
+async function api(path, opts = {}) {
+  const method = (opts.method || "GET");
+  const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+  if (token) headers["Authorization"] = "Bearer " + token;
+  let res;
+  try {
+    res = await fetch(API + path, Object.assign({}, opts, { headers }));
+  } catch (e) {
+    renderLast(method, path, "fetch-failed", "Cannot reach " + API + " — is `npm run dev` running in backend/? open http://localhost:8787/test.html");
+    throw new Error("fetch failed — " + e.message);
+  }
+  let json = null;
+  try { json = await res.json(); } catch {}
+  renderLast(method, path, res.status, json ?? "(no JSON body)");
+  if (!res.ok) {
+    const msg = json && json.error ? (json.error.code + ": " + json.error.message) : ("HTTP " + res.status + " " + res.statusText);
+    throw new Error(msg);
+  }
+  return json;
+}
+
+/* ---------------------------------------------------------------- login */
+$("btnLogin").addEventListener("click", async () => {
+  const username = $("wpUser").value.trim();
+  const appPassword = $("wpPass").value.trim();
+  if (!username || !appPassword) { showError("Enter WP username + application password."); return; }
+  try {
+    const r = await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, appPassword }),
+      headers: {},
+    });
+    token = r.data.token;
+    safeSetToken(token);
+    safeSetUser(username);
+    setAuthStatus("logged in as " + username, true);
+    showError("");
+    checkHealth();
+    loadProducts(); loadCategories(); loadOrders(); loadQuotes();
+  } catch (e) { setAuthStatus("login failed", false); showError(e.message); }
+});
+
+async function checkHealth() {
+  const el = $("serverStatus");
+  try {
+    const r = await fetch(API + "/health");
+    const j = await r.json();
+    const login = j.wpLoginAvailable ? "WP login ENABLED" : "WP login disabled (set WOOCOMMERCE_URL in backend/.env)";
+    const wc = j.wpConfigured ? "WooCommerce configured" : "WooCommerce keys not set";
+    el.textContent = `server ok · ${login} · ${wc} · session: ${token ? "yes" : "NO — log in with your WP username + app password above"}`;
+  } catch {
+    el.textContent = "Cannot reach " + API + " — is `npm run dev` running in backend/? (use http://localhost:8787/test.html, not the file:// path)";
+  }
+}
+
+/* ---------------------------------------------------------------- tabs */
+document.querySelectorAll(".tabs button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
+    $("tab-" + btn.dataset.tab).style.display = "block";
+  });
+});
+
+/* -------------------------------------------------------------- products */
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+$("loadProducts").addEventListener("click", loadProducts);
+$("newProductBtn").addEventListener("click", () => { $("newProductPanel").open = !$("newProductPanel").open; });
+$("npCreate").addEventListener("click", async () => {
+  try {
+    await api("/products", {
+      method: "POST",
+      body: JSON.stringify({
+        name: $("npName").value.trim(), sku: $("npSku").value.trim(),
+        price: Number($("npPrice").value || 0), stock_quantity: Number($("npStock").value || 0),
+        categoryId: $("npCategory").value, imageUrl: $("npImage").value.trim(),
+        description: $("npDescription").value.trim() || undefined,
+      }),
+    });
+    showError(""); await loadProducts();
+  } catch (e) { showError(e.message); }
+});
+
+async function loadProducts() {
+  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="9" class="muted">Log in first (top-right).</td></tr>`; return; }
+  try {
+    const search = $("productSearch").value.trim();
+    const r = await api("/products" + (search ? "?search=" + encodeURIComponent(search) : ""));
+    productsCache = r.data;
+    $("productsBody").innerHTML = r.data.map((p) => `<tr>
+      <td>${esc(p.id)}</td>
+      <td>${esc(p.name)}</td>
+      <td class="muted">${esc(p.categoryName ?? "–")}</td>
+      <td>${esc(p.sku)}</td>
+      <td>₱${Number(p.price).toLocaleString()}</td>
+      <td>${p.salePrice ? "₱" + Number(p.salePrice).toLocaleString() : "–"}</td>
+      <td>${typeof p.stock_quantity === "number" ? p.stock_quantity : "–"}</td>
+      <td><span class="pill">${esc(p.status ?? p.stock_status ?? "")}</span></td>
+      <td>
+        <button class="small edit-btn" data-id="${esc(p.id)}">Edit</button>
+        <button class="small danger del-btn" data-id="${esc(p.id)}">Delete</button>
+      </td></tr>`).join("") || `<tr><td colspan="9" class="muted">No products found.</td></tr>`;
+    fillProductOptions(r.data);
+  } catch (e) { $("productsBody").innerHTML = `<tr><td colspan="9">${esc("<i>fetch failed</i>")}</td></tr>`; showError(e.message); }
+}
+
+$("productsBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  try {
+    if (btn.classList.contains("del-btn")) {
+      if (!confirm("Delete product " + id + " permanently (force)? This syncs to WooCommerce.")) return;
+      await api("/products/" + id, { method: "DELETE" });
+      showError(""); loadProducts();
+    } else if (btn.classList.contains("edit-btn")) {
+      openEdit(id);
+    }
+  } catch (err) { showError(err.message); }
+});
+
+/* ------------------------------------------------- product edit modal */
+const modal = $("editModal");
+const catModal = $("catEditModal");
+function setVal(id, v, fallback = "") { const el = $(id); el.value = (v === undefined || v === null) ? fallback : String(v); }
+function updateImagePreview() {
+  const src = $("m_image").value.trim();
+  const img = $("m_imagePreview");
+  img.onerror = () => { img.style.display = "none"; $("m_imageHint").textContent = "WooCommerce could not load that URL — use a direct image file link (ends in .jpg/.png/.webp), not a search/thumbnail URL."; };
+  img.onload = () => { img.style.display = ""; $("m_imageHint").textContent = "Looks reachable. Save to attach it — WooCommerce downloads and hosts it."; };
+  if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("m_imageHint").textContent = "Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below."; }
+}
+function updateCategoryImagePreview() {
+  const src = $("cat_image").value.trim();
+  const img = $("cat_imagePreview");
+  img.onerror = () => { img.style.display = "none"; $("cat_imageHint").textContent = "Could not load that URL."; };
+  img.onload = () => { img.style.display = ""; $("cat_imageHint").textContent = "Looks reachable."; };
+  if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("cat_imageHint").textContent = "Preview updates as you type."; }
+}
+$("m_image").addEventListener("input", updateImagePreview);
+$("cat_image").addEventListener("input", updateCategoryImagePreview);
+
+$("m_uploadBtn").addEventListener("click", async () => {
+  const file = $("m_fileAccept").files && $("m_fileAccept").files[0];
+  if (!file) { showError("Pick an image file first."); return; }
+  if (file.size > 10 * 1024 * 1024) { showError("Image too large — max 10 MB."); return; }
+  const status = $("m_uploadStatus");
+  status.textContent = "uploading…";
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error("could not read file"));
+      r.readAsDataURL(file);
+    });
+    const r = await api("/media", { method: "POST", body: JSON.stringify({
+      filename: file.name,
+      data,
+      username: $("wpUser").value.trim() || safeGetUser(),
+      appPassword: $("wpPass").value.trim(),
+    }) });
+    $("m_image").value = r.data.url;
+    updateImagePreview();
+    status.textContent = "uploaded → " + r.data.url + " (press Save to attach)";
+    showError("");
+  } catch (e) { status.textContent = ""; showError(e.message); }
+});
+
+async function openEdit(id) {
+  try {
+    const [r] = await Promise.all([api("/products/" + id), loadCategories()]); // full detail + category dropdown
+    const p = r.data;
+    $("m_title").textContent = "· " + p.name;
+    $("m_id").textContent = p.id;
+    $("m_wcid").textContent = p.id;
+    $("m_created").textContent = new Date(p.dateCreated || "").toLocaleString() || "–";
+    $("m_modified").textContent = new Date(p.dateModified || "").toLocaleString() || "–";
+    setVal("m_name", p.name); setVal("m_sku", p.sku);
+    setVal("m_brand", p.brand);
+    setVal("m_categoryId", p.categoryId);
+    setVal("m_type", p.productType || "simple");
+    setVal("m_status", p.status || "publish");
+    setVal("m_price", p.price ?? 0); setVal("m_salePrice", p.salePrice ?? "");
+    setVal("m_stock", p.stock_quantity ?? 0);
+    setVal("m_stockStatus", p.stock_status || "instock");
+    $("m_manageStock").checked = !!p.manage_stock;
+    $("m_serialTracked").checked = !!p.serialTracked;
+    setVal("m_cost", p.cost ?? 0); setVal("m_warranty", p.warrantyMonths ?? 0);
+    setVal("m_location", p.location); setVal("m_supplier", p.supplier);
+    setVal("m_image", p.imageUrl || ""); updateImagePreview(); setVal("m_description", p.description || "");
+    setVal("m_specs", Object.entries(p.specs || {}).map(([k, v]) => `${k}: ${v}`).join(" · "), "—");
+    modal.classList.add("open");
+  } catch (e) { showError(e.message); }
+}
+
+$("m_cancel").addEventListener("click", () => modal.classList.remove("open"));
+$("m_delete").addEventListener("click", async () => {
+  const id = $("m_id").textContent;
+  if (!confirm("Delete product " + id + " permanently?")) return;
+  try {
+    await api("/products/" + id, { method: "DELETE" });
+    modal.classList.remove("open"); showError(""); loadProducts();
+  } catch (e) { showError(e.message); }
+});
+$("m_save").addEventListener("click", async () => {
+  const id = $("m_id").textContent;
+  const body = {
+    name: $("m_name").value.trim(),
+    sku: $("m_sku").value.trim(),
+    brand: $("m_brand").value.trim(),
+    categoryId: $("m_categoryId").value,
+    price: Number($("m_price").value || 0),
+    salePrice: $("m_salePrice").value === "" ? "" : Number($("m_salePrice").value),
+    stock_quantity: Number($("m_stock").value || 0),
+    stock_status: $("m_stockStatus").value,
+    manage_stock: $("m_manageStock").checked,
+    serialTracked: $("m_serialTracked").checked,
+    cost: Number($("m_cost").value || 0),
+    warrantyMonths: Number($("m_warranty").value || 0),
+    location: $("m_location").value.trim(),
+    supplier: $("m_supplier").value.trim(),
+    status: $("m_status").value,
+    imageUrl: $("m_image").value.trim(),
+    description: $("m_description").value,
+  };
+  try {
+    const r = await api("/products/" + id, { method: "PUT", body: JSON.stringify(body) });
+    $("m_title").textContent = "· " + r.data.name; // show saved result
+    showError(""); loadProducts();
+  } catch (e) { showError(e.message); }
+});
+
+/* ------------------------------------------------- category edit modal */
+async function openCategoryEdit(id) {
+  try {
+    const r = await api("/categories/" + id);
+    const cat = r.data;
+    $("cat_title").textContent = "· " + cat.name;
+    $("cat_id").textContent = cat.id;
+    setVal("cat_name", cat.name);
+    setVal("cat_slug", cat.slug);
+    setVal("cat_parentId", cat.parentId);
+    setVal("cat_display", cat.display || "default");
+    setVal("cat_description", cat.description);
+    setVal("cat_image", cat.image || "");
+    updateCategoryImagePreview();
+    catModal.classList.add("open");
+  } catch (e) { showError(e.message); }
+}
+
+$("cat_cancel").addEventListener("click", () => catModal.classList.remove("open"));
+$("cat_save").addEventListener("click", async () => {
+  const id = $("cat_id").textContent;
+  const body = {
+    name: $("cat_name").value.trim(),
+    slug: $("cat_slug").value.trim(),
+    parentId: $("cat_parentId").value ? Number($("cat_parentId").value) : undefined,
+    display: $("cat_display").value,
+    description: $("cat_description").value.trim() || undefined,
+    image: $("cat_image").value.trim() || undefined,
+  };
+  if (!body.name) { showError("Name is required."); return; }
+  try {
+    const r = await api("/categories/" + id, { method: "PUT", body: JSON.stringify(body) });
+    $("cat_title").textContent = "· " + r.data.name;
+    showError(""); loadCategories(); renderCatalog();
+  } catch (e) { showError(e.message); }
+});
+
+function fillProductOptions(products) {
+  const opts = products.map((p) => `<option value="${esc(p.id)}" data-price="${Number(p.price) || 0}">${esc(p.name)}</option>`).join("");
+  $("noProduct").innerHTML = '<option value="">— select product —</option>' + opts;
+  $("nqProduct").innerHTML = '<option value="">— select product —</option>' + opts;
+}
+$("nqProduct").addEventListener("change", (e) => {
+  const opt = e.target.selectedOptions[0];
+  if (opt) $("nqPrice").value = opt.dataset.price;
+});
+
+/* ------------------------------------------------------------- catalog */
+let categoriesCache = [];
+let catalogKind = "categories";
+
+function refillCategorySelects() {
+  const opts = '<option value="">— none —</option>' +
+    categoriesCache.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  $("m_categoryId").innerHTML = opts;
+  $("npCategory").innerHTML = '<option value="">— category —</option>' +
+    categoriesCache.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+}
+
+async function loadCategories() {
+  try {
+    const r = await api("/categories");
+    categoriesCache = r.data || [];
+  } catch { categoriesCache = []; }
+  refillCategorySelects();
+  if (catalogKind === "categories") renderCatalog();
+}
+
+async function renderCatalog() {
+  if (!token) { $("catalogBody").innerHTML = `<tr><td colspan="7" class="muted">Log in first.</td></tr>`; return; }
+  try {
+    const r = await api("/" + catalogKind);
+    const isCat = catalogKind === "categories";
+    const isAttr = catalogKind === "attributes";
+    $("catalogBody").innerHTML = r.data.map((it) => `<tr>
+      <td>${esc(it.id)}</td>
+      <td><strong>${esc(it.name)}</strong></td>
+      ${isCat ? `<td class="muted">${esc(it.slug ?? "")}</td>
+      <td class="muted">${it.parentId ? esc(it.parentId) : "—"}</td>
+      <td class="muted">${esc(it.display ?? "default")}</td>
+      <td>${it.image ? `<img src="${esc(it.image)}" style="height:30px;border-radius:4px;">` : "—"}</td>` : `<td colspan="4" class="muted">${isAttr ? esc(it.type) : "count " + (it.count ?? "?")}</td>`}
+      <td>
+        ${isCat ? `<button class="small catedit" data-id="${esc(it.id)}" style="margin-right:8px;">✏️ Edit</button>` : ""}
+        <button class="small danger catdel" data-kind="${catalogKind}" data-id="${esc(it.id)}">🗑️ Delete</button>
+      </td>
+    </tr>`).join("") || `<tr><td colspan="7" class="muted">None yet.</td></tr>`;
+  } catch (e) { showError(e.message); }
+}
+
+document.querySelectorAll(".catbtn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    catalogKind = btn.dataset.kind;
+    document.querySelectorAll(".catbtn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderCatalog();
+  });
+});
+
+$("catAddBtn").addEventListener("click", async () => {
+  const name = $("catAddName").value.trim();
+  if (!name) { showError("Enter a name first."); return; }
+  try {
+    await api("/" + catalogKind, { method: "POST", body: JSON.stringify({ name }) });
+    $("catAddName").value = "";
+    showError("");
+    renderCatalog();
+    if (catalogKind === "categories") loadCategories();
+  } catch (e) { showError(e.message); }
+});
+
+$("catalogBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  if (btn.classList.contains("catdel")) {
+    if (!confirm("Delete from WooCommerce permanently?")) return;
+    try {
+      await api("/" + btn.dataset.kind + "/" + btn.dataset.id, { method: "DELETE" });
+      showError("");
+      renderCatalog();
+      if (btn.dataset.kind === "categories") loadCategories();
+    } catch (err) { showError(err.message); }
+  } else if (btn.classList.contains("catedit")) {
+    openCategoryEdit(btn.dataset.id);
+  }
+});
+
+/* ----------------------------------------------------------------- orders */
+$("loadOrders").addEventListener("click", loadOrders);
+$("newOrderBtn").addEventListener("click", () => { $("newOrderPanel").open = !$("newOrderPanel").open; });
+$("noCreate").addEventListener("click", async () => {
+  try {
+    await api("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        items: [{ productId: $("noProduct").value, qty: Number($("noQty").value || 1) }],
+        customerName: $("noCustomer").value.trim() || undefined,
+        email: $("noEmail").value.trim() || undefined,
+        paymentMethod: $("noPay").value,
+        setPaid: $("noPaid").checked,
+      }),
+    });
+    showError(""); loadOrders();
+  } catch (e) { showError(e.message); }
+});
+
+async function loadOrders() {
+  if (!token) { $("ordersBody").innerHTML = `<tr><td colspan="6" class="muted">Log in first (top-right).</td></tr>`; return; }
+  try {
+    const r = await api("/orders");
+    $("ordersBody").innerHTML = r.data.map((o) => `<tr>
+      <td>${esc(o.id)}</td>
+      <td><span class="pill">${esc(o.status)}</span></td>
+      <td>${esc(o.customerName)}</td>
+      <td class="muted">${o.items.map((i) => esc(`${i.name} ×${i.qty}`)).join(", ") || "—"}</td>
+      <td>₱${Number(o.total).toLocaleString()}</td>
+      <td class="muted">${esc(new Date(o.createdAt).toLocaleString())}</td>
+    </tr>`).join("") || `<tr><td colspan="6" class="muted">No orders found.</td></tr>`;
+  } catch (e) { showError(e.message); }
+}
+
+/* ----------------------------------------------------------------- quotes */
+$("loadQuotes").addEventListener("click", loadQuotes);
+$("newQuoteBtn").addEventListener("click", () => { $("newQuotePanel").open = !$("newQuotePanel").open; });
+$("nqCreate").addEventListener("click", async () => {
+  try {
+    const productId = $("nqProduct").value;
+    const product = productsCache.find((p) => String(p.id) === productId);
+    await api("/quotes", {
+      method: "POST",
+      body: JSON.stringify({
+        customerName: $("nqCustomer").value.trim() || undefined,
+        discount: Number($("nqDiscount").value || 0),
+        items: product ? [{
+          productId: product.id,
+          name: product.name,
+          sku: product.sku,
+          qty: Number($("nqQty").value || 1),
+          unitPrice: Number($("nqPrice").value || 0),
+        }] : [],
+      }),
+    });
+    showError(""); loadQuotes();
+  } catch (e) { showError(e.message); }
+});
+
+async function loadQuotes() {
+  if (!token) { $("quotesBody").innerHTML = `<tr><td colspan="8" class="muted">Log in first (top-right).</td></tr>`; return; }
+  try {
+    const r = await api("/quotes");
+    $("quotesBody").innerHTML = r.data.map((q) => `<tr>
+      <td>${esc(q.id)}</td>
+      <td>${esc(q.customerName)}</td>
+      <td>v${q.version}</td>
+      <td class="muted">${q.items.map((i) => esc(`${i.name} ×${i.qty}`)).join(", ") || "—"}</td>
+      <td>₱${Number(q.total).toLocaleString()}</td>
+      <td><select class="qstatus" data-id="${esc(q.id)}">
+        ${["draft","sent","pending","approved","rejected","expired","converted"].map((s) => `<option value="${s}" ${s === q.status ? "selected" : ""}>${s}</option>`).join("")}
+      </select></td>
+      <td class="muted">${esc(new Date(q.createdAt).toLocaleString())}</td>
+      <td><button class="small danger qdel" data-id="${esc(q.id)}">Delete</button></td>
+    </tr>`).join("") || `<tr><td colspan="8" class="muted">No quotations yet — create one.</td></tr>`;
+  } catch (e) { showError(e.message); }
+}
+
+$("quotesBody").addEventListener("change", async (e) => {
+  if (!e.target.classList.contains("qstatus")) return;
+  try {
+    await api("/quotes/" + e.target.dataset.id, { method: "PUT", body: JSON.stringify({ status: e.target.value }) });
+    showError("");
+  } catch (err) { showError(err.message); }
+});
+$("quotesBody").addEventListener("click", async (e) => {
+  if (!e.target.classList.contains("qdel")) return;
+  if (!confirm("Delete this quotation?")) return;
+  try {
+    await api("/quotes/" + e.target.dataset.id, { method: "DELETE" });
+    showError(""); loadQuotes();
+  } catch (err) { showError(err.message); }
+});
+
+/* ------------------------------------------------------------- bootstrap */
+(function init() {
+  checkHealth();
+  $("wpUser").value = safeGetUser();
+  if (token) { setAuthStatus("session from localStorage", true); loadProducts(); loadCategories(); loadOrders(); loadQuotes(); }
+})();
+</script>
+</body>
+</html>
