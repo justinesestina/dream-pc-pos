@@ -200,6 +200,7 @@ export function productsRoutes() {
     const categories: Category[] = raw.map((cat) => ({
       id: String(cat.id),
       name: cat.name,
+      slug: cat.slug ?? "",
       archived: false,
       createdAt: "",
       key: cat.slug,

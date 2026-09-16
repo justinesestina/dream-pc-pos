@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,7 @@ export function ProductFormDialog({
   const [serialTracked, setSerialTracked] = useState(false);
   const [specs, setSpecs] = useState("");
   const [uploading, setUploading] = useState(false);
+  const initializedFor = useRef<string | null>(null);
 
   const categories = useMemo(
     () =>
@@ -80,7 +81,13 @@ export function ProductFormDialog({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedFor.current = null;
+      return;
+    }
+    const formKey = product?.id ?? "new";
+    if (initializedFor.current === formKey) return;
+
     const inv = product ? store.invFor(product.id) : undefined;
     setName(product?.name ?? "");
     setImageUrl(product?.imageUrl ?? "");
@@ -98,6 +105,7 @@ export function ProductFormDialog({
     setSupplier(product?.supplier ?? "");
     setSerialTracked(product?.serialTracked ?? false);
     setSpecs(product ? specsToText(product.specs) : "");
+    initializedFor.current = formKey;
   }, [open, product, store]);
 
   const submit = () => {
