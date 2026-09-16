@@ -59,11 +59,58 @@ export async function verifyWordPressUser(
     throw new WordpressAuthError(`Cannot reach WordPress at ${config.wp.url}: ${String(cause)}`);
   }
 
-  if (res.status === 403 || res.status === 401) {
-    throw new WordpressAuthError("Invalid WordPress username or application password");
+  // Surface WordPress's real error so the tester/page says WHY it failed.
+  let wpCode = "";
+  let wpMessage = "";
+  try {
+    const body = await res.clone().json();
+    if (body && typeof body === "object") {
+      wpCode = String((body as { code?: unknown }).code ?? "");
+      wpMessage = String((body as { message?: unknown }).message ?? "");
+    }
+  } catch {
+    /* non-JSON error body */
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    if (wpCode === "rest_not_logged_in") {
+      throw new WordpressAuthError(
+        "WordPress saw no valid credentials. If you typed your normal WP password, that won't work " +
+        "for the REST API — create an APPLICATION PASSWORD instead: WP Admin → Users → Profile → " +
+        "Application Passwords → Add new (name e.g. \"DPC POS\"), then use that 24-char code as the " +
+        "password here (username = your WP login). " +
+        `(WP: ${wpMessage})`,
+      );
+    }
+    if (wpCode.startsWith("rest_invalid_application_password")) {
+      throw new WordpressAuthError(
+        "Application password not recognized. To create one: WP Admin → Users → Profile → " +
+        "Application Passwords → Add new (24-char password, different from your login password). " +
+        `(WP: ${wpMessage})`,
+      );
+    }
+    if (wpCode.startsWith("rest_user_invalid_username") || wpCode === "incorrect_password") {
+      throw new WordpressAuthError(
+        "WordPress says these credentials are wrong — use your WP LOGIN username (not email/display " +
+        `name) + the app password. (WP: ${wpMessage})`,
+      );
+    }
+    if (res.status === 403) {
+      throw new WordpressAuthError(
+        `WordPress REST blocked the request (403) — a security plugin may be blocking Basic auth. ` +
+        `(WP: ${wpMessage || wpCode})`,
+      );
+    }
+    throw new WordpressAuthError(
+      `WordPress rejected the login (HTTP ${res.status}). ` +
+        `(WP${wpCode ? ` ${wpCode}` : ""}: ${wpMessage || "no detail returned"})`,
+    );
   }
   if (!res.ok) {
-    throw new WordpressAuthError(`WordPress returned HTTP ${res.status}`);
+    throw new WordpressAuthError(
+      `WordPress returned HTTP ${res.status} for ${url} — check WOOCOMMERCE_URL in backend/.env ` +
+        `(WP: ${wpMessage || wpCode || "no detail"})`,
+    );
   }
 
   const body = (await res.json()) as { id?: number; name?: string; email?: string; roles?: string[] };

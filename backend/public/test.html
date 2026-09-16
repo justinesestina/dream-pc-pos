@@ -231,6 +231,7 @@ $("npCreate").addEventListener("click", async () => {
 });
 
 async function loadProducts() {
+  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="7" class="muted">Log in first (top-right).</td></tr>`; return; }
   try {
     const search = $("productSearch").value.trim();
     const r = await api("/products" + (search ? "?search=" + encodeURIComponent(search) : ""));
@@ -323,6 +324,7 @@ $("noCreate").addEventListener("click", async () => {
 });
 
 async function loadOrders() {
+  if (!token) { $("ordersBody").innerHTML = `<tr><td colspan="6" class="muted">Log in first (top-right).</td></tr>`; return; }
   try {
     const r = await api("/orders");
     $("ordersBody").innerHTML = r.data.map((o) => `<tr>
@@ -362,6 +364,7 @@ $("nqCreate").addEventListener("click", async () => {
 });
 
 async function loadQuotes() {
+  if (!token) { $("quotesBody").innerHTML = `<tr><td colspan="8" class="muted">Log in first (top-right).</td></tr>`; return; }
   try {
     const r = await api("/quotes");
     $("quotesBody").innerHTML = r.data.map((q) => `<tr>
