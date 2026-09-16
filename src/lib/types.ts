@@ -27,6 +27,12 @@ export interface Category {
   createdAt: string;
   /** stable semantic slug used by build-slot logic; survives category renames. */
   key?: string | undefined;
+  /** WooCommerce category fields — present once synced with the backend. */
+  slug?: string | undefined;
+  parentId?: string | undefined;
+  description?: string | undefined;
+  display?: "default" | "products" | "subcategories" | "both" | undefined;
+  image?: string | undefined;
 }
 
 export interface ProductSpecs {

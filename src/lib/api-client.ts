@@ -169,6 +169,21 @@ export async function fetchBackendCategories(): Promise<Category[]> {
   return res.ok && res.data ? res.data : [];
 }
 
+export async function createBackendCategory(category: Partial<Category>): Promise<Category | null> {
+  const res = await apiRequest<Category>("/api/v1/categories", "POST", category);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendCategory(id: string, category: Partial<Category>): Promise<Category | null> {
+  const res = await apiRequest<Category>(`/api/v1/categories/${id}`, "PUT", category);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function deleteBackendCategory(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/categories/${id}`, "DELETE");
+  return res.ok;
+}
+
 export async function fetchBackendCustomers(): Promise<Customer[]> {
   const res = await apiRequest<Customer[]>("/api/v1/customers");
   return res.ok && res.data ? res.data : [];
@@ -181,6 +196,11 @@ export async function fetchBackendOrders(): Promise<Order[]> {
 
 export async function createBackendOrder(order: Partial<Order>): Promise<Order | null> {
   const res = await apiRequest<Order>("/api/v1/orders", "POST", order);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
+  const res = await apiRequest<Order>(`/api/v1/orders/${id}`, "PUT", { status });
   return res.ok ? (res.data || null) : null;
 }
 

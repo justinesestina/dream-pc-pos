@@ -23,9 +23,39 @@ const WC_STATUS_TO_ORDER: Record<string, OrderStatus> = {
   failed: "cancelled",
 };
 
+/**
+ * WooCommerce has no native concept of the DPC build pipeline (paid / assembly
+ * / testing / ready), so those statuses are tracked in order meta_data and
+ * layered on top of the nearest real WooCommerce status below.
+ */
+const ORDER_STATUS_TO_WC: Record<OrderStatus, string> = {
+  pending: "pending",
+  paid: "processing",
+  processing: "processing",
+  assembly: "processing",
+  testing: "processing",
+  ready: "processing",
+  completed: "completed",
+  cancelled: "cancelled",
+  refunded: "refunded",
+};
+
+const DPC_STATUS_META_KEY = "_dpc_status";
+const ALL_ORDER_STATUSES: OrderStatus[] = [
+  "pending", "paid", "processing", "assembly", "testing", "ready", "completed", "cancelled", "refunded",
+];
+
+function dpcStatusOverride(raw: WcOrder): OrderStatus | undefined {
+  const meta = raw.meta_data?.find((m) => m.key === DPC_STATUS_META_KEY);
+  const value = meta?.value;
+  return typeof value === "string" && (ALL_ORDER_STATUSES as string[]).includes(value)
+    ? (value as OrderStatus)
+    : undefined;
+}
+
 export function mapWcOrderToDto(raw: WcOrder): Order {
   const name = [raw.billing?.first_name, raw.billing?.last_name].filter(Boolean).join(" ");
-  const status: OrderStatus = WC_STATUS_TO_ORDER[raw.status] ?? "pending";
+  const status: OrderStatus = dpcStatusOverride(raw) ?? WC_STATUS_TO_ORDER[raw.status] ?? "pending";
 
   return {
     id: String(raw.id),
@@ -104,6 +134,22 @@ export function ordersRoutes() {
 
     const created = await woocommerce.createOrder(payload);
     return c.json(ok(mapWcOrderToDto(created)), 201);
+  });
+
+  app.put("/:id", requireAuth, async (c) => {
+    const id = Number(c.req.param("id"));
+    if (!Number.isFinite(id)) throw new ApiError(400, "BAD_REQUEST", "invalid id");
+    const body = await c.req.json().catch(() => ({}));
+    const status = String(body.status ?? "");
+    if (!(ALL_ORDER_STATUSES as string[]).includes(status)) {
+      throw new ApiError(400, "BAD_REQUEST", `status must be one of ${ALL_ORDER_STATUSES.join(", ")}`);
+    }
+
+    const updated = await woocommerce.updateOrder(id, {
+      status: ORDER_STATUS_TO_WC[status as OrderStatus],
+      meta_data: [{ key: DPC_STATUS_META_KEY, value: status }],
+    });
+    return c.json(ok(mapWcOrderToDto(updated)));
   });
 
   return app;

@@ -8,11 +8,12 @@ import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { CategoryFormDialog } from "@/components/products/category-form-dialog";
 import { money, num } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Category, Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
@@ -39,6 +40,68 @@ function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_st
   return "in_stock";
 }
 
+/**
+ * Always-on inline numeric editor: input + save icon stay mounted in every
+ * row state, so the cell's width never changes and the table never reflows.
+ * The save icon only lights up (and becomes clickable) once the value differs
+ * from what's saved.
+ */
+function InlineNumberField({
+  value,
+  onSave,
+  step = 1,
+  width = "w-20",
+}: {
+  value: number;
+  onSave: (next: number) => void;
+  step?: number;
+  width?: string;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const parsed = Number(draft);
+  const dirty = draft.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 && parsed !== value;
+
+  const save = () => {
+    if (!dirty) return;
+    onSave(parsed);
+  };
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <Input
+        type="number"
+        min="0"
+        step={step}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          else if (e.key === "Escape") setDraft(String(value));
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={cn("h-7 text-xs text-right", width)}
+      />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7 shrink-0"
+        disabled={!dirty}
+        onClick={(e) => {
+          e.stopPropagation();
+          save();
+        }}
+      >
+        <Check className={cn("size-3.5", dirty ? "text-green-500" : "text-muted-foreground/30")} />
+      </Button>
+    </div>
+  );
+}
+
 function ProductsIndexPage() {
   const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct, updateProduct, updateProductStock } = useStore();
   const loading = useSimulatedLoad();
@@ -52,8 +115,6 @@ function ProductsIndexPage() {
   const [stock, setStock] = useState<StockFilter>("all");
   const [dialog, setDialog] = useState<{ open: boolean; product?: Product }>({ open: false });
   const [catDialog, setCatDialog] = useState<{ open: boolean; category?: Category }>({ open: false });
-  const [editingPrice, setEditingPrice] = useState<{ productId: string; value: string } | null>(null);
-  const [editingStock, setEditingStock] = useState<{ productId: string; value: string } | null>(null);
 
   useEffect(() => {
     if (openNew) setDialog((d) => ({ ...d, open: true }));
@@ -149,58 +210,14 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => {
-        if (editingPrice?.productId === p.id) {
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editingPrice.value}
-                onChange={(e) => setEditingPrice({ ...editingPrice, value: e.target.value })}
-                onKeyDown={(e) => handlePriceKeyDown(e, p.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-7 w-24 text-xs text-right"
-                autoFocus
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePriceSave(p.id);
-                }}
-              >
-                <Check className="size-3.5 text-green-500" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePriceCancel();
-                }}
-              >
-                <X className="size-3.5 text-red-500" />
-              </Button>
-            </div>
-          );
-        }
-        return (
-          <div className="flex items-center justify-end gap-1 group">
-            <span
-              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
-              onClick={(e) => handlePriceEdit(p.id, p.price, e)}
-            >
-              {money(p.price)}
-              <Pencil className="size-3 text-muted-foreground/70" />
-            </span>
-          </div>
-        );
-      },
+      cell: (p) => (
+        <InlineNumberField
+          value={p.price}
+          step={0.01}
+          width="w-24"
+          onSave={(next) => updateProduct(p.id, { price: next })}
+        />
+      ),
       sortValue: (p) => p.price,
       align: "right",
       className: "min-w-[10rem]",
@@ -245,57 +262,15 @@ function ProductsIndexPage() {
       cell: (p) => {
         const inv = invFor(p.id);
         const onHand = inv?.onHand ?? 0;
-
-        if (editingStock?.productId === p.id) {
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <Input
-                type="number"
-                min="0"
-                step="1"
-                value={editingStock.value}
-                onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
-                onKeyDown={(e) => handleStockKeyDown(e, p.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-7 w-20 text-xs text-right"
-                autoFocus
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStockSave(p.id);
-                }}
-              >
-                <Check className="size-3.5 text-green-500" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStockCancel();
-                }}
-              >
-                <X className="size-3.5 text-red-500" />
-              </Button>
-            </div>
-          );
+        if (onHand === Infinity) {
+          return <div className="mono text-right tabular-nums">∞</div>;
         }
-
         return (
-          <div className="flex items-center justify-end gap-1 group">
-            <span
-              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
-              onClick={(e) => handleStockEdit(p.id, onHand === Infinity ? 0 : onHand, e)}
-            >
-              {onHand === Infinity ? "∞" : num(onHand)}
-              <Pencil className="size-3 text-muted-foreground/70" />
-            </span>
-          </div>
+          <InlineNumberField
+            value={onHand}
+            width="w-20"
+            onSave={(next) => updateProductStock(p.id, next)}
+          />
         );
       },
       sortValue: (p) => invFor(p.id)?.onHand ?? 0,
@@ -367,61 +342,9 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => {
-        if (editingPrice?.productId === p.id) {
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editingPrice.value}
-                onChange={(e) => setEditingPrice({ ...editingPrice, value: e.target.value })}
-                onKeyDown={(e) => handlePriceKeyDown(e, p.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-7 w-24 text-xs text-right"
-                autoFocus
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePriceSave(p.id);
-                }}
-              >
-                <Check className="size-3.5 text-green-500" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePriceCancel();
-                }}
-              >
-                <X className="size-3.5 text-red-500" />
-              </Button>
-            </div>
-          );
-        }
-        return (
-          <div className="flex items-center justify-end gap-1 group">
-            <span
-              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
-              onClick={(e) => handlePriceEdit(p.id, p.price, e)}
-            >
-              {money(p.price)}
-              <Pencil className="size-3 text-muted-foreground/70" />
-            </span>
-          </div>
-        );
-      },
+      cell: (p) => <div className="mono text-right tabular-nums text-muted-foreground">{money(p.price)}</div>,
       sortValue: (p) => p.price,
       align: "right",
-      className: "min-w-[10rem]",
     },
     {
       key: "actions",
@@ -442,58 +365,6 @@ function ProductsIndexPage() {
   ];
 
   const categoryCount = (id: string) => products.filter((p) => p.categoryId === id).length;
-
-  const handlePriceEdit = (productId: string, currentValue: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingPrice({ productId, value: String(currentValue) });
-  };
-
-  const handlePriceSave = (productId: string) => {
-    if (!editingPrice || editingPrice.productId !== productId) return;
-    const newPrice = Number(editingPrice.value);
-    if (Number.isFinite(newPrice) && newPrice >= 0) {
-      updateProduct(productId, { price: newPrice });
-    }
-    setEditingPrice(null);
-  };
-
-  const handlePriceCancel = () => {
-    setEditingPrice(null);
-  };
-
-  const handlePriceKeyDown = (e: React.KeyboardEvent, productId: string) => {
-    if (e.key === "Enter") {
-      handlePriceSave(productId);
-    } else if (e.key === "Escape") {
-      handlePriceCancel();
-    }
-  };
-
-  const handleStockEdit = (productId: string, currentValue: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingStock({ productId, value: String(currentValue) });
-  };
-
-  const handleStockSave = (productId: string) => {
-    if (!editingStock || editingStock.productId !== productId) return;
-    const newStock = Number(editingStock.value);
-    if (Number.isFinite(newStock) && newStock >= 0) {
-      updateProductStock(productId, newStock);
-    }
-    setEditingStock(null);
-  };
-
-  const handleStockCancel = () => {
-    setEditingStock(null);
-  };
-
-  const handleStockKeyDown = (e: React.KeyboardEvent, productId: string) => {
-    if (e.key === "Enter") {
-      handleStockSave(productId);
-    } else if (e.key === "Escape") {
-      handleStockCancel();
-    }
-  };
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
@@ -644,7 +515,7 @@ function ProductsIndexPage() {
                               setCatDialog({ open: true, category: c });
                             }}
                           >
-                            Rename
+                            Edit
                           </Button>
                           <Button
                             variant="ghost"

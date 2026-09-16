@@ -30,7 +30,10 @@ import {
   createBackendProduct,
   updateBackendProduct,
   updateBackendProductStock,
+  createBackendCategory,
+  updateBackendCategory,
   createBackendOrder,
+  updateBackendOrderStatus,
   createBackendQuote,
   updateBackendQuote,
   canReachBackend,
@@ -265,8 +268,14 @@ interface StoreValue extends Snapshot {
   archiveProduct: (productId: string) => void;
   reactivateProduct: (productId: string) => void;
   deleteProduct: (productId: string) => void;
-  createCategory: (name: string) => { ok: boolean; error?: string; category?: Category };
-  updateCategory: (categoryId: string, patch: Partial<Pick<Category, "name">>) => { ok: boolean; error?: string };
+  createCategory: (
+    name: string,
+    extra?: Partial<Pick<Category, "slug" | "parentId" | "description" | "display" | "image">>,
+  ) => { ok: boolean; error?: string; category?: Category };
+  updateCategory: (
+    categoryId: string,
+    patch: Partial<Pick<Category, "name" | "slug" | "parentId" | "description" | "display" | "image">>,
+  ) => { ok: boolean; error?: string };
   archiveCategory: (categoryId: string) => void;
   reactivateCategory: (categoryId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -1081,7 +1090,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `deleted product ${productId}`, productId),
         })),
 
-      createCategory: (name) => {
+      createCategory: (name, extra) => {
         const trimmed = name.trim();
         if (!trimmed) return { ok: false, error: "Category name is required." };
         if (state.categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
@@ -1092,12 +1101,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           name: trimmed,
           archived: false,
           createdAt: new Date().toISOString(),
+          ...extra,
         };
         patch((s) => ({
           ...s,
           categories: [...s.categories, category],
           auditLogs: log(s, `created category ${category.name}`, category.id),
         }));
+
+        // Fire-and-forget background sync — replaces the local id with WooCommerce's once it lands.
+        createBackendCategory({ name: trimmed, ...extra })
+          .then((remote) => {
+            if (!remote) return;
+            patch((s) => ({
+              ...s,
+              categories: s.categories.map((c) => (c.id === category.id ? { ...c, ...remote, id: remote.id } : c)),
+            }));
+          })
+          .catch((e) => console.error("Failed to create category in backend", e));
+
         return { ok: true, category };
       },
 
@@ -1111,9 +1133,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         patch((s) => ({
           ...s,
-          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, name } : c)),
+          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, ...patchData, name } : c)),
           auditLogs: log(s, `renamed category ${existing.name} to ${name}`, categoryId),
         }));
+
+        // Fire-and-forget background sync
+        updateBackendCategory(categoryId, { ...patchData, name })
+          .then((remote) => {
+            if (!remote) return;
+            patch((s) => ({
+              ...s,
+              categories: s.categories.map((c) => (c.id === categoryId ? { ...c, ...remote } : c)),
+            }));
+          })
+          .catch((e) => console.error("Failed to update category in backend", e));
+
         return { ok: true };
       },
 
@@ -1131,7 +1165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `reactivated category ${categoryId}`, categoryId),
         })),
 
-      updateOrderStatus: (orderId, status) =>
+      updateOrderStatus: (orderId, status) => {
         patch((s) => ({
           ...s,
           orders: s.orders.map((o) =>
@@ -1154,7 +1188,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : o,
           ),
           auditLogs: log(s, `set order ${orderId} to ${status}`, orderId),
-        })),
+        }));
+
+        // Fire-and-forget background sync
+        updateBackendOrderStatus(orderId, status).catch((e) =>
+          console.error("Failed to update order status in backend", e),
+        );
+      },
 
       createQuote: ({ customerId, items, discountType = "amount", discountPercentage = 0, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
         const lines = items.map((i) => {
