@@ -69,6 +69,7 @@ export function ProductFormDialog({
   const [supplier, setSupplier] = useState("");
   const [serialTracked, setSerialTracked] = useState(false);
   const [specs, setSpecs] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const categories = useMemo(
     () =>
@@ -238,31 +239,62 @@ export function ProductFormDialog({
             <Textarea id="pf-desc" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description shown on the product page." />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="pf-local-image">Upload Local Image</Label>
+            <Label htmlFor="pf-local-image">Upload Image</Label>
             <Input
               id="pf-local-image"
               type="file"
               accept="image/*"
               className="cursor-pointer"
-              onChange={(e) => {
+              disabled={uploading}
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (file) {
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast.error("Image file size must be less than 5MB");
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                  toast.error("Image file size must be less than 5MB");
+                  return;
+                }
+
+                setUploading(true);
+
+                // Try backend upload first (sends to WordPress media library)
+                try {
+                  const { uploadImageToBackend } = await import("@/lib/api-client");
+                  const result = await uploadImageToBackend(file);
+                  if (result.ok && result.url) {
+                    setImageUrl(result.url);
+                    setUploading(false);
+                    toast.success("Image uploaded to WordPress media library!");
                     return;
                   }
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    if (typeof reader.result === "string") {
-                      setImageUrl(reader.result);
-                      toast.success("Local image loaded!");
-                    }
-                  };
-                  reader.readAsDataURL(file);
+                  // Backend failed — fall through to local base64
+                  console.warn("Backend upload failed, using local fallback:", result.error);
+                } catch {
+                  console.warn("Backend unreachable, using local fallback");
                 }
+
+                // Fallback: save as base64 data URL locally
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  if (typeof reader.result === "string") {
+                    setImageUrl(reader.result);
+                    toast.success("Image loaded locally (backend unavailable)");
+                  }
+                  setUploading(false);
+                };
+                reader.onerror = () => {
+                  toast.error("Failed to read image file");
+                  setUploading(false);
+                };
+                reader.readAsDataURL(file);
               }}
             />
-            {imageUrl && (
+            {uploading && (
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-info/30 bg-info/10 px-3 py-2 text-xs text-info">
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Uploading to WordPress…
+              </div>
+            )}
+            {imageUrl && !uploading && (
               <div className="mt-2 flex items-center gap-3 rounded-md border p-2.5 bg-muted/30">
                 <div className="relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted/40 p-1 shrink-0 flex items-center justify-center shadow-xs">
                   <img

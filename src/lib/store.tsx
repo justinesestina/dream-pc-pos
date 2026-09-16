@@ -526,7 +526,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
       signInWithUser: (u) => patch((s) => ({ ...s, user: u })),
-      signOut: () => patch((s) => ({ ...s, user: null })),
+      signOut: () => {
+        localStorage.removeItem("dpc-nexus-wp-credentials");
+        patch((s) => ({ ...s, user: null }));
+      },
 
       productById,
       invFor,

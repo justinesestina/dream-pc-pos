@@ -115,6 +115,8 @@ function LoginPage() {
       setError(res.error ?? "Sign in failed.");
       return;
     }
+    // Save WP credentials for backend media API uploads (since the backend needs them to upload to WP)
+    localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username: wpUser, appPassword: wpPassword }));
     store.signInWithUser(res.user);
   };
 
