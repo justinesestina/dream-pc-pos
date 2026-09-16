@@ -40,20 +40,7 @@ export const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      // Allow specific origins in production
-      const allowedOrigins = [
-        "https://dpcmain.dreampcbuild.com",
-        "https://dreampcbuild.com",
-        "http://localhost:5173",
-        "http://localhost:3000",
-      ];
-      // Allow the origin if it's in the allowed list or if it's a local development request
-      if (!origin || allowedOrigins.includes(origin)) {
-        return origin || "*";
-      }
-      return null; // Block other origins
-    },
+    origin: "*", // Allow all origins for now to fix CORS
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
     exposeHeaders: ["Content-Length"],

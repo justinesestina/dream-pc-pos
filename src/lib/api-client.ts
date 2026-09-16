@@ -75,6 +75,7 @@ async function apiRequest<T>(
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      redirect: "follow", // Follow redirects
     });
     
     let json: any = null;
@@ -92,6 +93,7 @@ async function apiRequest<T>(
     return { ok: true, data: json?.data };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
+    console.error("API request failed:", err);
     pauseBackend(`Could not reach backend. Is it running? (${message})`);
     return {
       ok: false,
