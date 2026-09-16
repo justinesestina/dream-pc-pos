@@ -34,10 +34,27 @@ async function wcFetch(route: WcEndpoint, init?: RequestInit): Promise<unknown> 
     throw new ApiError(502, "WOOCOMMERCE_UNREACHABLE", `Cannot reach WooCommerce: ${String(cause)}`);
   }
 
+  const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(502, "WOOCOMMERCE_ERROR", `WooCommerce HTTP ${res.status}`);
+    // Surface WooCommerce's own reason (e.g. "Invalid image URL" or "Invalid
+    // stock_status") instead of a bare HTTP status — that's what makes image
+    // upload failures debuggable in the tester.
+    const wcError =
+      typeof body === "object" && body !== null && "code" in (body as Record<string, unknown>)
+        ? (body as { code?: unknown; message?: unknown; data?: unknown }).code
+        : undefined;
+    const wcMessage =
+      typeof body === "object" && body !== null && "message" in (body as Record<string, unknown>)
+        ? (body as { message?: unknown }).message
+        : undefined;
+    const detail = wcMessage ? String(wcMessage) : `HTTP ${res.status}`;
+    throw new ApiError(
+      res.status >= 400 && res.status < 500 ? 400 : 502,
+      "WOOCOMMERCE_ERROR",
+      wcError ? `${String(wcError)}: ${detail}` : detail,
+    );
   }
-  return res.json();
+  return body;
 }
 
 export interface WcCategory {

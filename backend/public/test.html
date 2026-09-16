@@ -201,6 +201,10 @@
       <label>Location<input id="m_location"></label>
       <label>Supplier<input id="m_supplier"></label>
       <label class="full">Image URL<input id="m_image"></label>
+      <div class="full" style="display:flex; gap:10px; align-items:center">
+        <img id="m_imagePreview" alt="preview" style="height:70px; border-radius:6px; border:1px solid #2a2f3a; background:#0a0c10; display:none">
+        <span class="muted" id="m_imageHint">Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below.</span>
+      </div>
       <label class="full">Description<textarea id="m_description" rows="3"></textarea></label>
       <label class="full">Specs (read-only attributes from WooCommerce)<input id="m_specs" disabled></label>
     </div>
@@ -363,6 +367,14 @@ $("productsBody").addEventListener("click", async (e) => {
 /* ------------------------------------------------- product edit modal */
 const modal = $("editModal");
 function setVal(id, v, fallback = "") { const el = $(id); el.value = (v === undefined || v === null) ? fallback : String(v); }
+function updateImagePreview() {
+  const src = $("m_image").value.trim();
+  const img = $("m_imagePreview");
+  img.onerror = () => { img.style.display = "none"; $("m_imageHint").textContent = "WooCommerce could not load that URL — use a direct image file link (ends in .jpg/.png/.webp), not a search/thumbnail URL."; };
+  img.onload = () => { img.style.display = ""; $("m_imageHint").textContent = "Looks reachable. Save to attach it — WooCommerce downloads and hosts it."; };
+  if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("m_imageHint").textContent = "Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below."; }
+}
+$("m_image").addEventListener("input", updateImagePreview);
 
 async function openEdit(id) {
   try {
@@ -385,7 +397,7 @@ async function openEdit(id) {
     $("m_serialTracked").checked = !!p.serialTracked;
     setVal("m_cost", p.cost ?? 0); setVal("m_warranty", p.warrantyMonths ?? 0);
     setVal("m_location", p.location); setVal("m_supplier", p.supplier);
-    setVal("m_image", p.imageUrl || ""); setVal("m_description", p.description || "");
+    setVal("m_image", p.imageUrl || ""); updateImagePreview(); setVal("m_description", p.description || "");
     setVal("m_specs", Object.entries(p.specs || {}).map(([k, v]) => `${k}: ${v}`).join(" · "), "—");
     modal.classList.add("open");
   } catch (e) { showError(e.message); }
