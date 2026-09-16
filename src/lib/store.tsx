@@ -387,19 +387,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (hasWooCommerceCredentials) {
           // Don't load from localStorage - we'll fetch fresh WooCommerce data
           console.log("WooCommerce credentials found, will fetch fresh data");
-          setState((prev) => ({ ...emptyState(), user: savedUser })); // Restore user session
+          setState((prev) => ({ ...emptyState(), user: savedUser ?? null })); // Restore user session
         } else {
           // Load from localStorage for non-WooCommerce users
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Partial<Snapshot>;
             if (parsed.schemaVersion === SCHEMA_VERSION) {
-              setState((prev) => ({ ...prev, ...parsed, user: savedUser || parsed.user })); // Prefer saved user
+              setState((prev) => ({ ...prev, ...parsed, user: savedUser ?? parsed.user ?? null })); // Prefer saved user
             } else {
               localStorage.removeItem(STORAGE_KEY);
             }
           } else {
-            setState((prev) => ({ ...prev, user: savedUser })); // Restore user if no localStorage data
+            setState((prev) => ({ ...prev, user: savedUser ?? null })); // Restore user if no localStorage data
           }
         }
       } catch {
@@ -893,6 +893,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sku,
           productType: data.productType ?? (data.isService ? "service" : "product"),
           archived: false,
+          stock_quantity: null,
         };
         const onHand = Math.max(0, Math.floor(opts.onHand ?? 0));
         const reorderPoint = Math.max(0, Math.floor(opts.reorderPoint ?? 4));
@@ -927,6 +928,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                         remoteProduct.stock_quantity !== undefined
                           ? Number(remoteProduct.stock_quantity)
                           : i.onHand,
+                      stock_quantity:
+                        remoteProduct.stock_quantity !== undefined
+                          ? remoteProduct.stock_quantity
+                          : null,
                     }
                   : i,
               ),
@@ -1151,7 +1156,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `set order ${orderId} to ${status}`, orderId),
         })),
 
-      createQuote: ({ customerId, items, discountType = "amount", discountPercentage, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
+      createQuote: ({ customerId, items, discountType = "amount", discountPercentage = 0, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
         const lines = items.map((i) => {
           const p = productById(i.productId);
           return {
@@ -1601,6 +1606,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           customerName: build.customerName,
           status: "draft",
           items: lines,
+          discountType: "amount",
+          discountPercentage: 0,
           discount: 0,
           serviceTotal,
           shippingFee: 0,

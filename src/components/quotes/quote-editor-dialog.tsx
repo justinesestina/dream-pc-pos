@@ -250,7 +250,7 @@ export function QuoteEditorDialog({
       customerId,
       items: resolvedItems,
       discountType,
-      discountPercentage: Number(discountPercentage) || undefined,
+      discountPercentage: Number(discountPercentage) || 0,
       discount: discountNum,
       serviceTotal: serviceNum,
       shippingFee: shippingNum,
