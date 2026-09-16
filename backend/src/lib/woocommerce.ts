@@ -47,6 +47,11 @@ export interface WcCategory {
   parent: number;
 }
 
+export interface WcMetaDatum {
+  key: string;
+  value: string | number | boolean | null;
+}
+
 export interface WcProduct {
   id: number;
   name: string;
@@ -56,12 +61,19 @@ export interface WcProduct {
   status: string;
   regular_price: string;
   sale_price: string;
+  price: string;
+  description: string;
+  short_description?: string;
   stock_quantity: number | null;
   stock_status: string;
   manage_stock: boolean;
   categories: { id: number; name: string }[];
+  images: { src: string; name?: string }[];
   brand: unknown;
   attributes: { name: string; options?: string[] }[];
+  meta_data: WcMetaDatum[];
+  date_created: string;
+  date_modified: string;
 }
 
 export interface WcOrder {

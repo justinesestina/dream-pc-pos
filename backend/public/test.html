@@ -8,9 +8,10 @@
   :root { color-scheme: light dark; }
   * { box-sizing: border-box; }
   body { font-family: system-ui, sans-serif; margin: 0; background: #0f1115; color: #e6e6e6; }
-  header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #2a2f3a; position: sticky; top: 0; background: #0f1115; flex-wrap: wrap; }
+  header { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #2a2f3a; position: sticky; top: 0; background: #0f1115; flex-wrap: wrap; z-index: 5; }
   header h1 { font-size: 16px; margin: 0 16px 0 0; }
-  input, select, button { padding: 7px 10px; border-radius: 8px; border: 1px solid #3a4150; background: #171b22; color: inherit; font-size: 14px; }
+  input, select, textarea, button { padding: 7px 10px; border-radius: 8px; border: 1px solid #3a4150; background: #171b22; color: inherit; font-size: 14px; }
+  textarea { font-family: ui-monospace, monospace; }
   button { cursor: pointer; background: #2563eb; border-color: #2563eb; font-weight: 600; }
   button.secondary { background: #1e2632; border-color: #3a4150; }
   button.danger { background: #b91c1c; border-color: #b91c1c; }
@@ -33,6 +34,16 @@
   .error { color: #fca5a5; font-size: 13px; white-space: pre-wrap; }
   .muted { color: #9aa3b2; font-size: 12px; }
   .pill { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #22293a; }
+  pre#lastResponse { background: #0a0c10; border: 1px solid #2a2f3a; padding: 10px; border-radius: 8px; font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
+  #editModal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 10; padding: 30px 12px; overflow: auto; }
+  #editModal.open { display: flex; }
+  #editModal .card { background: #171b22; border: 1px solid #3a4150; border-radius: 12px; width: 640px; max-width: 100%; padding: 18px; }
+  #editModal .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #editModal .grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9aa3b2; }
+  #editModal .grid .full { grid-column: 1 / -1; }
+  #editModal .actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  .kv { font-size: 12px; }
+  .kv b { color: #9aa3b2; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -62,21 +73,20 @@
       <button class="secondary" id="newProductBtn">+ New product</button>
       <input id="productSearch" placeholder="search…" style="width:180px">
     </div>
-
-    <div class="panel" id="newProductPanel" style="display:none">
-      <h2>New product</h2>
-      <div class="row">
+    <details class="panel" id="newProductPanel" style="padding-top:10px">
+      <summary>+ New product</summary>
+      <div class="row" style="margin-top:10px">
         <input id="npName" placeholder="Name *">
         <input id="npSku" placeholder="SKU">
         <input id="npPrice" placeholder="Price" type="number" step="0.01" style="width:90px">
         <input id="npStock" placeholder="Stock" type="number" style="width:80px">
+        <input id="npDescription" placeholder="Description" style="min-width:200px">
         <button id="npCreate">Create (syncs to WooCommerce)</button>
       </div>
-    </div>
-
+    </details>
     <table>
-      <thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Price</th><th>Stock</th><th>Stock status</th><th>Actions</th></tr></thead>
-      <tbody id="productsBody"><tr><td colspan="7" class="muted">Press "Refresh products" or log in first.</td></tr></tbody>
+      <thead><tr><th>ID</th><th>Name</th><th>SKU</th><th>Price</th><th>Sale</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="productsBody"><tr><td colspan="8" class="muted">Press "Refresh products" or log in first.</td></tr></tbody>
     </table>
   </section>
 
@@ -85,10 +95,9 @@
       <button id="loadOrders">Refresh orders</button>
       <button class="secondary" id="newOrderBtn">+ New order</button>
     </div>
-
-    <div class="panel" id="newOrderPanel" style="display:none">
-      <h2>New order (creates a real WooCommerce order)</h2>
-      <div class="row">
+    <details class="panel" id="newOrderPanel">
+      <summary>+ New order (creates a real WooCommerce order)</summary>
+      <div class="row" style="margin-top:10px">
         <select id="noProduct"><option value="">— load products first —</option></select>
         <input id="noQty" type="number" value="1" style="width:70px">
         <input id="noCustomer" placeholder="Customer name">
@@ -96,13 +105,11 @@
         <select id="noPay">
           <option value="bacs">Bank transfer</option>
           <option value="cod">Cash on delivery</option>
-          <option value="cod">COD</option>
         </select>
         <label class="muted"><input type="checkbox" id="noPaid"> mark paid</label>
         <button id="noCreate">Create</button>
       </div>
-    </div>
-
+    </details>
     <table>
       <thead><tr><th>ID</th><th>Status</th><th>Customer</th><th>Items</th><th>Total</th><th>Created</th></tr></thead>
       <tbody id="ordersBody"><tr><td colspan="6" class="muted">Log in and press "Refresh orders".</td></tr></tbody>
@@ -114,10 +121,9 @@
       <button id="loadQuotes">Refresh quotes</button>
       <button class="secondary" id="newQuoteBtn">+ New quotation</button>
     </div>
-
-    <div class="panel" id="newQuotePanel" style="display:none">
-      <h2>New quotation</h2>
-      <div class="row">
+    <details class="panel" id="newQuotePanel">
+      <summary>+ New quotation</summary>
+      <div class="row" style="margin-top:10px">
         <input id="nqCustomer" placeholder="Customer name" style="width:180px">
         <select id="nqProduct"><option value="">— load products first —</option></select>
         <input id="nqQty" type="number" value="1" style="width:70px">
@@ -125,15 +131,59 @@
         <input id="nqDiscount" placeholder="Discount" type="number" step="0.01" style="width:90px">
         <button id="nqCreate">Create quote</button>
       </div>
-      <p class="muted">Unit price auto-fills for products; you can still override before creating.</p>
-    </div>
-
+      <p class="muted" style="margin-top:8px">Unit price auto-fills for products; you can override before creating.</p>
+    </details>
     <table>
       <thead><tr><th>ID</th><th>Customer</th><th>Version</th><th>Items</th><th>Total</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
       <tbody id="quotesBody"><tr><td colspan="8" class="muted">Log in and press "Refresh quotes".</td></tr></tbody>
     </table>
   </section>
+
+  <div class="panel">
+    <h2>Last API call (method · path → status · response body)</h2>
+    <pre id="lastResponse">no calls yet
+(switch to the Products tab, press "Refresh products", then click "Edit" on a row to see full product detail)</pre>
+  </div>
 </main>
+
+<!-- =================== product edit modal =================== -->
+<div id="editModal">
+  <div class="card">
+    <h2 style="margin-top:0">Edit product <span id="m_title" class="muted"></span></h2>
+    <div class="kv" style="margin-bottom:12px">
+      <span><b>ID:</b> <span id="m_id"></span></span> ·
+      <span><b>WC id:</b> <span id="m_wcid"></span></span> ·
+      <span><b>Created:</b> <span id="m_created"></span></span> ·
+      <span><b>Modified:</b> <span id="m_modified"></span></span>
+    </div>
+    <div class="grid">
+      <label>Name *<input id="m_name"></label>
+      <label>SKU<input id="m_sku"></label>
+      <label>Brand<input id="m_brand"></label>
+      <label>Category id<input id="m_categoryId" placeholder="WC category id"></label>
+      <label>Type<select id="m_type"><option>simple</option><option>variable</option><option>external</option><option>grouped</option></select></label>
+      <label>WC status<select id="m_status"><option value="publish">publish</option><option value="private">private</option><option value="draft">draft</option><option value="pending">pending</option></select></label>
+      <label>Price<input id="m_price" type="number" step="0.01"></label>
+      <label>Sale price<input id="m_salePrice" type="number" step="0.01"></label>
+      <label>Stock qty<input id="m_stock" type="number"></label>
+      <label>Stock status<input id="m_stockStatus" placeholder="instock / outofstock"></label>
+      <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_manageStock"> Manage stock (WC)</label>
+      <label class="full" style="flex-direction:row; align-items:center; gap:8px"><input type="checkbox" id="m_serialTracked"> Serial tracked (DPC meta)</label>
+      <label>Cost (₱, DPC meta)<input id="m_cost" type="number" step="0.01"></label>
+      <label>Warranty (months)<input id="m_warranty" type="number"></label>
+      <label>Location<input id="m_location"></label>
+      <label>Supplier<input id="m_supplier"></label>
+      <label class="full">Image URL<input id="m_image"></label>
+      <label class="full">Description<textarea id="m_description" rows="3"></textarea></label>
+      <label class="full">Specs (read-only attributes from WooCommerce)<input id="m_specs" disabled></label>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="m_cancel">Cancel</button>
+      <button class="danger" id="m_delete">Delete</button>
+      <button id="m_save">Save (syncs to WooCommerce)</button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -142,6 +192,7 @@ document.getElementById("apiBase").textContent = "→ " + API;
 
 let token = safeGetToken();
 let productsCache = [];
+let lastResponse = null;
 
 const $ = (id) => document.getElementById(id);
 const errBox = $("errorBox");
@@ -152,15 +203,28 @@ function showError(msg) { if (msg) { errBox.textContent = String(msg); errBox.st
 function setAuthStatus(okMsg, isOk) {
   const el = $("authStatus");
   el.textContent = okMsg;
-  el.className = "status " + (isOk ? "ok" : token ? "ok" : "err");
+  el.className = "status " + (isOk ? "ok" : "err");
+}
+
+function renderLast(method, path, status, body) {
+  try { body = typeof body === "string" ? body : JSON.stringify(body, null, 2).slice(0, 6000); } catch {}
+  $("lastResponse").textContent = `${method} ${path}  →  HTTP ${status}\n${body}`;
 }
 
 async function api(path, opts = {}) {
+  const method = (opts.method || "GET");
   const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
   if (token) headers["Authorization"] = "Bearer " + token;
-  const res = await fetch(API + path, Object.assign({}, opts, { headers }));
+  let res;
+  try {
+    res = await fetch(API + path, Object.assign({}, opts, { headers }));
+  } catch (e) {
+    renderLast(method, path, "fetch-failed", "Cannot reach " + API + " — is `npm run dev` running in backend/? open http://localhost:8787/test.html");
+    throw new Error("fetch failed — " + e.message);
+  }
   let json = null;
   try { json = await res.json(); } catch {}
+  renderLast(method, path, res.status, json ?? "(no JSON body)");
   if (!res.ok) {
     const msg = json && json.error ? (json.error.code + ": " + json.error.message) : ("HTTP " + res.status + " " + res.statusText);
     throw new Error(msg);
@@ -177,7 +241,7 @@ $("btnLogin").addEventListener("click", async () => {
     const r = await api("/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, appPassword }),
-      headers: {}, // no bearer yet
+      headers: {},
     });
     token = r.data.token;
     safeSetToken(token);
@@ -215,79 +279,121 @@ document.querySelectorAll(".tabs button").forEach((btn) => {
 function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 $("loadProducts").addEventListener("click", loadProducts);
-$("newProductBtn").addEventListener("click", () => { $("newProductPanel").style.display = $("newProductPanel").style.display === "none" ? "block" : "none"; });
+$("newProductBtn").addEventListener("click", () => { $("newProductPanel").open = !$("newProductPanel").open; });
 $("npCreate").addEventListener("click", async () => {
   try {
-    const r = await api("/products", {
+    await api("/products", {
       method: "POST",
       body: JSON.stringify({
         name: $("npName").value.trim(), sku: $("npSku").value.trim(),
         price: Number($("npPrice").value || 0), stock_quantity: Number($("npStock").value || 0),
+        description: $("npDescription").value.trim() || undefined,
       }),
     });
     showError(""); await loadProducts();
-    fillProductOptions([r.data]);
   } catch (e) { showError(e.message); }
 });
 
 async function loadProducts() {
-  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="7" class="muted">Log in first (top-right).</td></tr>`; return; }
+  if (!token) { $("productsBody").innerHTML = `<tr><td colspan="8" class="muted">Log in first (top-right).</td></tr>`; return; }
   try {
     const search = $("productSearch").value.trim();
     const r = await api("/products" + (search ? "?search=" + encodeURIComponent(search) : ""));
     productsCache = r.data;
-    const rows = r.data.map((p) => {
-      const stock = typeof p.stock_quantity === "number" ? p.stock_quantity : (p.manage_stock ? "–" : "no");
-      return `<tr>
-        <td>${esc(p.id)}</td>
-        <td>${esc(p.name)}</td>
-        <td>${esc(p.sku)}</td>
-        <td>₱${Number(p.price).toLocaleString()}</td>
-        <td><input class="stock-input" data-id="${esc(p.id)}" type="number" value="${esc(stock)}" style="width:70px"></td>
-        <td><span class="pill">${esc(p.stock_status ?? "")}</span></td>
-        <td>
-          <button class="small edit-btn" data-id="${esc(p.id)}">Edit</button>
-          <button class="small save-btn" data-id="${esc(p.id)}" style="display:none">Save</button>
-          <button class="small danger del-btn" data-id="${esc(p.id)}">Delete</button>
-        </td></tr>`;
-    }).join("");
-    $("productsBody").innerHTML = rows || `<tr><td colspan="7" class="muted">No products found.</td></tr>`;
+    $("productsBody").innerHTML = r.data.map((p) => `<tr>
+      <td>${esc(p.id)}</td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.sku)}</td>
+      <td>₱${Number(p.price).toLocaleString()}</td>
+      <td>${p.salePrice ? "₱" + Number(p.salePrice).toLocaleString() : "–"}</td>
+      <td>${typeof p.stock_quantity === "number" ? p.stock_quantity : "–"}</td>
+      <td><span class="pill">${esc(p.status ?? p.stock_status ?? "")}</span></td>
+      <td>
+        <button class="small edit-btn" data-id="${esc(p.id)}">Edit</button>
+        <button class="small danger del-btn" data-id="${esc(p.id)}">Delete</button>
+      </td></tr>`).join("") || `<tr><td colspan="8" class="muted">No products found.</td></tr>`;
     fillProductOptions(r.data);
-  } catch (e) { $("productsBody").innerHTML = `<tr><td colspan="7">${esc("<i>fetch failed</i>")}</td></tr>`; showError(e.message); }
+  } catch (e) { $("productsBody").innerHTML = `<tr><td colspan="8">${esc("<i>fetch failed</i>")}</td></tr>`; showError(e.message); }
 }
 
 $("productsBody").addEventListener("click", async (e) => {
-  const row = e.target.closest("tr");
-  if (!row) return;
-  const id = e.target.dataset.id;
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const id = btn.dataset.id;
   try {
-    if (e.target.classList.contains("stock-input")) return;
-    if (e.target.classList.contains("del-btn")) {
+    if (btn.classList.contains("del-btn")) {
       if (!confirm("Delete product " + id + " permanently (force)? This syncs to WooCommerce.")) return;
       await api("/products/" + id, { method: "DELETE" });
       showError(""); loadProducts();
-    } else if (e.target.classList.contains("edit-btn")) {
-      row.querySelector("td:nth-child(2)").contentEditable = "true";
-      row.querySelector(".edit-btn").style.display = "none";
-      row.querySelector(".save-btn").style.display = "inline-block";
-    } else if (e.target.classList.contains("save-btn")) {
-      const name = row.querySelector("td:nth-child(2)").textContent.trim();
-      const qty = Number((row.querySelector(".stock-input")).value);
-      await api("/products/" + id, { method: "PUT", body: JSON.stringify({ name, price: undefined /* keep */, stock_quantity: qty }) });
-      showError(""); loadProducts();
+    } else if (btn.classList.contains("edit-btn")) {
+      openEdit(id);
     }
   } catch (err) { showError(err.message); }
 });
 
-$("productsBody").addEventListener("change", async (e) => {
-  if (!e.target.classList.contains("stock-input")) return;
-  const id = e.target.dataset.id;
-  const qty = Number(e.target.value);
-  if (!Number.isFinite(qty)) return;
+/* ------------------------------------------------- product edit modal */
+const modal = $("editModal");
+function setVal(id, v, fallback = "") { const el = $(id); el.value = (v === undefined || v === null) ? fallback : String(v); }
+
+async function openEdit(id) {
   try {
-    await api("/products/" + id + "/stock", { method: "PUT", body: JSON.stringify({ stock_quantity: qty }) });
+    const r = await api("/products/" + id); // full detail from the API
+    const p = r.data;
+    $("m_title").textContent = "· " + p.name;
+    $("m_id").textContent = p.id;
+    $("m_wcid").textContent = p.id;
+    $("m_created").textContent = new Date(p.dateCreated || "").toLocaleString() || "–";
+    $("m_modified").textContent = new Date(p.dateModified || "").toLocaleString() || "–";
+    setVal("m_name", p.name); setVal("m_sku", p.sku);
+    setVal("m_brand", p.brand); setVal("m_categoryId", p.categoryId);
+    setVal("m_type", p.productType || "simple");
+    setVal("m_status", p.status || "publish");
+    setVal("m_price", p.price ?? 0); setVal("m_salePrice", p.salePrice ?? "");
+    setVal("m_stock", p.stock_quantity ?? 0);
+    setVal("m_stockStatus", p.stock_status || "");
+    $("m_manageStock").checked = !!p.manage_stock;
+    $("m_serialTracked").checked = !!p.serialTracked;
+    setVal("m_cost", p.cost ?? 0); setVal("m_warranty", p.warrantyMonths ?? 0);
+    setVal("m_location", p.location); setVal("m_supplier", p.supplier);
+    setVal("m_image", p.imageUrl || ""); setVal("m_description", p.description || "");
+    setVal("m_specs", Object.entries(p.specs || {}).map(([k, v]) => `${k}: ${v}`).join(" · "), "—");
+    modal.classList.add("open");
+  } catch (e) { showError(e.message); }
+}
+
+$("m_cancel").addEventListener("click", () => modal.classList.remove("open"));
+$("m_delete").addEventListener("click", async () => {
+  const id = $("m_id").textContent;
+  if (!confirm("Delete product " + id + " permanently?")) return;
+  try {
+    await api("/products/" + id, { method: "DELETE" });
+    modal.classList.remove("open"); showError(""); loadProducts();
+  } catch (e) { showError(e.message); }
+});
+$("m_save").addEventListener("click", async () => {
+  const id = $("m_id").textContent;
+  const body = {
+    name: $("m_name").value.trim(),
+    sku: $("m_sku").value.trim(),
+    brand: $("m_brand").value.trim(),
+    categoryId: $("m_categoryId").value.trim(),
+    price: Number($("m_price").value || 0),
+    salePrice: $("m_salePrice").value === "" ? "" : Number($("m_salePrice").value),
+    stock_quantity: Number($("m_stock").value || 0),
+    manage_stock: $("m_manageStock").checked,
+    serialTracked: $("m_serialTracked").checked,
+    cost: Number($("m_cost").value || 0),
+    warrantyMonths: Number($("m_warranty").value || 0),
+    location: $("m_location").value.trim(),
+    supplier: $("m_supplier").value.trim(),
+    status: $("m_status").value,
+    description: $("m_description").value,
+  };
+  try {
+    const r = await api("/products/" + id, { method: "PUT", body: JSON.stringify(body) });
+    $("m_title").textContent = "· " + r.data.name; // show saved result
     showError(""); loadProducts();
-  } catch (err) { showError(err.message); }
+  } catch (e) { showError(e.message); }
 });
 
 function fillProductOptions(products) {
@@ -295,10 +401,6 @@ function fillProductOptions(products) {
   $("noProduct").innerHTML = '<option value="">— select product —</option>' + opts;
   $("nqProduct").innerHTML = '<option value="">— select product —</option>' + opts;
 }
-$("noProduct").addEventListener("change", (e) => {
-  const opt = e.target.selectedOptions[0];
-  // keep order price simple
-});
 $("nqProduct").addEventListener("change", (e) => {
   const opt = e.target.selectedOptions[0];
   if (opt) $("nqPrice").value = opt.dataset.price;
@@ -306,7 +408,7 @@ $("nqProduct").addEventListener("change", (e) => {
 
 /* ----------------------------------------------------------------- orders */
 $("loadOrders").addEventListener("click", loadOrders);
-$("newOrderBtn").addEventListener("click", () => { $("newOrderPanel").style.display = $("newOrderPanel").style.display === "none" ? "block" : "none"; });
+$("newOrderBtn").addEventListener("click", () => { $("newOrderPanel").open = !$("newOrderPanel").open; });
 $("noCreate").addEventListener("click", async () => {
   try {
     await api("/orders", {
@@ -331,7 +433,7 @@ async function loadOrders() {
       <td>${esc(o.id)}</td>
       <td><span class="pill">${esc(o.status)}</span></td>
       <td>${esc(o.customerName)}</td>
-      <td>${o.items.length} item(s)</td>
+      <td class="muted">${o.items.map((i) => esc(`${i.name} ×${i.qty}`)).join(", ") || "—"}</td>
       <td>₱${Number(o.total).toLocaleString()}</td>
       <td class="muted">${esc(new Date(o.createdAt).toLocaleString())}</td>
     </tr>`).join("") || `<tr><td colspan="6" class="muted">No orders found.</td></tr>`;
@@ -340,7 +442,7 @@ async function loadOrders() {
 
 /* ----------------------------------------------------------------- quotes */
 $("loadQuotes").addEventListener("click", loadQuotes);
-$("newQuoteBtn").addEventListener("click", () => { $("newQuotePanel").style.display = $("newQuotePanel").style.display === "none" ? "block" : "none"; });
+$("newQuoteBtn").addEventListener("click", () => { $("newQuotePanel").open = !$("newQuotePanel").open; });
 $("nqCreate").addEventListener("click", async () => {
   try {
     const productId = $("nqProduct").value;
@@ -371,7 +473,7 @@ async function loadQuotes() {
       <td>${esc(q.id)}</td>
       <td>${esc(q.customerName)}</td>
       <td>v${q.version}</td>
-      <td>${q.items.length} item(s)</td>
+      <td class="muted">${q.items.map((i) => esc(`${i.name} ×${i.qty}`)).join(", ") || "—"}</td>
       <td>₱${Number(q.total).toLocaleString()}</td>
       <td><select class="qstatus" data-id="${esc(q.id)}">
         ${["draft","sent","pending","approved","rejected","expired","converted"].map((s) => `<option value="${s}" ${s === q.status ? "selected" : ""}>${s}</option>`).join("")}
