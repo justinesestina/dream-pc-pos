@@ -205,6 +205,13 @@
         <img id="m_imagePreview" alt="preview" style="height:70px; border-radius:6px; border:1px solid #2a2f3a; background:#0a0c10; display:none">
         <span class="muted" id="m_imageHint">Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below.</span>
       </div>
+      <label class="full">…or upload from this computer
+        <div style="display:flex; gap:8px; align-items:center">
+          <input type="file" id="m_fileAccept" accept="image/png,image/jpeg,image/webp,image/gif">
+          <button class="secondary" id="m_uploadBtn">Upload to site & use</button>
+          <span class="muted" id="m_uploadStatus"></span>
+        </div>
+      </label>
       <label class="full">Description<textarea id="m_description" rows="3"></textarea></label>
       <label class="full">Specs (read-only attributes from WooCommerce)<input id="m_specs" disabled></label>
     </div>
@@ -375,6 +382,27 @@ function updateImagePreview() {
   if (src) { img.src = src; } else { img.removeAttribute("src"); img.style.display = "none"; $("m_imageHint").textContent = "Preview updates as you type. The URL must be a directly-downloadable image file — Google/images-with-hotlink-protection will be rejected by WooCommerce with an error below."; }
 }
 $("m_image").addEventListener("input", updateImagePreview);
+
+$("m_uploadBtn").addEventListener("click", async () => {
+  const file = $("m_fileAccept").files && $("m_fileAccept").files[0];
+  if (!file) { showError("Pick an image file first."); return; }
+  if (file.size > 10 * 1024 * 1024) { showError("Image too large — max 10 MB."); return; }
+  const status = $("m_uploadStatus");
+  status.textContent = "uploading…";
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error("could not read file"));
+      r.readAsDataURL(file);
+    });
+    const r = await api("/media", { method: "POST", body: JSON.stringify({ filename: file.name, data }) });
+    $("m_image").value = r.data.url;
+    updateImagePreview();
+    status.textContent = "uploaded → " + r.data.url + " (press Save to attach)";
+    showError("");
+  } catch (e) { status.textContent = ""; showError(e.message); }
+});
 
 async function openEdit(id) {
   try {

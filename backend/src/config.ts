@@ -19,6 +19,9 @@ export const config = {
     url: (process.env.WOOCOMMERCE_URL || "").replace(/\/+$/, ""),
     consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY || "",
     consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET || "",
+    /** Application password for the WP media library uploads (media endpoint). */
+    mediaUsername: process.env.WP_MEDIA_USERNAME || "",
+    mediaAppPassword: process.env.WP_MEDIA_APP_PASSWORD || "",
   },
 
   jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me",
@@ -30,4 +33,8 @@ export const config = {
 
 export const wpConfigured = Boolean(
   config.wp.url && config.wp.consumerKey && config.wp.consumerSecret,
+);
+
+export const mediaConfigured = Boolean(
+  config.wp.url && config.wp.mediaUsername && config.wp.mediaAppPassword,
 );

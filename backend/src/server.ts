@@ -10,7 +10,7 @@
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { config, wpConfigured } from "./config.js";
+import { config, wpConfigured, mediaConfigured } from "./config.js";
 import { ApiError, ok } from "./lib/errors.js";
 import { authRoutes } from "./routes/auth.js";
 import { productsRoutes } from "./routes/products.js";
@@ -18,6 +18,7 @@ import { categoriesRoutes } from "./routes/categories.js";
 import { tagsRoutes } from "./routes/tags.js";
 import { brandsRoutes } from "./routes/brands.js";
 import { attributesRoutes } from "./routes/attributes.js";
+import { mediaRoutes } from "./routes/media.js";
 import { inventoryRoutes } from "./routes/inventory.js";
 import { serialsRoutes } from "./routes/serials.js";
 import { ordersRoutes } from "./routes/orders.js";
@@ -44,9 +45,10 @@ app.get("/api/v1/health", (c) => {
     wpConfigured,
     /** Login via WordPress only needs the site URL — the WC keys are for products/orders. */
     wpLoginAvailable: Boolean(config.wp.url),
+    mediaConfigured,
     supabaseConfigured: Boolean(config.supabaseUrl && config.supabaseServiceRoleKey),
     domains: [
-      "auth", "products", "categories", "tags", "brands", "attributes",
+      "auth", "products", "categories", "tags", "brands", "attributes", "media",
       "inventory", "serials", "orders", "quotes", "customers",
       "builds", "services", "warranty", "returns", "purchasing", "receiving",
       "shifts", "releases", "audit", "notifications",
@@ -60,6 +62,7 @@ app.route("/api/v1/categories", categoriesRoutes());
 app.route("/api/v1/tags", tagsRoutes());
 app.route("/api/v1/brands", brandsRoutes());
 app.route("/api/v1/attributes", attributesRoutes());
+app.route("/api/v1/media", mediaRoutes());
 app.route("/api/v1/inventory", inventoryRoutes());
 app.route("/api/v1/serials", serialsRoutes());
 app.route("/api/v1/orders", ordersRoutes());

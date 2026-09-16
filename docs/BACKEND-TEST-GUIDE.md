@@ -22,10 +22,14 @@ each endpoint returns. Architecture decisions live in
 | Brands CRUD | ✅ works | WooCommerce (live, brand plugin) | `GET/POST/PUT/DELETE /brands` |
 | Tags CRUD | ✅ works | WooCommerce (live) | `GET/POST/PUT/DELETE /tags` |
 | Attributes + terms CRUD | ✅ works | WooCommerce (live) | `/attributes`, `/attributes/:id/terms`… |
+| Media upload (local image) | ✅ API ready* | WordPress media (live) | `POST /media` |
 | Orders — list / create | ✅ works | WooCommerce (live) | `GET /orders`, `POST /orders` |
 | Quotations — list / create / update / delete | ✅ works* | **in-memory** | `GET /quotes`, `POST /quotes`, `PUT /quotes/:id`, `DELETE /quotes/:id` |
 | Inventory ledger, serials | ⏳ stub (401/empty) | Supabase (planned P1) | `GET /inventory`, `GET /serials` |
 | Customers, builds, services, warranty, returns, shifts, releases, audit, notifications | ⏳ stub | Supabase (planned P2–P5) | mounted, return stubs |
+
+\* **Media upload** needs `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` set in
+`backend/.env` (and Vercel) — until then it returns `503 MEDIA_NOT_CONFIGURED`.
 
 \* **Quotations reset on server restart / Vercel cold start** — they are stored
 in process memory on purpose, until the Postgres phase (P3). Products and orders
@@ -82,7 +86,8 @@ every button you press.
 2. **Root Directory → `backend`** (Framework Preset auto-detects **Hono**).
 3. **Environment Variables** (same names as `backend/.env`):
    `JWT_SECRET`, `WOOCOMMERCE_URL`, `WOOCOMMERCE_CONSUMER_KEY`,
-   `WOOCOMMERCE_CONSUMER_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+   `WOOCOMMERCE_CONSUMER_SECRET`, `WP_MEDIA_USERNAME`, `WP_MEDIA_APP_PASSWORD`,
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 4. **Deployment Protection → off** so the app + tester are publicly reachable.
 5. Tester lives at `https://<your-project>.vercel.app/test.html`, API at
    `https://<your-project>.vercel.app/api/v1`.
@@ -202,7 +207,25 @@ Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`
 > (`products/brands`), so they CRUD exactly like categories. The **Catalog** tab
 > in the tester exercises all of these.
 
-### 4.5 Orders
+### 4.5 Media upload (local image → product)
+
+`POST /media` — upload a real file from the computer. Product images in
+WooCommerce can only be URLs, so this uploads into the WP media library and
+returns the hosted URL to put in the product's `imageUrl`:
+
+```json
+{ "filename": "rtx-5080.png", "data": "data:image/png;base64,iVBORw0KGgo…" }
+```
+
+Response → `201 { "data": { "mediaId": "123", "url": "https://dreampcbuild.com/wp-content/uploads/2026/09/rtx-5080.png" } }`
+
+Rules: `png / jpg / jpeg / webp / gif`, max 10 MB. Requires `WP_MEDIA_USERNAME` +
+`WP_MEDIA_APP_PASSWORD` (a WP **application password** for an admin user —
+create one under Users → Profile → Application Passwords → "DPC backend"). The
+tester's Edit modal has an "…or upload from this computer" button that does this
+for you automatically.
+
+### 4.6 Orders
 
 `GET /orders?search=…` → array mapped to the frontend Order shape:
 ```json
@@ -225,7 +248,7 @@ Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`
 Creates a **real WooCommerce order** → `201`. (POS payment/serials logic comes
 in the P2 Supabase phase.)
 
-### 4.6 Quotations
+### 4.7 Quotations
 
 `GET /quotes` → array of Quote objects (see `dto.ts`).
 
@@ -250,8 +273,9 @@ Creates a draft quote, computes subtotal/total server-side → `201` with the qu
 3. Tester at `http://localhost:8787/test.html`:
    - Log in (app password) → products should load from the live storefront.
    - Click **Edit** on a product → full detail modal → change price/stock/category
-     (dropdown) / stock-status (dropdown) / image URL → **Save** → confirm the
-     "Last API call" panel shows `200/201`.
+     (dropdown) / stock-status (dropdown) → pick a photo with "…or upload from
+     this computer" (or paste an image URL) → **Save** → confirm the "Last API
+     call" panel shows `200/201`.
    - Catalog tab → **Brands/Tags/Categories/Attributes** → add + delete an item
      → confirm it appears/disappears on the storefront too.
    - Set stock in the Products table → stock column updates after refresh.
