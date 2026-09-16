@@ -5,7 +5,7 @@
  * file, so @hono/node-server stays out of the deployed bundle.
  */
 import { serve } from "@hono/node-server";
-import { app } from "./app-core.js";
+import { app } from "./server.js";
 import { config } from "./config.js";
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
