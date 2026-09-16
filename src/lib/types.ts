@@ -46,6 +46,7 @@ export interface Product {
   categoryId: string;
   productType?: ProductType | undefined;
   description?: string | undefined;
+  imageUrl?: string | undefined;
   price: number;
   cost: number;
   serialTracked: boolean;
@@ -184,12 +185,15 @@ export interface QuoteRevision {
   at: string;
   items: QuoteItem[];
   subtotal: number;
+  discountType?: "amount" | "percentage";
+  discountPercentage?: number;
   discount: number;
   serviceTotal: number;
   shippingFee: number;
   tax: number;
   total: number;
   notes?: string | undefined;
+  originalRequest?: string | undefined;
 }
 
 export interface Quote {
@@ -198,6 +202,8 @@ export interface Quote {
   customerName: string;
   status: QuoteStatus;
   items: QuoteItem[];
+  discountType?: "amount" | "percentage";
+  discountPercentage?: number;
   discount: number;
   serviceTotal: number;
   shippingFee: number;
@@ -209,6 +215,7 @@ export interface Quote {
   createdAt: string;
   expiresAt: string;
   notes?: string | undefined;
+  originalRequest?: string | undefined;
   subject?: string | undefined;
   message?: string | undefined;
   sentAt?: string | undefined;

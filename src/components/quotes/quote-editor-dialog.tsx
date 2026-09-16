@@ -78,7 +78,9 @@ export function QuoteEditorDialog({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [customerId, setCustomerId] = useState<string | null>(quote.customerId);
   const [lines, setLines] = useState<EditableItem[]>([]);
-  const [discount, setDiscount] = useState("");
+  const [discountType, setDiscountType] = useState<"amount" | "percentage">(quote.discountType ?? "amount");
+  const [discountPercentage, setDiscountPercentage] = useState(quote.discountPercentage ? String(quote.discountPercentage) : "");
+  const [discount, setDiscount] = useState(quote.discount ? String(quote.discount) : "");
   const [serviceTotal, setServiceTotal] = useState("");
   const [shippingFee, setShippingFee] = useState("");
   const [notes, setNotes] = useState("");
@@ -99,6 +101,8 @@ export function QuoteEditorDialog({
         unitPrice: String(i.unitPrice),
       })),
     );
+    setDiscountType(quote.discountType ?? "amount");
+    setDiscountPercentage(quote.discountPercentage ? String(quote.discountPercentage) : "");
     setDiscount(quote.discount ? String(quote.discount) : "");
     setServiceTotal(quote.serviceTotal ? String(quote.serviceTotal) : "");
     setShippingFee(quote.shippingFee ? String(quote.shippingFee) : "");
@@ -120,7 +124,6 @@ export function QuoteEditorDialog({
   const addLine = () => setLines((prev) => [...prev, { productId: "", qty: "1", unitPrice: "" }]);
   const removeLine = (i: number) => setLines((prev) => prev.filter((_, idx) => idx !== i));
 
-  const discountNum = Number(discount) || 0;
   const serviceNum = Number(serviceTotal) || 0;
   const shippingNum = Number(shippingFee) || 0;
   const validDaysNum = Math.max(1, Number(validDays) || 14);
@@ -142,10 +145,32 @@ export function QuoteEditorDialog({
     [lines, products],
   );
 
+  const subtotalBeforeDiscount = useMemo(() => {
+    return resolvedItems.reduce((acc, item) => acc + item.qty * item.unitPrice, 0);
+  }, [resolvedItems]);
+
+  const discountNum = useMemo(() => {
+    if (discountType === "percentage") {
+      const pct = Number(discountPercentage) || 0;
+      return Math.round(subtotalBeforeDiscount * (pct / 100) * 100) / 100;
+    }
+    return Number(discount) || 0;
+  }, [discountType, discountPercentage, discount, subtotalBeforeDiscount]);
+
   const totals = useMemo(
     () => computeTotals(resolvedItems, discountNum, serviceNum, shippingNum),
     [resolvedItems, discountNum, serviceNum, shippingNum],
   );
+
+  const totalCost = useMemo(() => {
+    return resolvedItems.reduce((sum, item) => {
+      const p = products.find((x) => x.id === item.productId);
+      return sum + (p?.cost ?? 0) * item.qty;
+    }, 0);
+  }, [resolvedItems, products]);
+
+  const profitMarginAmount = (totals.total - totals.tax) - totalCost;
+  const profitMarginPercent = totals.total - totals.tax > 0 ? (profitMarginAmount / (totals.total - totals.tax)) * 100 : 0;
 
   const customerName = activeCustomers.find((c) => c.id === customerId)?.name ?? quote.customerName;
 
@@ -155,6 +180,8 @@ export function QuoteEditorDialog({
       customerId,
       customerName,
       items: resolvedItems,
+      discountType,
+      discountPercentage: Number(discountPercentage) || undefined,
       discount: discountNum,
       serviceTotal: serviceNum,
       shippingFee: shippingNum,
@@ -171,6 +198,8 @@ export function QuoteEditorDialog({
       customerId,
       customerName,
       resolvedItems,
+      discountType,
+      discountPercentage,
       discountNum,
       serviceNum,
       shippingNum,
@@ -203,6 +232,8 @@ export function QuoteEditorDialog({
     updateQuote(quote.id, {
       customerId,
       items: resolvedItems,
+      discountType,
+      discountPercentage: Number(discountPercentage) || undefined,
       discount: discountNum,
       serviceTotal: serviceNum,
       shippingFee: shippingNum,
@@ -279,17 +310,34 @@ export function QuoteEditorDialog({
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="qe-discount" className="label-tech">
-                    Discount (₱)
+                    Discount
                   </label>
-                  <Input
-                    id="qe-discount"
-                    type="number"
-                    min={0}
-                    value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                    className="h-9"
-                    placeholder="0.00"
-                  />
+                  <div className="flex gap-1">
+                    <Select value={discountType} onValueChange={(v: "amount" | "percentage") => setDiscountType(v)}>
+                      <SelectTrigger className="w-16 h-9 px-2 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="amount">₱</SelectItem>
+                        <SelectItem value="percentage">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="qe-discount"
+                      type="number"
+                      min={0}
+                      value={discountType === "percentage" ? discountPercentage : discount}
+                      onChange={(e) => {
+                        if (discountType === "percentage") {
+                          setDiscountPercentage(e.target.value);
+                        } else {
+                          setDiscount(e.target.value);
+                        }
+                      }}
+                      className="h-9 flex-1"
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="qe-service" className="label-tech">
@@ -400,7 +448,7 @@ export function QuoteEditorDialog({
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5 sm:col-span-2">
                   <label htmlFor="qe-notes" className="label-tech">
-                    Notes (internal / printed on the quotation)
+                    Notes (printed on the quotation)
                   </label>
                   <Textarea
                     id="qe-notes"
@@ -425,8 +473,16 @@ export function QuoteEditorDialog({
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-surface/40 p-3">
-                <p className="label-tech mb-2">Quotation totals</p>
+              <div className="rounded-lg border border-border bg-surface/40 p-3 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="label-tech">Quotation totals</p>
+                  <div className={cn(
+                    "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full",
+                    profitMarginPercent < 5 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+                  )}>
+                    Est. Margin: {profitMarginPercent.toFixed(1)}% ({money(profitMarginAmount)})
+                  </div>
+                </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-6">
                   <div>
                     <dt className="text-muted-foreground">Subtotal</dt>

@@ -253,9 +253,16 @@ export function CartPanel({
           <ul className="divide-y divide-border">
             {lines.map((l) => (
               <li key={l.productId} className="px-3 py-2.5">
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted/40 p-1 flex items-center justify-center">
+                    {l.product.imageUrl ? (
+                      <img src={l.product.imageUrl} alt={l.product.name} className="h-full w-full object-contain" />
+                    ) : (
+                      <span className="text-[9px] text-muted-foreground/40">N/A</span>
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] text-foreground">{l.product.name}</p>
+                    <p className="truncate text-[13px] font-medium text-foreground">{l.product.name}</p>
                     <p className="mono text-[10.5px] text-subtle">
                       {l.product.sku} · {money(l.product.price)} ea
                     </p>

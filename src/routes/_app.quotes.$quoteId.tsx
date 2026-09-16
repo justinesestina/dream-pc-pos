@@ -8,7 +8,7 @@ import { DocumentPreview, PrintButton } from "@/components/nexus/document";
 import { QuoteEditorDialog } from "@/components/quotes/quote-editor-dialog";
 import { QuotePdfDialog } from "@/components/quotes/quote-pdf-dialog";
 import { QuoteClientMessage } from "@/components/quotes/quote-message";
-import { FileText, History, CreditCard, Banknote, Smartphone, Building2 } from "lucide-react";
+import { FileText, History, CreditCard, Banknote, Smartphone, Building2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/_app/quotes/$quoteId")({
 
 function QuotesQuoteidPage() {
   const { quoteId } = Route.useParams();
-  const { quotes, customerById, setQuoteStatus, convertQuoteToOrder } = useStore();
+  const { quotes, customerById, setQuoteStatus, convertQuoteToOrder, duplicateQuote } = useStore();
   const navigate = useNavigate();
   const quote = quotes.find((q) => q.id === quoteId);
   const [editOpen, setEditOpen] = useState(false);
@@ -113,6 +113,14 @@ function QuotesQuoteidPage() {
     setConvertOpen(false);
   };
 
+  const handleDuplicate = () => {
+    const duplicated = duplicateQuote(quote.id);
+    if (duplicated) {
+      toast.success(`Quote duplicated to ${duplicated.id}`);
+      navigate({ to: "/quotes/$quoteId", params: { quoteId: duplicated.id } });
+    }
+  };
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
@@ -141,6 +149,9 @@ function QuotesQuoteidPage() {
             <PrintButton label="Print quotation" />
             <Button size="sm" variant="outline" onClick={() => setPdfOpen(true)}>
               <FileText className="size-3.5" /> View PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleDuplicate}>
+              <Copy className="size-3.5" /> Duplicate
             </Button>
             {(canSend || canResend) && (
               <Button size="sm" onClick={() => setEditOpen(true)}>

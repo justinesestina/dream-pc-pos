@@ -54,6 +54,7 @@ export function ProductFormDialog({
   const store = useStore();
   const isEdit = Boolean(product);
   const [name, setName] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [sku, setSku] = useState("");
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -81,6 +82,7 @@ export function ProductFormDialog({
     if (!open) return;
     const inv = product ? store.invFor(product.id) : undefined;
     setName(product?.name ?? "");
+    setImageUrl(product?.imageUrl ?? "");
     setSku(product?.sku ?? "");
     setBrand(product?.brand ?? "");
     setCategoryId(product?.categoryId ?? store.categories.find((c) => !c.archived)?.id ?? "");
@@ -112,6 +114,7 @@ export function ProductFormDialog({
     const reorderNum = Math.max(0, Math.floor(Number(reorderPoint) || 0));
     const payload = {
       name: name.trim(),
+      imageUrl: imageUrl.trim() || undefined,
       sku: sku.trim().toUpperCase(),
       brand: brand.trim() || "Generic",
       categoryId,
@@ -154,9 +157,13 @@ export function ProductFormDialog({
           className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
           data-lenis-prevent
         >
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="pf-name">Name</Label>
             <Input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. RTX 5070 Gaming OC" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pf-image">Image URL</Label>
+            <Input id="pf-image" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pf-sku">SKU</Label>
@@ -229,6 +236,64 @@ export function ProductFormDialog({
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="pf-desc">Description</Label>
             <Textarea id="pf-desc" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description shown on the product page." />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="pf-local-image">Upload Local Image</Label>
+            <Input
+              id="pf-local-image"
+              type="file"
+              accept="image/*"
+              className="cursor-pointer"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("Image file size must be less than 5MB");
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    if (typeof reader.result === "string") {
+                      setImageUrl(reader.result);
+                      toast.success("Local image loaded!");
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            {imageUrl && (
+              <div className="mt-2 flex items-center gap-3 rounded-md border p-2.5 bg-muted/30">
+                <div className="relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted/40 p-1 shrink-0 flex items-center justify-center shadow-xs">
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+                <div className="flex-1 overflow-hidden text-xs space-y-1">
+                  <p className="font-semibold text-foreground">Image Preview</p>
+                  <p className="text-muted-foreground truncate">
+                    {imageUrl.startsWith("data:") ? "Local File Upload" : imageUrl}
+                  </p>
+                  <span className="inline-block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    ✓ Ready to save
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setImageUrl("")}
+                >
+                  Remove
+                </Button>
+              </div>
+            )}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="pf-specs">Specifications (key: value, one per line)</Label>

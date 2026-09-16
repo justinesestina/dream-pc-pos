@@ -231,10 +231,13 @@ interface StoreValue extends Snapshot {
   createQuote: (data: {
     customerId: string | null;
     items: { productId: string; qty: number }[];
+    discountType?: "amount" | "percentage";
+    discountPercentage?: number;
     discount: number;
     serviceTotal: number;
     shippingFee?: number;
     notes?: string;
+    originalRequest?: string;
     expiresInDays: number;
   }) => Quote;
   setQuoteStatus: (quoteId: string, status: QuoteStatus) => void;
@@ -243,13 +246,17 @@ interface StoreValue extends Snapshot {
     edits: {
       customerId?: string | null;
       items?: QuoteItem[];
+      discountType?: "amount" | "percentage";
+      discountPercentage?: number;
       discount?: number;
       serviceTotal?: number;
       shippingFee?: number;
       notes?: string;
+      originalRequest?: string;
       expiresInDays?: number;
     },
   ) => void;
+  duplicateQuote: (quoteId: string) => Quote | null;
   sendQuote: (quoteId: string, patch: { subject: string; message: string }) => void;
   convertQuoteToOrder: (quoteId: string, downpayment?: { amount: number; method: PaymentMethod }) => Order | null;
   createBuild: (data: {
@@ -954,7 +961,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `set order ${orderId} to ${status}`, orderId),
         })),
 
-      createQuote: ({ customerId, items, discount, serviceTotal, shippingFee = 0, notes, expiresInDays }) => {
+      createQuote: ({ customerId, items, discountType = "amount", discountPercentage, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
         const lines = items.map((i) => {
           const p = productById(i.productId);
           return {
@@ -974,6 +981,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           customerName: customer?.name ?? "Walk-in Customer",
           status: "draft",
           items: lines,
+          discountType,
+          discountPercentage,
           discount,
           serviceTotal,
           shippingFee,
@@ -985,6 +994,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + expiresInDays * 86400000).toISOString(),
           notes,
+          originalRequest,
           preparedBy: state.user?.name ?? "Demo User",
         };
         patch((s) => ({
@@ -1021,14 +1031,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           at: new Date().toISOString(),
           items: existing.items,
           subtotal: existing.subtotal,
+          discountType: existing.discountType,
+          discountPercentage: existing.discountPercentage,
           discount: existing.discount,
           serviceTotal: existing.serviceTotal,
           shippingFee: existing.shippingFee ?? 0,
           tax: existing.tax,
           total: existing.total,
           notes: existing.notes,
+          originalRequest: existing.originalRequest,
         };
         const items = edits.items ?? existing.items;
+        const discountType = edits.discountType ?? existing.discountType;
+        const discountPercentage = edits.discountPercentage ?? existing.discountPercentage;
         const discount = edits.discount ?? existing.discount;
         const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
         const shippingFee = edits.shippingFee ?? existing.shippingFee ?? 0;
@@ -1052,13 +1067,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   customerId,
                   customerName,
                   items,
+                  discountType,
+                  discountPercentage,
                   discount,
                   serviceTotal,
                   shippingFee,
                   subtotal: t.subtotal,
                   tax: t.tax,
                   total: t.total,
-                  notes: edits.notes ?? q.notes,
+                  notes: edits.notes !== undefined ? edits.notes : q.notes,
+                  originalRequest: edits.originalRequest !== undefined ? edits.originalRequest : q.originalRequest,
                   expiresAt,
                   version: nextVersion,
                   revisions: [...(q.revisions ?? []), revision],
@@ -1067,6 +1085,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
           auditLogs: log(s, `updated quote ${quoteId} to v${nextVersion}`, quoteId),
         }));
+      },
+
+      duplicateQuote: (quoteId) => {
+        const existing = state.quotes.find((q) => q.id === quoteId);
+        if (!existing) return null;
+        
+        const id = `QT-${state.counters.quote}`;
+        const duplicate: Quote = {
+          ...existing,
+          id,
+          status: "draft",
+          version: 1,
+          revisions: [],
+          createdAt: new Date().toISOString(),
+          sentAt: undefined,
+          orderId: undefined,
+          preparedBy: state.user?.name ?? "Demo User",
+        };
+
+        patch((s) => ({
+          ...s,
+          quotes: [duplicate, ...s.quotes],
+          counters: { ...s.counters, quote: s.counters.quote + 1 },
+          auditLogs: log(s, `duplicated quote ${quoteId} to ${id}`, id),
+        }));
+        
+        return duplicate;
       },
 
       sendQuote: (quoteId, msg) =>

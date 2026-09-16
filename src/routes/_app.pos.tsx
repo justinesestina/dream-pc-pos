@@ -52,15 +52,12 @@ function PosPage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-col gap-4 p-4 sm:p-6">
+    <div className="flex h-[calc(100vh-5rem)] flex-col gap-3 p-4 sm:p-6 overflow-hidden">
       <PageHeader
         title="Point of Sale"
         description="Ring up walk-in sales, apply discounts and take payment."
       />
-      <DemoNote>
-        Payments, receipt printing and cash-drawer hardware are simulated in this demo build.
-      </DemoNote>
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_380px] overflow-hidden">
         <ProductBrowser loading={loading} />
         <CartPanel notes={notes} onNotesChange={setNotes} onCheckout={checkout} />
       </div>

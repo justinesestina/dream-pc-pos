@@ -7,7 +7,7 @@ export function DreamLogo({ className }: { className?: string }) {
       src="/dpc-logo.png"
       alt="Dream PC Build & IT Solutions"
       draggable={false}
-      className={cn("shrink-0 object-contain select-none", className)}
+      className={cn("shrink-0 object-contain select-none bg-white p-1", className)}
     />
   );
 }

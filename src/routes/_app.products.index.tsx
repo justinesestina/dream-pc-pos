@@ -105,6 +105,20 @@ function ProductsIndexPage() {
 
   const columns: Column<Product>[] = [
     {
+      key: "image",
+      header: "",
+      cell: (p) => (
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40 p-1">
+          {p.imageUrl ? (
+            <img src={p.imageUrl} alt={p.name} className="h-full w-full object-contain" />
+          ) : (
+            <span className="text-[10px] text-muted-foreground/50">N/A</span>
+          )}
+        </div>
+      ),
+      className: "w-14",
+    },
+    {
       key: "sku",
       header: "SKU",
       cell: (p) => <Mono>{p.sku}</Mono>,
@@ -191,6 +205,20 @@ function ProductsIndexPage() {
   ];
 
   const archivedColumns: Column<Product>[] = [
+    {
+      key: "image",
+      header: "",
+      cell: (p) => (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-surface opacity-50">
+          {p.imageUrl ? (
+            <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[10px] text-muted-foreground/50">N/A</span>
+          )}
+        </div>
+      ),
+      className: "w-12",
+    },
     {
       key: "sku",
       header: "SKU",
