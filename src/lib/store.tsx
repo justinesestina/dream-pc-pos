@@ -30,7 +30,8 @@ import {
   createBackendProduct,
   updateBackendProduct,
   createBackendOrder,
-  createBackendQuote
+  createBackendQuote,
+  canReachBackend,
 } from "./api-client";
 import { VAT_RATE } from "./format";
 import type {
@@ -409,23 +410,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
           const connected = await testConnection();
           console.log("WooCommerce connection test:", connected);
-          if (connected) {
-            const result = await fullSyncFromWooCommerce();
-            console.log("WooCommerce sync result:", result);
-            if (result.products.length === 0) {
-              console.warn("Skipping auto-load: backend returned no products (auth or empty catalog)");
-              return;
-            }
-            setState((prev) => ({
-              ...prev,
-              categories: result.categories.length > 0 ? result.categories : prev.categories,
-              products: result.products,
-              customers: result.customers.length > 0 ? result.customers : prev.customers,
-              orders: result.orders.length > 0 ? result.orders : prev.orders,
-              inventory: inventoryFromProducts(result.products, prev.inventory),
-            }));
-            console.log("WooCommerce data loaded successfully");
+          if (!connected.connected) {
+            console.warn("Skipping auto-load: backend is unavailable");
+            return;
           }
+          const result = await fullSyncFromWooCommerce();
+          console.log("WooCommerce sync result:", result);
+          if (result.products.length === 0) {
+            console.warn("Skipping auto-load: backend returned no products (auth or empty catalog)");
+            return;
+          }
+          setState((prev) => ({
+            ...prev,
+            categories: result.categories.length > 0 ? result.categories : prev.categories,
+            products: result.products,
+            customers: result.customers.length > 0 ? result.customers : prev.customers,
+            orders: result.orders.length > 0 ? result.orders : prev.orders,
+            inventory: inventoryFromProducts(result.products, prev.inventory),
+          }));
+          console.log("WooCommerce data loaded successfully");
         }
       } catch (error) {
         console.warn("Auto-load WooCommerce data failed:", error);
@@ -563,6 +566,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       
       syncWithBackend: async () => {
         try {
+          if (!(await canReachBackend())) return;
           const [products, orders, customers, quotes, categories] = await Promise.all([
             fetchBackendProducts(),
             fetchBackendOrders(),

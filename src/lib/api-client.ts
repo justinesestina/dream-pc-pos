@@ -11,6 +11,18 @@ const API_BASE =
   (import.meta.env?.["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/+$/, "") ||
   "http://localhost:8787";
 
+let backendPausedUntil = 0;
+let backendPauseReason: string | null = null;
+
+function pauseBackend(message: string) {
+  backendPausedUntil = Date.now() + 60_000;
+  backendPauseReason = message;
+}
+
+export function isBackendPaused(): boolean {
+  return Date.now() < backendPausedUntil;
+}
+
 // ---------------------------------------------------------------------------
 // Auth helpers
 // ---------------------------------------------------------------------------
@@ -42,6 +54,10 @@ async function apiRequest<T>(
   body?: unknown,
   opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
+  if (opts.auth !== false && isBackendPaused()) {
+    return { ok: false, error: backendPauseReason ?? "Backend temporarily unavailable." };
+  }
+
   const headers: Record<string, string> = {};
   const contentType = opts.contentType ?? "json";
   if (body !== undefined) {
@@ -74,6 +90,7 @@ async function apiRequest<T>(
     return { ok: true, data: json?.data };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
+    pauseBackend(`Could not reach backend. Is it running? (${message})`);
     return {
       ok: false,
       error: `Could not reach backend. Is it running? (${message})`,
@@ -114,6 +131,12 @@ export async function loginToBackend(username: string, appPassword: string): Pro
 export async function fetchBackendProducts(): Promise<Product[]> {
   const res = await apiRequest<Product[]>("/api/v1/products");
   return res.ok && res.data ? res.data : [];
+}
+
+export async function canReachBackend(): Promise<boolean> {
+  if (isBackendPaused()) return false;
+  const res = await apiRequest<{ status: string }>("/api/v1/health", "GET", undefined, { auth: false });
+  return res.ok;
 }
 
 export async function createBackendProduct(product: Partial<Product>): Promise<Product | null> {

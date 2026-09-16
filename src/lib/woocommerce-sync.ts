@@ -13,6 +13,7 @@ import {
   createBackendProduct,
   updateBackendProduct,
   createBackendOrder,
+  canReachBackend,
   // updateBackendOrder, // Add this if needed in the future
 } from "./api-client";
 import type { Product, Category, Customer, Order } from "./types";
@@ -111,9 +112,8 @@ export async function updateOrderInWooCommerce(orderId: string, order: Order): P
 
 export async function testConnection(): Promise<{ connected: boolean; error?: string }> {
   try {
-    // Just try fetching products as a connection test
-    await fetchBackendProducts();
-    return { connected: true };
+    const connected = await canReachBackend();
+    return connected ? { connected: true } : { connected: false, error: "Backend unavailable" };
   } catch (error) {
     return {
       connected: false,

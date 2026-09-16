@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppSidebar } from "@/components/app/app-sidebar";
@@ -16,16 +16,19 @@ function AppLayout() {
   const store = useStore();
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const syncedUserId = useRef<string | null>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // DEMO auth gate — UI-level only, not security.
   useEffect(() => {
     if (store.hydrated && !store.user) void navigate({ to: "/", replace: true });
     else if (store.hydrated && store.user) {
-      // Sync with backend on startup
-      store.syncWithBackend();
+      if (syncedUserId.current !== store.user.id) {
+        syncedUserId.current = store.user.id;
+        void store.syncWithBackend();
+      }
     }
-  }, [store.hydrated, store.user, navigate, store.syncWithBackend]);
+  }, [store.hydrated, store.user?.id, navigate]);
 
   // Per-role access control: block direct URLs to sections the role cannot use.
   useEffect(() => {
