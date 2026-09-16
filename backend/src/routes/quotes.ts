@@ -167,12 +167,6 @@ export function quotesRoutes() {
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 14 * 86400000).toISOString();
 
-    const [first = "", last = ""] = customerName.split(" ");
-    // Ensure last_name is not empty - WooCommerce requires both first_name and last_name
-    const billingFirst = first || "Guest";
-    const billingLast = last || "Customer";
-    const billingEmail = String(body.email ?? "").trim();
-    
     const payload: Record<string, unknown> = {
       status: "pending",
       payment_method: "dpc_quote",
@@ -200,15 +194,6 @@ export function quotesRoutes() {
         [META.message]: body.message,
       }),
     };
-    
-    // Only add billing if we have valid data
-    if (billingFirst && billingLast) {
-      payload.billing = {
-        first_name: billingFirst,
-        last_name: billingLast,
-        email: billingEmail || "guest@example.com",
-      };
-    }
     
     const created = await woocommerce.createOrder(payload);
 
