@@ -24,7 +24,7 @@ each endpoint returns. Architecture decisions live in
 | Attributes + terms CRUD | ✅ works | WooCommerce (live) | `/attributes`, `/attributes/:id/terms`… |
 | Media upload (local image) | ✅ API ready* | WordPress media (live) | `POST /media` |
 | Orders — list / create | ✅ works | WooCommerce (live) | `GET /orders`, `POST /orders` |
-| Quotations — list / create / update / delete | ✅ works* | **in-memory** | `GET /quotes`, `POST /quotes`, `PUT /quotes/:id`, `DELETE /quotes/:id` |
+| Quotations — list / create / update / delete | ✅ works | WooCommerce (tagged orders) | `GET /quotes`, `POST /quotes`, `PUT /quotes/:id`, `DELETE /quotes/:id` |
 | Inventory ledger, serials | ⏳ stub (401/empty) | Supabase (planned P1) | `GET /inventory`, `GET /serials` |
 | Customers, builds, services, warranty, returns, shifts, releases, audit, notifications | ⏳ stub | Supabase (planned P2–P5) | mounted, return stubs |
 
@@ -32,9 +32,12 @@ each endpoint returns. Architecture decisions live in
 optional env pair `WP_MEDIA_USERNAME` + `WP_MEDIA_APP_PASSWORD` (a dedicated
 backend account) is only a fallback for JWT-only clients.
 
-\* **Quotations reset on server restart / Vercel cold start** — they are stored
-in process memory on purpose, until the Postgres phase (P3). Products and orders
-are permanent because they live in WooCommerce.
+**Quotations are persistent** — each quote is stored as a WooCommerce *order*
+tagged with the `_dpc_is_quote` meta key, so quotes survive restarts and Vercel
+cold-starts without any separate database. They're filtered out of the Orders
+tab so they never look like sales orders. (Postgres/Supabase remains the
+long-term home; moving there later is a pure storage swap — the API shape stays
+the same.)
 
 **Source of truth today:** WooCommerce (`dreampcbuild.com`). The API reads and
 writes straight to the storefront catalog and orders.

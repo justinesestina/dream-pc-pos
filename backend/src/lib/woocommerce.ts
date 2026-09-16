@@ -124,6 +124,7 @@ export interface WcOrder {
   customer_note?: string;
   billing?: { first_name?: string; last_name?: string; email?: string };
   line_items: { product_id: number; name: string; sku?: string; quantity: number; total: string }[];
+  meta_data?: WcMetaDatum[];
   date_created: string;
 }
 
@@ -153,6 +154,20 @@ export const woocommerce = {
     return (await wcFetch(`orders?per_page=100&orderby=date&order=desc&${params}`)) as WcOrder[];
   },
 
+  /** Fetch ALL orders across pages (quotes live as tagged orders, so lists need
+   *  to scan pages and filter server-side — WC can't filter orders by meta). */
+  async ordersAll(params = ""): Promise<WcOrder[]> {
+    const all: WcOrder[] = [];
+    for (let page = 1; page <= 100; page++) {
+      const rows = (await wcFetch(
+        `orders?per_page=100&page=${page}&orderby=date&order=desc&${params}`,
+      )) as WcOrder[];
+      all.push(...rows);
+      if (rows.length < 100) break;
+    }
+    return all;
+  },
+
   async customers(params = ""): Promise<WcCustomer[]> {
     return (await wcFetch(`customers?per_page=100${params}`)) as WcCustomer[];
   },
@@ -180,9 +195,23 @@ export const woocommerce = {
     });
   },
 
+  async order(id: string | number): Promise<WcOrder> {
+    return (await wcFetch(`orders/${id}`)) as WcOrder;
+  },
+
   /** Create a storefront order (the "orders" tab in the test page). */
   async createOrder(body: Record<string, unknown>): Promise<WcOrder> {
     return (await wcFetch("orders", { method: "POST", body: JSON.stringify(body) })) as WcOrder;
+  },
+
+  /** Update an order (quotes edit meta_data/line_items through this). */
+  async updateOrder(id: string | number, body: Record<string, unknown>): Promise<WcOrder> {
+    return (await wcFetch(`orders/${id}`, { method: "PUT", body: JSON.stringify(body) })) as WcOrder;
+  },
+
+  /** Permanently delete an order (quote delete). */
+  async deleteOrder(id: string | number): Promise<WcOrder> {
+    return (await wcFetch(`orders/${id}?force=true`, { method: "DELETE" })) as WcOrder;
   },
 
   /* ----------- taxonomy CRUD (categories / tags / brands / attributes) ----------- */
