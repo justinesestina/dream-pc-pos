@@ -298,7 +298,78 @@ git push all main
 
 ---
 
-## 11. Open decisions (to confirm before P1)
+## 11. Step-by-step: developer setup (from zero)
+
+### A. One-time machine setup
+
+1. Install **Node.js 20 LTS+**, **Git**, and **bun** (recommended — the repo ships
+   `bun.lock`; npm also works).
+2. Verify from a terminal:
+   ```bash
+   node -v && git --version && bun -V
+   ```
+3. (Windows) Use PowerShell or Git Bash. Never clone into a path with a space.
+
+### B. Clone & first run
+
+```bash
+git clone https://github.com/Vanflame/dreampc-pos.git dreampc-pos
+cd dreampc-pos
+bun install
+cp .env.example .env.local      # Windows: Copy-Item .env.example .env.local
+# then edit .env.local — keep the WooCommerce/WordPress URL + keys
+bun run dev
+```
+
+Open the URL printed in the terminal (`http://localhost:<port>`).
+
+Sign in with a demo profile (e.g. Owner / `demo1234`) or "Use your WordPress account"
+(username + application password from wp-admin → Users → Profile → Application Passwords).
+
+### C. Daily contribute (recommended flow)
+
+```bash
+git switch main
+git pull --rebase origin main        # always pull BEFORE pushing
+git switch -c feature/<short-name>   # never work directly on main
+# ... make changes ...
+bun run lint
+npx tsc --noEmit
+npm run build                         # full prod check before shipping
+git add .
+git commit -m "short description of the change"
+git push origin feature/<short-name>  # then open a PR → main on GitHub
+```
+
+### D. Push to both mirrors (only while `alt` is alive)
+
+```bash
+git remote -v                        # origin (canonical) + alt (mirror)
+git push origin main
+git push alt main:main               # mirror fast-forward
+```
+
+If `alt` ever rejects (fell behind): `git fetch alt; git push alt main:main` — never
+force-push.
+
+### E. Retiring the mirror (when you archive justinesestina/dream-pc-pos)
+
+```bash
+git remote remove alt
+```
+
+From then on the ONLY repo is `Vanflame/dreampc-pos`.
+
+### F. Good hygiene (all contributors)
+
+- Pull before push; never `git push --force` on `main`.
+- Never commit secrets — `.env*` stays ignored.
+- Backend work goes in `backend/` (or Supabase), never under `src/` (see §1).
+- Keep one feature per branch; merge small PRs into `main`.
+
+---
+
+## 12. Open decisions (to confirm before P1)
 
 - [ ] Backend host: **Supabase** (recommended, already architected) first, or a Node/Nitro
       service in this repo?
