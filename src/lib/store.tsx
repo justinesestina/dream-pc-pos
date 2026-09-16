@@ -29,8 +29,10 @@ import {
   getAuthToken,
   createBackendProduct,
   updateBackendProduct,
+  updateBackendProductStock,
   createBackendOrder,
   createBackendQuote,
+  updateBackendQuote,
   canReachBackend,
 } from "./api-client";
 import { VAT_RATE } from "./format";
@@ -259,6 +261,7 @@ interface StoreValue extends Snapshot {
     patch: Partial<Product>,
     opts?: { onHand?: number; reorderPoint?: number },
   ) => { ok: boolean; error?: string };
+  updateProductStock: (productId: string, stockQuantity: number) => { ok: boolean; error?: string };
   archiveProduct: (productId: string) => void;
   reactivateProduct: (productId: string) => void;
   deleteProduct: (productId: string) => void;
@@ -360,6 +363,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initializeStore() {
       try {
+        // Always try to restore user session from localStorage first
+        let savedUser: User | null = null;
+        try {
+          const userRaw = localStorage.getItem("dpc-nexus-user");
+          if (userRaw) {
+            savedUser = JSON.parse(userRaw) as User;
+          }
+        } catch {
+          // Ignore user parse errors
+        }
+
         // Check if WooCommerce credentials exist
         let hasWooCommerceCredentials = false;
         try {
@@ -373,17 +387,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (hasWooCommerceCredentials) {
           // Don't load from localStorage - we'll fetch fresh WooCommerce data
           console.log("WooCommerce credentials found, will fetch fresh data");
-          setState((prev) => ({ ...emptyState(), user: prev.user })); // Preserve user session
+          setState((prev) => ({ ...emptyState(), user: savedUser })); // Restore user session
         } else {
           // Load from localStorage for non-WooCommerce users
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Partial<Snapshot>;
             if (parsed.schemaVersion === SCHEMA_VERSION) {
-              setState((prev) => ({ ...prev, ...parsed }));
+              setState((prev) => ({ ...prev, ...parsed, user: savedUser || parsed.user })); // Prefer saved user
             } else {
               localStorage.removeItem(STORAGE_KEY);
             }
+          } else {
+            setState((prev) => ({ ...prev, user: savedUser })); // Restore user if no localStorage data
           }
         }
       } catch {
@@ -554,13 +570,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             error: "Incorrect password for this role. Use the demo password shown below.",
           };
         }
+        try {
+          localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
+        } catch {
+          // Ignore localStorage errors
+        }
         patch((s) => ({ ...s, user: u }));
         return { ok: true };
       },
-      signInWithUser: (u) => patch((s) => ({ ...s, user: u })),
+      signInWithUser: (u) => {
+        try {
+          localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
+        } catch {
+          // Ignore localStorage errors
+        }
+        patch((s) => ({ ...s, user: u }));
+      },
       signOut: () => {
         localStorage.removeItem("dpc-nexus-auth-token");
         localStorage.removeItem("dpc-nexus-wp-credentials");
+        localStorage.removeItem("dpc-nexus-user");
         patch((s) => ({ ...s, user: null }));
       },
       
@@ -977,6 +1006,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
 
+      updateProductStock: (productId, stockQuantity) => {
+        const existing = productById(productId);
+        if (!existing) return { ok: false, error: "Product not found." };
+        const newStock = Math.max(0, Math.floor(stockQuantity));
+        patch((s) => {
+          const currentStock = invFor(productId)?.onHand ?? 0;
+          const stockDiff = newStock - currentStock;
+          return {
+            ...s,
+            products: s.products.map((p) => (p.id === productId ? { ...p, stock_quantity: newStock } : p)),
+            inventory: s.inventory.map((i) =>
+              i.productId === productId ? { ...i, onHand: newStock } : i,
+            ),
+            movements: [
+              ...s.movements,
+              {
+                id: `mv-${Math.random().toString(36).slice(2, 9)}`,
+                productId,
+                type: "adjusted" as const,
+                qty: stockDiff,
+                at: new Date().toISOString(),
+                actor: s.user?.name ?? "Demo User",
+                note: "Stock level edited inline",
+              },
+            ],
+            auditLogs: log(s, `updated stock for ${productId} to ${newStock}`, productId),
+          };
+        });
+        updateBackendProductStock(productId, newStock)
+          .then((remoteProduct) => {
+            if (!remoteProduct) return;
+            patch((s) => ({
+              ...s,
+              products: s.products.map((p) => (p.id === productId ? { ...p, ...remoteProduct } : p)),
+              inventory: s.inventory.map((i) =>
+                i.productId === productId &&
+                remoteProduct.stock_quantity !== null &&
+                remoteProduct.stock_quantity !== undefined
+                  ? { ...i, onHand: Number(remoteProduct.stock_quantity) }
+                  : i,
+              ),
+            }));
+          })
+          .catch((e) => console.error("Failed to update product stock in backend", e));
+        return { ok: true };
+      },
+
       archiveProduct: (productId) =>
         patch((s) => ({
           ...s,
@@ -1123,7 +1199,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return quote;
       },
 
-      setQuoteStatus: (quoteId, status) =>
+      setQuoteStatus: (quoteId, status) => {
         patch((s) => ({
           ...s,
           quotes: s.quotes.map((q) => (q.id === quoteId ? { ...q, status } : q)),
@@ -1137,7 +1213,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   kind: "quote",
                 })
               : s.notifications,
-        })),
+        }));
+
+        // Fire-and-forget background sync
+        const updatedQuote = state.quotes.find((q) => q.id === quoteId);
+        if (updatedQuote) {
+          updateBackendQuote(quoteId, { status }).catch(e => console.error("Failed to update quote status in backend", e));
+        }
+      },
 
       updateQuote: (quoteId, edits) => {
         const existing = state.quotes.find((q) => q.id === quoteId);
@@ -1202,6 +1285,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
           auditLogs: log(s, `updated quote ${quoteId} to v${nextVersion}`, quoteId),
         }));
+
+        // Fire-and-forget background sync
+        const updatedQuote = state.quotes.find((q) => q.id === quoteId);
+        if (updatedQuote) {
+          updateBackendQuote(quoteId, updatedQuote).catch(e => console.error("Failed to update quote in backend", e));
+        }
       },
 
       duplicateQuote: (quoteId) => {
@@ -1231,7 +1320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return duplicate;
       },
 
-      sendQuote: (quoteId, msg) =>
+      sendQuote: (quoteId, msg) => {
         patch((s) => ({
           ...s,
           quotes: s.quotes.map((q) =>
@@ -1252,7 +1341,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             priority: "normal",
             kind: "quote",
           }),
-        })),
+        }));
+
+        // Fire-and-forget background sync
+        const sentQuote = state.quotes.find((q) => q.id === quoteId);
+        if (sentQuote) {
+          updateBackendQuote(quoteId, sentQuote).catch(e => console.error("Failed to update quote in backend", e));
+        }
+      },
 
       convertQuoteToOrder: (quoteId, downpayment) => {
         const quote = state.quotes.find((q) => q.id === quoteId);

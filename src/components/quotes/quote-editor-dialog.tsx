@@ -99,6 +99,7 @@ export function QuoteEditorDialog({
   const [pdf, setPdf] = useState<{ url: string | URL } | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -125,6 +126,7 @@ export function QuoteEditorDialog({
     setPdf(null);
     setPdfBusy(false);
     setCustomerOpen(false);
+    setIsSaving(false);
   }, [open, quote]);
 
   const selectableCustomers = useMemo(() => {
@@ -258,6 +260,46 @@ export function QuoteEditorDialog({
     sendQuote(quote.id, { subject: subject.trim(), message: message.trim() });
     toast.success(`Quote ${quote.id} sent to ${customerName} via e-mail`);
     onOpenChange(false);
+  };
+
+  const saveOnly = async () => {
+    setIsSaving(true);
+    try {
+      console.log("Saving quote with data:", {
+        customerId,
+        items: resolvedItems,
+        discountType,
+        discountPercentage: Number(discountPercentage) || undefined,
+        discount: discountNum,
+        serviceTotal: serviceNum,
+        shippingFee: shippingNum,
+        notes: notes.trim(),
+        expiresInDays: validDaysNum,
+      });
+      
+      updateQuote(quote.id, {
+        customerId,
+        items: resolvedItems,
+        discountType,
+        discountPercentage: Number(discountPercentage) || undefined,
+        discount: discountNum,
+        serviceTotal: serviceNum,
+        shippingFee: shippingNum,
+        notes: notes.trim(),
+        expiresInDays: validDaysNum,
+      });
+      
+      // Wait a moment for the state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast.success(`Quote ${quote.id} saved successfully`);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Save error:", error);
+      toast.error(`Failed to save quote: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const stepBase = "label-tech inline-flex items-center gap-1.5";
@@ -589,10 +631,13 @@ export function QuoteEditorDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button disabled={!canContinue} onClick={() => setStep(2)}>
+              <Button variant="secondary" onClick={saveOnly} disabled={!canContinue || isSaving}>
+                {isSaving ? "Saving..." : "Save Only"}
+              </Button>
+              <Button disabled={!canContinue || isSaving} onClick={() => setStep(2)}>
                 Continue to message <ArrowRight className="size-3.5" />
               </Button>
             </DialogFooter>
@@ -639,13 +684,16 @@ export function QuoteEditorDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep(1)}>
+              <Button variant="outline" onClick={() => setStep(1)} disabled={isSaving}>
                 <ArrowLeft className="size-3.5" /> Back to quotation
               </Button>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button disabled={!canSend} onClick={() => setStep(3)}>
+              <Button variant="secondary" onClick={saveOnly} disabled={!canContinue || isSaving}>
+                {isSaving ? "Saving..." : "Save Only"}
+              </Button>
+              <Button disabled={!canSend || isSaving} onClick={() => setStep(3)}>
                 Preview PDF <ArrowRight className="size-3.5" />
               </Button>
             </DialogFooter>
@@ -684,13 +732,16 @@ export function QuoteEditorDialog({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStep(2)}>
+              <Button variant="outline" onClick={() => setStep(2)} disabled={isSaving}>
                 <ArrowLeft className="size-3.5" /> Back to message
               </Button>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button disabled={!canSend} onClick={submit}>
+              <Button variant="secondary" onClick={saveOnly} disabled={!canContinue || isSaving}>
+                {isSaving ? "Saving..." : "Save Only"}
+              </Button>
+              <Button disabled={!canSend || isSaving} onClick={submit}>
                 <Send className="size-3.5" /> Send to customer
               </Button>
             </DialogFooter>

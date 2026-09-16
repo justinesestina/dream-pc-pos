@@ -7,6 +7,8 @@ import { Toolbar, SearchInput, FilterSelect, Segmented, ResultCount } from "@/co
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pencil, Check, X } from "lucide-react";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { CategoryFormDialog } from "@/components/products/category-form-dialog";
@@ -38,7 +40,7 @@ function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_st
 }
 
 function ProductsIndexPage() {
-  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct } = useStore();
+  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct, updateProduct, updateProductStock } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const { openNew } = Route.useSearch();
@@ -50,6 +52,8 @@ function ProductsIndexPage() {
   const [stock, setStock] = useState<StockFilter>("all");
   const [dialog, setDialog] = useState<{ open: boolean; product?: Product }>({ open: false });
   const [catDialog, setCatDialog] = useState<{ open: boolean; category?: Category }>({ open: false });
+  const [editingPrice, setEditingPrice] = useState<{ productId: string; value: string } | null>(null);
+  const [editingStock, setEditingStock] = useState<{ productId: string; value: string } | null>(null);
 
   useEffect(() => {
     if (openNew) setDialog((d) => ({ ...d, open: true }));
@@ -145,7 +149,58 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => <span className="mono tabular-nums">{money(p.price)}</span>,
+      cell: (p) => {
+        if (editingPrice?.productId === p.id) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editingPrice.value}
+                onChange={(e) => setEditingPrice({ ...editingPrice, value: e.target.value })}
+                onKeyDown={(e) => handlePriceKeyDown(e, p.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 w-24 text-xs text-right"
+                autoFocus
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePriceSave(p.id);
+                }}
+              >
+                <Check className="size-3.5 text-green-500" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePriceCancel();
+                }}
+              >
+                <X className="size-3.5 text-red-500" />
+              </Button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center justify-end gap-1 group">
+            <span
+              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
+              onClick={(e) => handlePriceEdit(p.id, p.price, e)}
+            >
+              {money(p.price)}
+              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+            </span>
+          </div>
+        );
+      },
       sortValue: (p) => p.price,
       align: "right",
     },
@@ -171,9 +226,56 @@ function ProductsIndexPage() {
         const inv = invFor(p.id);
         const onHand = inv?.onHand ?? 0;
         const status = stockStatus(onHand, inv?.reorderPoint ?? 0);
+        
+        if (editingStock?.productId === p.id) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={editingStock.value}
+                onChange={(e) => setEditingStock({ ...editingStock, value: e.target.value })}
+                onKeyDown={(e) => handleStockKeyDown(e, p.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 w-20 text-xs text-right"
+                autoFocus
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStockSave(p.id);
+                }}
+              >
+                <Check className="size-3.5 text-green-500" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStockCancel();
+                }}
+              >
+                <X className="size-3.5 text-red-500" />
+              </Button>
+            </div>
+          );
+        }
+        
         return (
-          <div className="flex items-center justify-end gap-2">
-            <span className="mono tabular-nums">{onHand === Infinity ? "∞" : num(onHand)}</span>
+          <div className="flex items-center justify-end gap-1 group">
+            <span
+              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
+              onClick={(e) => handleStockEdit(p.id, onHand === Infinity ? 0 : onHand, e)}
+            >
+              {onHand === Infinity ? "∞" : num(onHand)}
+              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+            </span>
             {status !== "in_stock" && <StatusBadge status={status} />}
           </div>
         );
@@ -246,7 +348,58 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => <span className="mono tabular-nums">{money(p.price)}</span>,
+      cell: (p) => {
+        if (editingPrice?.productId === p.id) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editingPrice.value}
+                onChange={(e) => setEditingPrice({ ...editingPrice, value: e.target.value })}
+                onKeyDown={(e) => handlePriceKeyDown(e, p.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="h-7 w-24 text-xs text-right"
+                autoFocus
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePriceSave(p.id);
+                }}
+              >
+                <Check className="size-3.5 text-green-500" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePriceCancel();
+                }}
+              >
+                <X className="size-3.5 text-red-500" />
+              </Button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center justify-end gap-1 group">
+            <span
+              className="mono tabular-nums cursor-pointer hover:bg-muted/50 px-1 rounded flex items-center gap-1"
+              onClick={(e) => handlePriceEdit(p.id, p.price, e)}
+            >
+              {money(p.price)}
+              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+            </span>
+          </div>
+        );
+      },
       sortValue: (p) => p.price,
       align: "right",
     },
@@ -269,6 +422,58 @@ function ProductsIndexPage() {
   ];
 
   const categoryCount = (id: string) => products.filter((p) => p.categoryId === id).length;
+
+  const handlePriceEdit = (productId: string, currentValue: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingPrice({ productId, value: String(currentValue) });
+  };
+
+  const handlePriceSave = (productId: string) => {
+    if (!editingPrice || editingPrice.productId !== productId) return;
+    const newPrice = Number(editingPrice.value);
+    if (Number.isFinite(newPrice) && newPrice >= 0) {
+      updateProduct(productId, { price: newPrice });
+    }
+    setEditingPrice(null);
+  };
+
+  const handlePriceCancel = () => {
+    setEditingPrice(null);
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === "Enter") {
+      handlePriceSave(productId);
+    } else if (e.key === "Escape") {
+      handlePriceCancel();
+    }
+  };
+
+  const handleStockEdit = (productId: string, currentValue: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingStock({ productId, value: String(currentValue) });
+  };
+
+  const handleStockSave = (productId: string) => {
+    if (!editingStock || editingStock.productId !== productId) return;
+    const newStock = Number(editingStock.value);
+    if (Number.isFinite(newStock) && newStock >= 0) {
+      updateProductStock(productId, newStock);
+    }
+    setEditingStock(null);
+  };
+
+  const handleStockCancel = () => {
+    setEditingStock(null);
+  };
+
+  const handleStockKeyDown = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === "Enter") {
+      handleStockSave(productId);
+    } else if (e.key === "Escape") {
+      handleStockCancel();
+    }
+  };
 
   return (
     <div className="space-y-5 p-4 sm:p-6">

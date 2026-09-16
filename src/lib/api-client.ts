@@ -118,6 +118,7 @@ export async function loginToBackend(username: string, appPassword: string): Pro
   if (res.ok && res.data) {
     localStorage.setItem("dpc-nexus-auth-token", res.data.token);
     localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username, appPassword }));
+    localStorage.setItem("dpc-nexus-user", JSON.stringify(res.data.user));
     return { ok: true, user: res.data.user, token: res.data.token };
   }
   
@@ -146,6 +147,11 @@ export async function createBackendProduct(product: Partial<Product>): Promise<P
 
 export async function updateBackendProduct(id: string, product: Partial<Product>): Promise<Product | null> {
   const res = await apiRequest<Product>(`/api/v1/products/${id}`, "PUT", product);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendProductStock(id: string, stockQuantity: number): Promise<Product | null> {
+  const res = await apiRequest<Product>(`/api/v1/products/${id}/stock`, "PUT", { stock_quantity: stockQuantity });
   return res.ok ? (res.data || null) : null;
 }
 
@@ -181,6 +187,11 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
 
 export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>("/api/v1/quotes", "POST", quote);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendQuote(id: string, quote: Partial<Quote>): Promise<Quote | null> {
+  const res = await apiRequest<Quote>(`/api/v1/quotes/${id}`, "PUT", quote);
   return res.ok ? (res.data || null) : null;
 }
 

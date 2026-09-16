@@ -81,8 +81,25 @@ function LoginPage() {
   const user = selected ? demoUsers.find((u) => u.role === selected) : undefined;
 
   useEffect(() => {
-    if (!store.hydrated || !store.user) return;
-    void navigate({ to: homeFor(store.user.role), replace: true });
+    if (!store.hydrated) return;
+    
+    // Check if user is already logged in
+    if (store.user) {
+      void navigate({ to: homeFor(store.user.role), replace: true });
+      return;
+    }
+    
+    // Try to restore user session from localStorage
+    try {
+      const savedUser = localStorage.getItem("dpc-nexus-user");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        store.signInWithUser(user);
+        return;
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
   }, [store.hydrated, store.user, navigate]);
 
   const selectRole = (role: Role) => {
