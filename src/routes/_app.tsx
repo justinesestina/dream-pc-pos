@@ -21,7 +21,11 @@ function AppLayout() {
   // DEMO auth gate — UI-level only, not security.
   useEffect(() => {
     if (store.hydrated && !store.user) void navigate({ to: "/", replace: true });
-  }, [store.hydrated, store.user, navigate]);
+    else if (store.hydrated && store.user) {
+      // Sync with backend on startup
+      store.syncWithBackend();
+    }
+  }, [store.hydrated, store.user, navigate, store.syncWithBackend]);
 
   // Per-role access control: block direct URLs to sections the role cannot use.
   useEffect(() => {

@@ -74,7 +74,7 @@ export async function authenticateWordPress(
 
   let res: Response;
   try {
-    res = await fetch(`${url}/wp-json/wp/v2/users/me`, {
+    res = await fetch(`${url}/wp-json/wp/v2/users/me?context=edit`, {
       headers: { Authorization: `Basic ${btoa(`${login}:${appPassword}`)}` },
     });
   } catch {

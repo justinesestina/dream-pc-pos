@@ -20,6 +20,16 @@ import {
 } from "react";
 import * as demo from "./demo-data";
 import { emitBuildStatus } from "./build-sync";
+import {
+  fetchBackendProducts,
+  fetchBackendOrders,
+  fetchBackendCustomers,
+  fetchBackendQuotes,
+  createBackendProduct,
+  updateBackendProduct,
+  createBackendOrder,
+  createBackendQuote
+} from "./api-client";
 import { VAT_RATE } from "./format";
 import type {
   AppNotification,
@@ -307,6 +317,7 @@ interface StoreValue extends Snapshot {
     customers: Customer[];
     orders: Order[];
   }) => void;
+  syncWithBackend: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -527,8 +538,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       signInWithUser: (u) => patch((s) => ({ ...s, user: u })),
       signOut: () => {
+        localStorage.removeItem("dpc-nexus-auth-token");
         localStorage.removeItem("dpc-nexus-wp-credentials");
         patch((s) => ({ ...s, user: null }));
+      },
+      
+      syncWithBackend: async () => {
+        try {
+          const [products, orders, customers, quotes] = await Promise.all([
+            fetchBackendProducts(),
+            fetchBackendOrders(),
+            fetchBackendCustomers(),
+            fetchBackendQuotes()
+          ]);
+          patch((s) => ({
+            ...s,
+            products: products.length > 0 ? products : s.products,
+            orders: orders.length > 0 ? orders : s.orders,
+            customers: customers.length > 0 ? customers : s.customers,
+            quotes: quotes.length > 0 ? quotes : s.quotes,
+          }));
+        } catch (e) {
+          console.error("Failed to sync with backend", e);
+        }
       },
 
       productById,
@@ -726,6 +758,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
           auditLogs: log(s, `completed order ${id}`, id),
         }));
+        
+        // Fire-and-forget background sync
+        createBackendOrder(newOrder).catch(e => console.error("Failed to create order in backend", e));
+        
         return newOrder;
       },
 
@@ -815,6 +851,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               ],
           auditLogs: log(s, `created product ${product.name} (${sku})`, id),
         }));
+        // Fire-and-forget background sync
+        createBackendProduct(product).catch(e => console.error("Failed to create product in backend", e));
         return { ok: true, product };
       },
 
@@ -864,6 +902,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             auditLogs: log(s, `updated product ${productId} (${sku})`, productId),
           };
         });
+        // Fire-and-forget background sync
+        const current = productById(productId);
+        if (current) {
+          updateBackendProduct(productId, current).catch(e => console.error("Failed to update product in backend", e));
+        }
         return { ok: true };
       },
 
@@ -1006,6 +1049,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           counters: { ...s.counters, quote: s.counters.quote + 1 },
           auditLogs: log(s, `created quote ${id}`, id),
         }));
+        
+        // Fire-and-forget background sync
+        createBackendQuote(quote).catch(e => console.error("Failed to create quote in backend", e));
+        
         return quote;
       },
 

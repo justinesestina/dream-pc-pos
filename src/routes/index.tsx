@@ -109,14 +109,14 @@ function LoginPage() {
     e.preventDefault();
     setError(null);
     setPending(true);
-    const res = await authenticateWordPress(wpUser, wpPassword);
+    const { loginToBackend } = await import("@/lib/api-client");
+    const res = await loginToBackend(wpUser, wpPassword);
     setPending(false);
     if (!res.ok || !res.user) {
       setError(res.error ?? "Sign in failed.");
       return;
     }
-    // Save WP credentials for backend media API uploads (since the backend needs them to upload to WP)
-    localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username: wpUser, appPassword: wpPassword }));
+    // Token and WP credentials are now automatically saved in api-client.ts loginToBackend
     store.signInWithUser(res.user);
   };
 

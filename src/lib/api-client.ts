@@ -1,8 +1,9 @@
+import type { User, Product, Order, Quote, Category, Customer } from "./types";
+
 /**
  * DPC NEXUS — Frontend API client for the backend service.
  *
  * Handles authenticated requests to the Hono backend (backend/src/server.ts).
- * Currently supports: media upload (image → WP media library → permanent URL).
  */
 
 /** Base URL of the backend API. Defaults to localhost:8787 in dev. */
@@ -11,10 +12,10 @@ const API_BASE =
   "http://localhost:8787";
 
 // ---------------------------------------------------------------------------
-// Auth helpers — pull JWT token from localStorage (set at login)
+// Auth helpers
 // ---------------------------------------------------------------------------
 
-function getAuthToken(): string | null {
+export function getAuthToken(): string | null {
   try {
     const raw = localStorage.getItem("dpc-nexus-auth-token");
     return raw || null;
@@ -35,6 +36,129 @@ function getWpCredentials(): { username: string; appPassword: string } | null {
   }
 }
 
+async function apiRequest<T>(
+  path: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+  body?: unknown
+): Promise<{ ok: boolean; data?: T; error?: string }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch {
+      // Ignored
+    }
+
+    if (!res.ok) {
+      const errMsg = json?.error?.message || json?.message || `HTTP ${res.status}`;
+      return { ok: false, error: errMsg };
+    }
+
+    return { ok: true, data: json?.data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network error";
+    return {
+      ok: false,
+      error: `Could not reach backend. Is it running? (${message})`,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+export interface LoginResult {
+  ok: boolean;
+  user?: User;
+  token?: string;
+  error?: string;
+}
+
+export async function loginToBackend(username: string, appPassword: string): Promise<LoginResult> {
+  const res = await apiRequest<{ token: string; user: User }>("/api/v1/auth/login", "POST", {
+    username,
+    appPassword,
+  });
+  
+  if (res.ok && res.data) {
+    localStorage.setItem("dpc-nexus-auth-token", res.data.token);
+    localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username, appPassword }));
+    return { ok: true, user: res.data.user, token: res.data.token };
+  }
+  
+  return { ok: false, error: res.error };
+}
+
+// ---------------------------------------------------------------------------
+// Core Data CRUD
+// ---------------------------------------------------------------------------
+
+export async function fetchBackendProducts(): Promise<Product[]> {
+  const res = await apiRequest<Product[]>("/api/v1/products");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendProduct(product: Partial<Product>): Promise<Product | null> {
+  const res = await apiRequest<Product>("/api/v1/products", "POST", product);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendProduct(id: string, product: Partial<Product>): Promise<Product | null> {
+  const res = await apiRequest<Product>(`/api/v1/products/${id}`, "PUT", product);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function deleteBackendProduct(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/products/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function fetchBackendCategories(): Promise<Category[]> {
+  const res = await apiRequest<Category[]>("/api/v1/categories");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchBackendCustomers(): Promise<Customer[]> {
+  const res = await apiRequest<Customer[]>("/api/v1/customers");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchBackendOrders(): Promise<Order[]> {
+  const res = await apiRequest<Order[]>("/api/v1/orders");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendOrder(order: Partial<Order>): Promise<Order | null> {
+  const res = await apiRequest<Order>("/api/v1/orders", "POST", order);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function fetchBackendQuotes(): Promise<Quote[]> {
+  const res = await apiRequest<Quote[]>("/api/v1/quotes");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote | null> {
+  const res = await apiRequest<Quote>("/api/v1/quotes", "POST", quote);
+  return res.ok ? (res.data || null) : null;
+}
+
+
 // ---------------------------------------------------------------------------
 // Media upload
 // ---------------------------------------------------------------------------
@@ -46,15 +170,6 @@ export interface MediaUploadResult {
   error?: string;
 }
 
-/**
- * Upload a local image file to the backend, which forwards it to the
- * WordPress media library. Returns the permanent public URL.
- *
- * Flow: Browser file → base64 → POST /api/v1/media → WP media library → URL
- *
- * @param file - The File object from an <input type="file">
- * @returns The permanent WordPress media URL or an error
- */
 export async function uploadImageToBackend(file: File): Promise<MediaUploadResult> {
   // Validate file
   const MAX_SIZE = 5 * 1024 * 1024; // 5 MB frontend limit
@@ -78,55 +193,22 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
     reader.readAsDataURL(file);
   });
 
-  // Build request body
   const body: Record<string, string> = {
     filename: file.name,
     data: dataUrl,
   };
 
-  // Attach WP credentials if available (for media upload auth)
   const wpCreds = getWpCredentials();
   if (wpCreds) {
     body.username = wpCreds.username;
     body.appPassword = wpCreds.appPassword;
   }
 
-  // Build headers
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const token = getAuthToken();
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  const res = await apiRequest<{ url: string; mediaId: string }>("/api/v1/media", "POST", body);
+  
+  if (res.ok && res.data) {
+    return { ok: true, url: res.data.url, mediaId: res.data.mediaId };
   }
-
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/media`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      const errMsg =
-        json?.error?.message || json?.message || `Upload failed (HTTP ${res.status})`;
-      return { ok: false, error: errMsg };
-    }
-
-    const url = json?.data?.url;
-    const mediaId = json?.data?.mediaId;
-    if (!url) {
-      return { ok: false, error: "Backend returned no image URL" };
-    }
-
-    return { ok: true, url, mediaId };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Network error";
-    return {
-      ok: false,
-      error: `Could not reach the backend server. Make sure the backend is running. (${message})`,
-    };
-  }
+  
+  return { ok: false, error: res.error };
 }

@@ -47,7 +47,7 @@ export async function verifyWordPressUser(
 ): Promise<{ wpUser: WpUser; role: Role }> {
   if (!config.wp.url) throw new WordpressAuthError("WordPress site URL is not configured");
 
-  const url = `${config.wp.url}/wp-json/wp/v2/users/me`;
+  const url = `${config.wp.url}/wp-json/wp/v2/users/me?context=edit`;
   // The application password is the "password" side of HTTP Basic auth against
   // wp/users/me. The username part is the real WP login.
   const credentials = Buffer.from(`${username}:${appPassword}`).toString("base64");

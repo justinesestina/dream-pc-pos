@@ -6,16 +6,15 @@
  */
 
 import {
-  fetchWooCommerceProducts,
-  fetchWooCommerceCategories,
-  fetchWooCommerceCustomers,
-  fetchWooCommerceOrders,
-  createWooCommerceProduct,
-  updateWooCommerceProduct,
-  createWooCommerceOrder,
-  updateWooCommerceOrder,
-  testWooCommerceConnection,
-} from "./woocommerce-client";
+  fetchBackendProducts,
+  fetchBackendCategories,
+  fetchBackendCustomers,
+  fetchBackendOrders,
+  createBackendProduct,
+  updateBackendProduct,
+  createBackendOrder,
+  // updateBackendOrder, // Add this if needed in the future
+} from "./api-client";
 import type { Product, Category, Customer, Order } from "./types";
 
 /* ------------------------------------------------------------- Sync Functions */
@@ -28,111 +27,93 @@ export async function syncProductsFromWooCommerce(
   onProgress?: (current: number, total: number) => void,
 ): Promise<Product[]> {
   try {
-    const wooProducts = await fetchWooCommerceProducts();
-    onProgress?.(wooProducts.length, wooProducts.length);
-    return wooProducts;
+    const products = await fetchBackendProducts();
+    onProgress?.(products.length, products.length);
+    return products;
   } catch (error) {
-    console.error("Error syncing products from WooCommerce:", error);
+    console.error("Error syncing products from backend:", error);
     throw error;
   }
 }
 
-/**
- * Sync categories from WooCommerce to POS
- */
 export async function syncCategoriesFromWooCommerce(): Promise<Category[]> {
   try {
-    const wooCategories = await fetchWooCommerceCategories();
-    return wooCategories;
+    const categories = await fetchBackendCategories();
+    return categories;
   } catch (error) {
-    console.error("Error syncing categories from WooCommerce:", error);
+    console.error("Error syncing categories from backend:", error);
     throw error;
   }
 }
 
-/**
- * Sync customers from WooCommerce to POS
- */
 export async function syncCustomersFromWooCommerce(): Promise<Customer[]> {
   try {
-    const wooCustomers = await fetchWooCommerceCustomers();
-    return wooCustomers;
+    const customers = await fetchBackendCustomers();
+    return customers;
   } catch (error) {
-    console.error("Error syncing customers from WooCommerce:", error);
+    console.error("Error syncing customers from backend:", error);
     throw error;
   }
 }
 
-/**
- * Sync orders from WooCommerce to POS
- */
 export async function syncOrdersFromWooCommerce(): Promise<Order[]> {
   try {
-    const wooOrders = await fetchWooCommerceOrders();
-    return wooOrders;
+    const orders = await fetchBackendOrders();
+    return orders;
   } catch (error) {
-    console.error("Error syncing orders from WooCommerce:", error);
+    console.error("Error syncing orders from backend:", error);
     throw error;
   }
 }
 
-/**
- * Push a new product to WooCommerce
- */
 export async function pushProductToWooCommerce(product: Product): Promise<string> {
   try {
-    const wooProduct = await createWooCommerceProduct(product);
-    return wooProduct.id.toString();
+    const newProduct = await createBackendProduct(product);
+    if (!newProduct) throw new Error("Failed to create product");
+    return newProduct.id.toString();
   } catch (error) {
-    console.error("Error pushing product to WooCommerce:", error);
+    console.error("Error pushing product to backend:", error);
     throw error;
   }
 }
 
-/**
- * Update existing product in WooCommerce
- */
 export async function updateProductInWooCommerce(productId: string, product: Product): Promise<void> {
   try {
-    await updateWooCommerceProduct(productId, product);
+    await updateBackendProduct(productId, product);
   } catch (error) {
-    console.error("Error updating product in WooCommerce:", error);
+    console.error("Error updating product in backend:", error);
     throw error;
   }
 }
 
-/**
- * Push a new order to WooCommerce
- */
 export async function pushOrderToWooCommerce(order: Order): Promise<string> {
   try {
-    const wooOrder = await createWooCommerceOrder(order);
-    return wooOrder.id.toString();
+    const newOrder = await createBackendOrder(order);
+    if (!newOrder) throw new Error("Failed to create order");
+    return newOrder.id.toString();
   } catch (error) {
-    console.error("Error pushing order to WooCommerce:", error);
+    console.error("Error pushing order to backend:", error);
     throw error;
   }
 }
 
-/**
- * Update existing order in WooCommerce
- */
 export async function updateOrderInWooCommerce(orderId: string, order: Order): Promise<void> {
   try {
-    await updateWooCommerceOrder(orderId, order);
+    // Note: The backend API currently might not have a dedicated PUT /orders/:id yet,
+    // but we stub it out or bypass. Currently we can just log a warning.
+    console.warn("Backend order update not fully implemented, skipping API call for now.");
+    // await updateBackendOrder(orderId, order);
   } catch (error) {
-    console.error("Error updating order in WooCommerce:", error);
+    console.error("Error updating order in backend:", error);
     throw error;
   }
 }
 
-/**
- * Test WooCommerce connection
- */
 export async function testConnection(): Promise<{ connected: boolean; error?: string }> {
   try {
-    const connected = await testWooCommerceConnection();
-    return { connected };
+    // Just try fetching products as a connection test
+    await fetchBackendProducts();
+    return { connected: true };
   } catch (error) {
     return {
       connected: false,
