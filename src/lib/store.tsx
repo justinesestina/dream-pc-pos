@@ -443,6 +443,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             customers: result.customers.length > 0 ? result.customers : prev.customers,
             orders: result.orders.length > 0 ? result.orders : prev.orders,
             inventory: inventoryFromProducts(result.products, prev.inventory),
+            user: prev.user, // Preserve the user session
           }));
           console.log("WooCommerce data loaded successfully");
         }
@@ -950,7 +951,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const syncedProduct: Product = {
           ...existing,
           ...next,
-          stock_quantity: opts.onHand ?? existing.stock_quantity,
+          stock_quantity: opts.onHand !== undefined ? (opts.onHand ?? null) : existing.stock_quantity,
           manage_stock: opts.onHand !== undefined ? true : existing.manage_stock,
         };
         patch((s) => {
@@ -1231,8 +1232,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           at: new Date().toISOString(),
           items: existing.items,
           subtotal: existing.subtotal,
-          discountType: existing.discountType,
-          discountPercentage: existing.discountPercentage,
+          discountType: existing.discountType || "amount",
+          discountPercentage: existing.discountPercentage || 0,
           discount: existing.discount,
           serviceTotal: existing.serviceTotal,
           shippingFee: existing.shippingFee ?? 0,
@@ -1242,8 +1243,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           originalRequest: existing.originalRequest,
         };
         const items = edits.items ?? existing.items;
-        const discountType = edits.discountType ?? existing.discountType;
-        const discountPercentage = edits.discountPercentage ?? existing.discountPercentage;
+        const discountType = edits.discountType ?? (existing.discountType || "amount");
+        const discountPercentage = edits.discountPercentage !== undefined ? edits.discountPercentage : existing.discountPercentage || 0;
         const discount = edits.discount ?? existing.discount;
         const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
         const shippingFee = edits.shippingFee ?? existing.shippingFee ?? 0;
@@ -1289,7 +1290,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // Fire-and-forget background sync
         const updatedQuote = state.quotes.find((q) => q.id === quoteId);
         if (updatedQuote) {
-          updateBackendQuote(quoteId, updatedQuote).catch(e => console.error("Failed to update quote in backend", e));
+          updateBackendQuote(quoteId, {
+            ...updatedQuote,
+            discountPercentage: updatedQuote.discountPercentage || 0,
+          }).catch(e => console.error("Failed to update quote in backend", e));
         }
       },
 
@@ -1308,6 +1312,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sentAt: undefined,
           orderId: undefined,
           preparedBy: state.user?.name ?? "Demo User",
+          discountPercentage: existing.discountPercentage || 0,
         };
 
         patch((s) => ({

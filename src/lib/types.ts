@@ -207,7 +207,7 @@ export interface Quote {
   status: QuoteStatus;
   items: QuoteItem[];
   discountType?: "amount" | "percentage";
-  discountPercentage?: number;
+  discountPercentage: number;
   discount: number;
   serviceTotal: number;
   shippingFee: number;

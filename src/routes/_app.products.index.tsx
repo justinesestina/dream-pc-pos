@@ -196,7 +196,7 @@ function ProductsIndexPage() {
               onClick={(e) => handlePriceEdit(p.id, p.price, e)}
             >
               {money(p.price)}
-              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              <Pencil className="size-3 text-muted-foreground/70" />
             </span>
           </div>
         );
@@ -274,7 +274,7 @@ function ProductsIndexPage() {
               onClick={(e) => handleStockEdit(p.id, onHand === Infinity ? 0 : onHand, e)}
             >
               {onHand === Infinity ? "∞" : num(onHand)}
-              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              <Pencil className="size-3 text-muted-foreground/70" />
             </span>
             {status !== "in_stock" && <StatusBadge status={status} />}
           </div>
@@ -395,7 +395,7 @@ function ProductsIndexPage() {
               onClick={(e) => handlePriceEdit(p.id, p.price, e)}
             >
               {money(p.price)}
-              <Pencil className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+              <Pencil className="size-3 text-muted-foreground/70" />
             </span>
           </div>
         );

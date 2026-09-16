@@ -2,14 +2,14 @@
   "buildCommand": "cd backend && npm run build",
   "outputDirectory": "backend/dist",
   "functions": {
-    "api/server.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/server"
+      "source": "/(.*)",
+      "destination": "/api/index"
     }
   ],
   "headers": [

@@ -74,7 +74,7 @@ async function apiRequest<T>(
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : null,
       redirect: "follow", // Follow redirects
     });
     
@@ -126,7 +126,7 @@ export async function loginToBackend(username: string, appPassword: string): Pro
     return { ok: true, user: res.data.user, token: res.data.token };
   }
   
-  return { ok: false, error: res.error };
+  return { ok: false, error: res.error || "Login failed" };
 }
 
 // ---------------------------------------------------------------------------
@@ -241,8 +241,8 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
 
   const wpCreds = getWpCredentials();
   if (wpCreds) {
-    body.username = wpCreds.username;
-    body.appPassword = wpCreds.appPassword;
+    body['username'] = wpCreds.username;
+    body['appPassword'] = wpCreds.appPassword;
   }
 
   const res = await apiRequest<{ url: string; mediaId: string }>("/api/v1/media", "POST", body);
@@ -251,5 +251,5 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
     return { ok: true, url: res.data.url, mediaId: res.data.mediaId };
   }
   
-  return { ok: false, error: res.error };
+  return { ok: false, error: res.error || "Upload failed" };
 }
