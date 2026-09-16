@@ -203,6 +203,7 @@ function ProductsIndexPage() {
       },
       sortValue: (p) => p.price,
       align: "right",
+      className: "min-w-[10rem]",
     },
     {
       key: "margin",
@@ -220,13 +221,31 @@ function ProductsIndexPage() {
       align: "right",
     },
     {
-      key: "onhand",
-      header: "On hand",
+      key: "status",
+      header: "Status",
+      cell: (p) => {
+        const inv = invFor(p.id);
+        const status = stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
+        return (
+          <div className="flex justify-end">
+            <StatusBadge status={status} />
+          </div>
+        );
+      },
+      sortValue: (p) => {
+        const inv = invFor(p.id);
+        return stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
+      },
+      align: "right",
+      className: "w-28",
+    },
+    {
+      key: "stock",
+      header: "Stock",
       cell: (p) => {
         const inv = invFor(p.id);
         const onHand = inv?.onHand ?? 0;
-        const status = stockStatus(onHand, inv?.reorderPoint ?? 0);
-        
+
         if (editingStock?.productId === p.id) {
           return (
             <div className="flex items-center justify-end gap-1">
@@ -266,7 +285,7 @@ function ProductsIndexPage() {
             </div>
           );
         }
-        
+
         return (
           <div className="flex items-center justify-end gap-1 group">
             <span
@@ -276,12 +295,12 @@ function ProductsIndexPage() {
               {onHand === Infinity ? "∞" : num(onHand)}
               <Pencil className="size-3 text-muted-foreground/70" />
             </span>
-            {status !== "in_stock" && <StatusBadge status={status} />}
           </div>
         );
       },
       sortValue: (p) => invFor(p.id)?.onHand ?? 0,
       align: "right",
+      className: "min-w-[10rem]",
     },
     {
       key: "location",
@@ -402,6 +421,7 @@ function ProductsIndexPage() {
       },
       sortValue: (p) => p.price,
       align: "right",
+      className: "min-w-[10rem]",
     },
     {
       key: "actions",
