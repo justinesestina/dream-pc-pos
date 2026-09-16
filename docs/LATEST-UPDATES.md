@@ -4,11 +4,13 @@ Here is a simple summary of all the new features and improvements we added today
 
 ## Products Module
 
-### 1. Product Image & Local Upload Support
-- **What it does:** You can now add an **Image URL** or **Upload a Local File Image** directly from your computer when creating or editing a product. Enhanced image containers with `object-contain` framing and crisp white background padding ensure that the full product image is completely visible without cropping in the Product Form, Products Table, and POS Cashier Screen.
-- **Why it is useful:** It allows adding images using web links or direct file uploads from your local storage, making the product catalog much more visual and easier to navigate. Staff can quickly identify products by looking at their full pictures instead of just reading the names and SKUs.
+### 1. WordPress Media Library Image Upload Integration
+- **What it does:** The Product Form image uploader is now fully connected to the WordPress Media Library! When you upload a local image, the frontend seamlessly sends it to the backend `POST /api/v1/media` endpoint, which securely forwards it to your WooCommerce/WordPress site using your logged-in WP App Password.
+- **Why it is useful:** Instead of just saving a heavy base64 string locally in the browser, the images are actually uploaded to your live WordPress media server, which returns a permanent, lightweight URL (e.g. `https://dreampcbuild.com/wp-content/uploads/...`). If the backend isn't running or the internet goes down, it will gracefully fall back to storing the image locally so your staff can keep working.
 
----
+### 2. Enhanced Image Display Styling
+- **What it does:** We added enhanced image containers with `object-contain` framing and crisp white background padding to ensure that the full product image is completely visible without cropping in the Product Form, Products Table, and POS Cashier Screen.
+- **Why it is useful:** Prevents cropping of product images, keeping the product catalog visual and easier to navigate.
 
 ## Quotations Module
 
