@@ -34,38 +34,21 @@ export function wpSiteUrl(): string {
  * Prefers explicit `nexus_*` roles if present, then falls back to common
  * built-in roles so DWON admin/shop-manager accounts can sign in immediately.
  */
-export function mapWpRolesToPosRole(roles: string[] | undefined): Role | null {
-  if (!roles || roles.length === 0) return null;
-  const normalized = roles.map((r) => r.toLowerCase().replace(/[\s-]+/g, "_"));
+export function mapWpRolesToPosRole(roles: string[] | undefined): Role {
+  const r = new Set((roles || []).map((x) => x.toLowerCase().replace(/[\s-]+/g, "_")));
 
-  const custom: Record<string, Role> = {
-    nexus_owner: "owner",
-    nexus_admin: "admin",
-    nexus_cashier: "cashier",
-    nexus_inventory: "inventory",
-    nexus_staff: "inventory",
-    dpc_owner: "owner",
-    dpc_admin: "admin",
-    dpc_cashier: "cashier",
-    dpc_inventory: "inventory",
-    dpc_staff: "inventory",
-  };
-  for (const r of normalized) {
-    const hit = custom[r];
-    if (hit) return hit;
+  if (r.has("administrator") || r.has("nexus_owner") || r.has("dpc_owner")) return "owner";
+  if (r.has("shop_manager") || r.has("nexus_admin") || r.has("dpc_admin")) return "admin";
+  if (r.has("nexus_cashier") || r.has("dpc_cashier")) return "cashier";
+  if (
+    r.has("editor") ||
+    r.has("nexus_inventory") ||
+    r.has("dpc_inventory") ||
+    r.has("nexus_staff")
+  ) {
+    return "inventory";
   }
-
-  const builtin: Record<string, Role> = {
-    administrator: "owner",
-    shop_manager: "admin",
-    editor: "inventory",
-  };
-  for (const r of normalized) {
-    const hit = builtin[r];
-    if (hit) return hit;
-  }
-
-  return null;
+  return "cashier"; // least-privilege default for arbitrary WP users
 }
 
 /**
@@ -130,12 +113,6 @@ export async function authenticateWordPress(
   }
 
   const role = mapWpRolesToPosRole(raw.roles);
-  if (!role) {
-    return {
-      ok: false,
-      error: `No POS role is mapped for WordPress role(s): ${raw.roles?.join(", ") ?? "none"}. Ask an admin to assign administrator, shop_manager, or a nexus_* role.`,
-    };
-  }
 
   const name = (raw.name || raw.slug || login).trim().replace(/\s+/g, " ") || login;
   const email = raw.email || `${login}@wp.local`;
