@@ -66,6 +66,8 @@ export interface Warehouse {
   createdAt: string;
   /** Derived totals returned by the warehouses list endpoint. */
   totalProducts?: number | undefined;
+  /** Derived: catalog products with zero quantity in this warehouse. */
+  outOfStock?: number | undefined;
   totalQuantity?: number | undefined;
   /** Derived: sum of (qty × cost) for products that carry a cost. */
   totalValue?: number | undefined;

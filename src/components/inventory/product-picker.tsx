@@ -29,6 +29,16 @@ function Thumb({ product, size = "size-7" }: { product: Product; size?: string }
   );
 }
 
+/** "12 in stock" / "Out of stock" / "∞" (unlimited) from the WooCommerce stock field. */
+function stockLabel(product: Product): { text: string; tone: string } {
+  const qty = product.stock_quantity;
+  if (qty === null || qty === undefined) {
+    return { text: "∞", tone: "text-muted-foreground" };
+  }
+  if (qty <= 0) return { text: "Out of stock", tone: "text-destructive" };
+  return { text: `${qty} in stock`, tone: "text-muted-foreground" };
+}
+
 /** Searchable product combobox — matches name, SKU or id while you type. */
 export function ProductPicker({
   products,
@@ -68,6 +78,9 @@ export function ProductPicker({
                   {selected.sku}
                 </span>
               )}
+              <span className={cn("shrink-0 text-[11px]", stockLabel(selected).tone)}>
+                {stockLabel(selected).text}
+              </span>
             </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -78,6 +91,7 @@ export function ProductPicker({
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
+        data-lenis-prevent
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command
@@ -89,7 +103,7 @@ export function ProductPicker({
         >
           <CommandInput placeholder="Type a name, SKU or id…" />
           <CommandEmpty>No product found.</CommandEmpty>
-          <CommandList className="max-h-64">
+          <CommandList className="max-h-64 overscroll-contain" data-lenis-prevent>
             {products.map((p) => (
               <CommandItem
                 key={p.id}
@@ -107,7 +121,10 @@ export function ProductPicker({
                     {p.sku || p.id}
                   </span>
                 </span>
-                {p.id === value && <Check className="ml-auto size-4 shrink-0" />}
+                <span className={cn("ml-auto shrink-0 text-[11px]", stockLabel(p).tone)}>
+                  {stockLabel(p).text}
+                </span>
+                {p.id === value && <Check className="size-4 shrink-0" />}
               </CommandItem>
             ))}
           </CommandList>

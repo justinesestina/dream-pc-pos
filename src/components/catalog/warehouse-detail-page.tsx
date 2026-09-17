@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
@@ -8,7 +8,6 @@ import {
   MinusCircle,
   Package,
   PackagePlus,
-  Pencil,
   Trash2,
   Warehouse as WarehouseIcon,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import { PageHeader } from "@/components/nexus/page-header";
 import { EmptyState, Panel } from "@/components/nexus/primitives";
 import { ResultCount, SearchInput, Segmented, Toolbar } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
+import { InlineNumberField } from "@/components/nexus/inline-number-field";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Section } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddStockDialog } from "@/components/inventory/add-stock-dialog";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
-import { EditStockDialog } from "@/components/inventory/edit-stock-dialog";
 import {
   deleteBackendWarehouse,
   fetchBackendWarehouse,
@@ -50,6 +49,8 @@ import {
   fetchWarehouseStock,
   fetchWarehouseTransfers,
   getLastApiError,
+  newIdempotencyKey,
+  setWarehouseStock,
   updateBackendWarehouse,
 } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -110,7 +111,8 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
   const [stockQ, setStockQ] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [editingRow, setEditingRow] = useState<WarehouseStockRow | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const inFlight = useRef<Set<string>>(new Set());
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -157,7 +159,13 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     const inStock = stock.filter((r) => r.quantity > 0);
     const quantity = stock.reduce((sum, r) => sum + r.quantity, 0);
     const totalValue = stock.reduce((sum, r) => sum + (r.value ?? 0), 0);
-    return { products: inStock.length, quantity, catalog: stock.length, totalValue };
+    return {
+      products: inStock.length,
+      outOfStock: stock.length - inStock.length,
+      quantity,
+      catalog: stock.length,
+      totalValue,
+    };
   }, [stock]);
 
   const filteredStock = useMemo(() => {
@@ -212,6 +220,44 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     navigate({ to: "/warehouses", search: { openNew: false } });
   };
 
+  const saveStockRow = async (row: WarehouseStockRow, field: "quantity" | "cost", next: number) => {
+    const cellKey = `${row.productId}:${field}`;
+    if (inFlight.current.has(cellKey)) return;
+    inFlight.current.add(cellKey);
+    const snapshot = stock;
+    const quantity = field === "quantity" ? next : row.quantity;
+    const cost = field === "cost" ? next : (row.cost ?? 0);
+    setSavingKey(cellKey);
+    setStock((rows) =>
+      rows.map((r) =>
+        r.productId === row.productId
+          ? {
+              ...r,
+              quantity,
+              available: quantity,
+              cost: cost > 0 ? cost : r.cost,
+              value: cost > 0 ? Math.round(cost * quantity * 100) / 100 : 0,
+              updatedAt: new Date().toISOString(),
+            }
+          : r,
+      ),
+    );
+    const res = await setWarehouseStock(warehouseId, row.productId, {
+      ...(field === "quantity" ? { quantity: next } : { costPrice: next }),
+      idempotencyKey: newIdempotencyKey(),
+    });
+    inFlight.current.delete(cellKey);
+    setSavingKey(null);
+    if (!res) {
+      setStock(snapshot);
+      toast.error("Could not update stock", {
+        description: getLastApiError() ?? "Please try again.",
+      });
+      return;
+    }
+    setStock((rows) => rows.map((r) => (r.productId === row.productId ? { ...r, ...res.row } : r)));
+  };
+
   const stockColumns: Column<WarehouseStockRow>[] = [
     {
       key: "image",
@@ -242,27 +288,32 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     {
       key: "quantity",
       header: "Quantity",
-      align: "right",
-      cell: (r) => <span className="mono tabular-nums">{num(r.quantity)}</span>,
-      sortValue: (r) => r.quantity,
-    },
-    {
-      key: "available",
-      header: "Available",
-      align: "right",
+      align: "center",
+      className: "min-w-[9rem]",
       cell: (r) => (
-        <span className="mono tabular-nums text-muted-foreground">{num(r.available)}</span>
+        <InlineNumberField
+          value={r.quantity}
+          width="w-20"
+          disabled={savingKey === `${r.productId}:quantity`}
+          onSave={(next) => void saveStockRow(r, "quantity", next)}
+        />
       ),
-      sortValue: (r) => r.available,
+      sortValue: (r) => r.quantity,
     },
     {
       key: "cost",
       header: "Unit Cost",
-      align: "right",
+      align: "center",
+      className: "min-w-[11rem]",
       cell: (r) => (
-        <span className="mono tabular-nums text-muted-foreground">
-          {r.cost ? money(r.cost) : "—"}
-        </span>
+        <InlineNumberField
+          value={r.cost ?? 0}
+          step={0.01}
+          width="w-24"
+          prefix="₱"
+          disabled={savingKey === `${r.productId}:cost`}
+          onSave={(next) => void saveStockRow(r, "cost", next)}
+        />
       ),
       sortValue: (r) => r.cost ?? 0,
     },
@@ -284,23 +335,6 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         </span>
       ),
       sortValue: (r) => r.updatedAt,
-    },
-    {
-      key: "actions",
-      header: "",
-      align: "right",
-      className: "w-20",
-      cell: (r) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 px-2"
-          onClick={() => setEditingRow(r)}
-          aria-label={`Edit stock for ${r.name}`}
-        >
-          <Pencil className="size-3.5" /> Edit
-        </Button>
-      ),
     },
   ];
 
@@ -409,7 +443,8 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         meta={
           warehouse ? (
             <>
-              <span className="label-tech">{num(totals.products)} products</span>
+              <span className="label-tech">{num(totals.products)} in stock</span>
+              <span className="label-tech">{num(totals.outOfStock)} out of stock</span>
               <span className="label-tech">{num(totals.quantity)} units on hand</span>
               <span className="label-tech">{num(totals.catalog)} in catalog</span>
               {totals.totalValue > 0 && (
@@ -688,19 +723,6 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         onOpenChange={setTransferOpen}
         initialFromId={warehouseId}
         onDone={() => setReloadKey((k) => k + 1)}
-      />
-
-      <EditStockDialog
-        open={Boolean(editingRow)}
-        onOpenChange={(v) => !v && setEditingRow(null)}
-        warehouseId={warehouseId}
-        productId={editingRow?.productId}
-        initialQuantity={editingRow?.quantity}
-        initialCost={editingRow?.cost}
-        onDone={() => {
-          setEditingRow(null);
-          setReloadKey((k) => k + 1);
-        }}
       />
     </div>
   );

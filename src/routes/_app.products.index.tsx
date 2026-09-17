@@ -13,14 +13,12 @@ import {
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Check } from "lucide-react";
+import { InlineNumberField } from "@/components/nexus/inline-number-field";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { CategoryFormDialog } from "@/components/products/category-form-dialog";
 import { ProductStockView } from "@/components/catalog/product-stock-view";
 import { money, num } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { Category, Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
@@ -53,68 +51,6 @@ function stockStatus(
   if (onHand <= 0) return "out_of_stock";
   if (onHand <= reorderPoint) return "low_stock";
   return "in_stock";
-}
-
-/**
- * Always-on inline numeric editor: input + save icon stay mounted in every
- * row state, so the cell's width never changes and the table never reflows.
- * The save icon only lights up (and becomes clickable) once the value differs
- * from what's saved.
- */
-function InlineNumberField({
-  value,
-  onSave,
-  step = 1,
-  width = "w-20",
-}: {
-  value: number;
-  onSave: (next: number) => void;
-  step?: number;
-  width?: string;
-}) {
-  const [draft, setDraft] = useState(String(value));
-
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-
-  const parsed = Number(draft);
-  const dirty = draft.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 && parsed !== value;
-
-  const save = () => {
-    if (!dirty) return;
-    onSave(parsed);
-  };
-
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Input
-        type="number"
-        min="0"
-        step={step}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") save();
-          else if (e.key === "Escape") setDraft(String(value));
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className={cn("h-7 text-xs text-right", width)}
-      />
-      <Button
-        size="icon"
-        variant="ghost"
-        className="h-7 w-7 shrink-0"
-        disabled={!dirty}
-        onClick={(e) => {
-          e.stopPropagation();
-          save();
-        }}
-      >
-        <Check className={cn("size-3.5", dirty ? "text-green-500" : "text-muted-foreground/30")} />
-      </Button>
-    </div>
-  );
 }
 
 function ProductsIndexPage() {

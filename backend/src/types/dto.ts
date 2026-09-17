@@ -85,8 +85,10 @@ export interface Warehouse {
   default: boolean;
   status: "active" | "inactive";
   createdAt: string;
-  /** Derived: number of distinct products stocked here. */
+  /** Derived: number of distinct products stocked here (qty > 0). */
   totalProducts?: number;
+  /** Derived: catalog products with zero quantity in this warehouse. */
+  outOfStock?: number;
   /** Derived: sum of all quantities in this warehouse. */
   totalQuantity?: number;
   /** Derived: sum of (qty × cost) for products that carry a cost. */
