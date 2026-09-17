@@ -100,7 +100,12 @@ export const suppliers: Supplier[] = [
     rating: 3.4,
     notes: "On hold — repeated short deliveries in Q1.",
   },
-];
+].map((supplier) => ({
+  ...supplier,
+  productIds: products
+    .filter((product) => product.supplier === supplier.name)
+    .map((product) => product.id),
+}));
 
 const line = (productId: string, qty: number, received = 0) => {
   const prod = p(productId);

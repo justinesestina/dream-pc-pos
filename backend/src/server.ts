@@ -27,6 +27,7 @@ import { serialsRoutes } from "./routes/serials.js";
 import { ordersRoutes } from "./routes/orders.js";
 import { quotesRoutes } from "./routes/quotes.js";
 import { customersRoutes } from "./routes/customers.js";
+import { suppliersRoutes } from "./routes/suppliers.js";
 import { buildsRoutes } from "./routes/builds.js";
 import { servicesRoutes } from "./routes/services.js";
 import { warrantyRoutes } from "./routes/warranty.js";
@@ -100,6 +101,7 @@ app.get("/api/v1/health", (c) => {
       "orders",
       "quotes",
       "customers",
+      "suppliers",
       "builds",
       "services",
       "warranty",
@@ -128,6 +130,7 @@ app.route("/api/v1/serials", serialsRoutes());
 app.route("/api/v1/orders", ordersRoutes());
 app.route("/api/v1/quotes", quotesRoutes());
 app.route("/api/v1/customers", customersRoutes());
+app.route("/api/v1/suppliers", suppliersRoutes());
 app.route("/api/v1/builds", buildsRoutes());
 app.route("/api/v1/services", servicesRoutes());
 app.route("/api/v1/warranty", warrantyRoutes());

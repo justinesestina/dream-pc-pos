@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { KeyValueGrid, Section, TotalsRows } from "@/components/nexus/detail";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { useOps } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
 import { money, num, dateShort } from "@/lib/format";
 import type { PurchaseOrder } from "@/lib/ops-types";
 
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_app/suppliers/$supplierId")({
 function SupplierDetailPage() {
   const { supplierId } = Route.useParams();
   const { supplierById, purchaseOrders } = useOps();
+  const { products } = useStore();
   const navigate = useNavigate();
   const supplier = supplierById(supplierId);
 
@@ -39,6 +41,11 @@ function SupplierDetailPage() {
     const received = orders.filter((o) => o.status === "received").reduce((sum, o) => sum + o.total, 0);
     return { total, received, open: total - received };
   }, [orders]);
+
+  const suppliedProducts = useMemo(
+    () => products.filter((product) => supplier?.productIds?.includes(product.id)),
+    [products, supplier],
+  );
 
   if (!supplier) {
     return (
@@ -79,7 +86,7 @@ function SupplierDetailPage() {
             { label: "Terms", value: supplier.terms, mono: true },
             { label: "Lead time", value: `${supplier.leadTimeDays} days` },
             { label: "Rating", value: supplier.rating.toFixed(1) },
-            { label: "Categories", value: supplier.categories.join(", ") },
+            { label: "Brands supplied", value: Array.from(new Set(suppliedProducts.map((product) => product.brand))).join(", ") || "None assigned" },
           ]}
         />
         {supplier.notes && (
@@ -98,6 +105,21 @@ function SupplierDetailPage() {
           <TotalsRows rows={[{ label: "Outstanding value", value: money(spend.open) }]} />
         </Panel>
       </div>
+
+      <Section title="Supplied products" hint={`${suppliedProducts.length} assigned product(s)`}>
+        {suppliedProducts.length === 0 ? (
+          <Panel className="p-4 text-[13px] text-muted-foreground">No products assigned to this supplier yet.</Panel>
+        ) : (
+          <Panel className="divide-y divide-border">
+            {suppliedProducts.map((product) => (
+              <div key={product.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0"><p className="truncate text-sm text-foreground">{product.name}</p><p className="mono text-[11px] text-muted-foreground">{product.sku} · {product.brand}</p></div>
+                <span className="mono text-sm">{money(product.price)}</span>
+              </div>
+            ))}
+          </Panel>
+        )}
+      </Section>
 
       <Section title="Purchase orders" hint={`${orders.length} order(s) with this supplier`}>
         <DataTable

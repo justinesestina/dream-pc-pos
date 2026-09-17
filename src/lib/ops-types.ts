@@ -21,6 +21,8 @@ export interface Supplier {
   terms: string;
   leadTimeDays: number;
   categories: string[];
+  /** Product IDs this supplier can provide. Brands are derived from these products. */
+  productIds?: string[];
   status: "active" | "inactive";
   rating: number;
   notes?: string | undefined;

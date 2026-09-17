@@ -42,7 +42,7 @@ const STORAGE_KEY = "dpc-nexus-ops-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 interface OpsSnapshot {
   schemaVersion: number;
@@ -114,6 +114,7 @@ interface OpsValue extends OpsSnapshot {
   setPoStatus: (id: string, status: PurchaseStatus) => void;
   createSupplier: (data: Omit<Supplier, "id" | "rating" | "status">) => Supplier;
   updateSupplier: (id: string, patch: Partial<Supplier>) => void;
+  setSupplierProducts: (supplierId: string, productIds: string[]) => void;
   createPurchaseOrder: (data: {
     supplierId: string;
     lines: { productId: string; name: string; sku: string; qty: number; unitCost: number }[];
@@ -267,6 +268,14 @@ export function OpsProvider({ children, actor = "System" }: { children: ReactNod
         patch((s) => ({
           ...s,
           suppliers: s.suppliers.map((sp) => (sp.id === id ? { ...sp, ...p } : sp)),
+        })),
+
+      setSupplierProducts: (supplierId, productIds) =>
+        patch((s) => ({
+          ...s,
+          suppliers: s.suppliers.map((supplier) =>
+            supplier.id === supplierId ? { ...supplier, productIds } : supplier,
+          ),
         })),
 
       createPurchaseOrder: ({ supplierId, lines, expectedAt, notes }) => {

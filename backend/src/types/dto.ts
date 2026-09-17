@@ -531,6 +531,7 @@ export interface Supplier {
   terms: string;
   leadTimeDays: number;
   categories: string[];
+  productIds: string[];
   status: "active" | "inactive";
   rating: number;
   notes?: string;

@@ -20,7 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useOps } from "@/lib/ops-store";
-import { useSimulatedLoad } from "@/lib/store";
+import { useSimulatedLoad, useStore } from "@/lib/store";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
 import { num } from "@/lib/format";
 import type { Supplier } from "@/lib/ops-types";
@@ -44,6 +44,7 @@ export const Route = createFileRoute("/_app/suppliers/")({
 
 function SuppliersIndexPage() {
   const { suppliers, purchaseOrders, updateSupplier } = useOps();
+  const { products } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const { openNew } = Route.useSearch();
@@ -57,8 +58,8 @@ function SuppliersIndexPage() {
   }, [openNew]);
 
   const categories = useMemo(
-    () => Array.from(new Set(suppliers.flatMap((s) => s.categories))).sort(),
-    [suppliers],
+    () => Array.from(new Set(suppliers.flatMap((s) => s.productIds?.map((id) => products.find((product) => product.id === id)?.brand).filter(Boolean) ?? []))).sort(),
+    [suppliers, products],
   );
 
   const filtered = useMemo(() => {
@@ -69,7 +70,7 @@ function SuppliersIndexPage() {
         if (!hay.includes(query)) return false;
       }
       if (status !== "all" && s.status !== status) return false;
-      if (category !== "all" && !s.categories.includes(category)) return false;
+      if (category !== "all" && !(s.productIds ?? []).some((id) => products.find((product) => product.id === id)?.brand === category)) return false;
       return true;
     });
   }, [suppliers, q, status, category]);
@@ -239,6 +240,7 @@ function SuppliersIndexPage() {
         open={dialog.open}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         supplier={dialog.supplier}
+        availableProducts={products}
       />
     </div>
   );

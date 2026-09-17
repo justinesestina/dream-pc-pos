@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,20 +13,18 @@ import {
 } from "@/components/ui/dialog";
 import { useOps } from "@/lib/ops-store";
 import type { Supplier } from "@/lib/ops-types";
-
-const KNOWN_CATEGORIES = [
-  "CPU", "GPU", "Motherboard", "RAM", "Storage", "PSU", "Case", "Cooling",
-  "Fans", "Monitor", "Keyboard", "Mouse", "Headset", "Networking", "Software",
-];
+import type { Product } from "@/lib/types";
 
 export function SupplierFormDialog({
   open,
   onOpenChange,
   supplier,
+  availableProducts,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   supplier?: Supplier | undefined;
+  availableProducts: Product[];
 }) {
   const { createSupplier, updateSupplier } = useOps();
   const isEdit = Boolean(supplier);
@@ -37,7 +35,8 @@ export function SupplierFormDialog({
   const [address, setAddress] = useState("");
   const [terms, setTerms] = useState("");
   const [leadTimeDays, setLeadTimeDays] = useState("");
-  const [categories, setCategories] = useState("");
+  const [productIds, setProductIds] = useState<string[]>([]);
+  const [productQuery, setProductQuery] = useState("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -49,19 +48,24 @@ export function SupplierFormDialog({
     setAddress(supplier?.address ?? "");
     setTerms(supplier?.terms ?? "");
     setLeadTimeDays(supplier ? String(supplier.leadTimeDays) : "");
-    setCategories(supplier?.categories.join(", ") ?? "");
+    setProductIds(supplier?.productIds ?? []);
+    setProductQuery("");
     setNotes(supplier?.notes ?? "");
   }, [open, supplier]);
+
+  const matchingProducts = useMemo(() => {
+    const query = productQuery.trim().toLowerCase();
+    if (!query) return availableProducts;
+    return availableProducts.filter((product) =>
+      `${product.name} ${product.sku} ${product.brand}`.toLowerCase().includes(query),
+    );
+  }, [availableProducts, productQuery]);
 
   const submit = () => {
     if (!name.trim() || !contact.trim()) {
       toast.error("Supplier name and contact are required.");
       return;
     }
-    const cats = categories
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
     const lead = Math.max(1, Math.floor(Number(leadTimeDays) || 1));
     const payload = {
       name: name.trim(),
@@ -71,7 +75,15 @@ export function SupplierFormDialog({
       address: address.trim() || "—",
       terms: terms.trim() || "Net 30",
       leadTimeDays: lead,
-      categories: cats.length ? cats : ["General"],
+      categories: Array.from(
+        new Set(
+          availableProducts
+            .filter((product) => productIds.includes(product.id))
+            .map((product) => product.brand)
+            .filter(Boolean),
+        ),
+      ),
+      productIds,
       notes: notes.trim() || undefined,
     };
     if (isEdit && supplier) {
@@ -122,9 +134,37 @@ export function SupplierFormDialog({
             <Label htmlFor="sf-lead">Lead time (days)</Label>
             <Input id="sf-lead" type="number" min={1} value={leadTimeDays} onChange={(e) => setLeadTimeDays(e.target.value)} />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="sf-categories">Categories (comma-separated)</Label>
-            <Input id="sf-categories" value={categories} onChange={(e) => setCategories(e.target.value)} placeholder={KNOWN_CATEGORIES.join(", ")} />
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Products supplied</Label>
+            <p className="text-xs text-muted-foreground">Select the catalog products this supplier can provide. Brands are summarized automatically.</p>
+            <Input
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              placeholder="Search product name, SKU, or brand…"
+              aria-label="Search supplied products"
+            />
+            <p className="mono text-[11px] text-muted-foreground">
+              {productIds.length} selected · {matchingProducts.length} shown
+            </p>
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2" data-lenis-prevent>
+              {matchingProducts.length === 0 ? (
+                <p className="px-2 py-4 text-center text-xs text-muted-foreground">No products match that search.</p>
+              ) : matchingProducts.map((product) => {
+                const selected = productIds.includes(product.id);
+                return (
+                  <label key={product.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-elevated">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => setProductIds((current) => selected ? current.filter((id) => id !== product.id) : [...current, product.id])}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{product.name}</span>
+                    <span className="mono text-[10px] text-muted-foreground">{product.brand} · {product.sku}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {productIds.length === 0 && <p className="text-xs text-warning">Select at least one product before saving.</p>}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="sf-notes">Notes</Label>

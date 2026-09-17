@@ -22,6 +22,7 @@ import {
 import { TechLabel } from "@/components/nexus/primitives";
 import { ImageDropzone } from "@/components/products/image-dropzone";
 import { useStore } from "@/lib/store";
+import { useOps } from "@/lib/ops-store";
 import type { Product, ProductType } from "@/lib/types";
 
 function parseSpecs(raw: string): Product["specs"] {
@@ -64,6 +65,7 @@ export function ProductFormDialog({
   product?: Product | undefined;
 }) {
   const store = useStore();
+  const { suppliers, updateSupplier } = useOps();
   const isEdit = Boolean(product);
   const [name, setName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -78,7 +80,7 @@ export function ProductFormDialog({
   const [reorderPoint, setReorderPoint] = useState("4");
   const [warranty, setWarranty] = useState("0");
   const [location, setLocation] = useState("");
-  const [supplier, setSupplier] = useState("");
+  const [supplierId, setSupplierId] = useState("none");
   const [serialTracked, setSerialTracked] = useState(false);
   const [specs, setSpecs] = useState("");
   const initializedFor = useRef<string | null>(null);
@@ -113,7 +115,7 @@ export function ProductFormDialog({
     setReorderPoint(product ? String(inv?.reorderPoint ?? 4) : "4");
     setWarranty(product ? String(product.warrantyMonths) : "0");
     setLocation(product?.location ?? "");
-    setSupplier(product?.supplier ?? "");
+    setSupplierId(product ? suppliers.find((item) => item.name === product.supplier)?.id ?? "none" : "none");
     setSerialTracked(product?.serialTracked ?? false);
     setSpecs(product ? specsToText(product.specs) : "");
     initializedFor.current = formKey;
@@ -145,7 +147,7 @@ export function ProductFormDialog({
       cost: costNum,
       warrantyMonths: Math.max(0, Math.floor(Number(warranty) || 0)),
       location: location.trim() || "—",
-      supplier: supplier.trim() || "—",
+      supplier: suppliers.find((item) => item.id === supplierId)?.name ?? "—",
       serialTracked,
       specs: parseSpecs(specs),
     };
@@ -163,6 +165,23 @@ export function ProductFormDialog({
         return;
       }
       toast.success(`${res.product?.name} added to the catalog.`);
+      if (res.product && supplierId !== "none") {
+        const selectedSupplier = suppliers.find((item) => item.id === supplierId);
+        if (selectedSupplier) {
+          updateSupplier(selectedSupplier.id, {
+            productIds: Array.from(new Set([...(selectedSupplier.productIds ?? []), res.product.id])),
+          });
+        }
+      }
+    }
+    if (isEdit && product) {
+      for (const item of suppliers) {
+        const ids = item.productIds ?? [];
+        const nextIds = item.id === supplierId ? Array.from(new Set([...ids, product.id])) : ids.filter((id) => id !== product.id);
+        if (nextIds.length !== ids.length || nextIds.some((id, index) => id !== ids[index])) {
+          updateSupplier(item.id, { productIds: nextIds });
+        }
+      }
     }
     onOpenChange(false);
   };
@@ -250,7 +269,15 @@ export function ProductFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-supplier">Supplier</Label>
-              <Input id="pf-supplier" value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="e.g. Nexlogic Distribution" />
+              <Select value={supplierId} onValueChange={setSupplierId}>
+                <SelectTrigger id="pf-supplier"><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No supplier assigned</SelectItem>
+                  {suppliers.filter((item) => item.status === "active" || item.id === supplierId).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-location">Bin location</Label>

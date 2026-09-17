@@ -39,6 +39,13 @@ export function NewPurchaseOrderDialog() {
   const [supplierId, setSupplierId] = useState<string>("");
   const [expectedAt, setExpectedAt] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([{ productId: "", qty: "1", unitCost: "" }]);
+  const selectedSupplier = suppliers.find((supplier) => supplier.id === supplierId);
+  const supplierProducts = useMemo(
+    () => selectedSupplier?.productIds?.length
+      ? products.filter((product) => selectedSupplier.productIds?.includes(product.id))
+      : [],
+    [products, selectedSupplier],
+  );
 
   const total = useMemo(
     () =>
@@ -169,7 +176,7 @@ export function NewPurchaseOrderDialog() {
                         <SelectValue placeholder="Product" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map((p) => (
+                        {supplierProducts.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name} ({p.sku})
                           </SelectItem>
