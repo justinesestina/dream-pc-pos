@@ -11,7 +11,19 @@ import { requireAuth, type AppVars } from "../middleware/auth.js";
 import { ok, ApiError } from "../lib/errors.js";
 import { woocommerce, type WcOrder } from "../lib/woocommerce.js";
 import { isQuoteOrder } from "./quotes.js";
+import { isWarehouseOrder } from "../lib/warehouse-store.js";
+import { isMovementOrder, isTransferOrder } from "../lib/inventory-store.js";
 import type { Order, OrderStatus } from "../types/dto.js";
+
+/** True for internal records that are stored as WC orders but are not sales. */
+function isInternalRecord(order: WcOrder): boolean {
+  return (
+    isQuoteOrder(order) ||
+    isWarehouseOrder(order) ||
+    isMovementOrder(order) ||
+    isTransferOrder(order)
+  );
+}
 
 const WC_STATUS_TO_ORDER: Record<string, OrderStatus> = {
   pending: "pending",
@@ -92,7 +104,7 @@ export function ordersRoutes() {
     const search = c.req.query("search") ?? "";
     const params = search ? `&search=${encodeURIComponent(search)}` : "";
     const raw = await woocommerce.ordersAll(params);
-    const orders = raw.filter((o) => !isQuoteOrder(o)).map(mapWcOrderToDto);
+    const orders = raw.filter((o) => !isInternalRecord(o)).map(mapWcOrderToDto);
     return c.json(ok(orders, { total: orders.length }));
   });
 

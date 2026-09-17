@@ -44,14 +44,18 @@ export interface AttributeMeta {
 /** A single value term belonging to an attribute. */
 export type AttributeTerm = CatalogTerm;
 
-export type WarehouseType = "main" | "branch" | "storage" | "service";
+/** Selling warehouses push their stock to WooCommerce when sync is on. */
+export type WarehouseType = "selling" | "storage" | "service" | "damaged";
 
-/** Custom warehouse record — backend-managed table (WooCommerce has none). */
+/** Custom warehouse record — WooCommerce has no native entity, so it's stored
+ *  as a tagged WC order (durable across serverless cold-starts). */
 export interface Warehouse {
   id: string;
   name: string;
   code: string;
   type: WarehouseType;
+  /** Push this warehouse's quantity to WooCommerce sellable stock. */
+  sync: boolean;
   address?: string | undefined;
   phone?: string | undefined;
   manager?: string | undefined;
@@ -60,6 +64,74 @@ export interface Warehouse {
   default: boolean;
   status: "active" | "inactive";
   createdAt: string;
+  /** Derived totals returned by the warehouses list endpoint. */
+  totalProducts?: number | undefined;
+  totalQuantity?: number | undefined;
+}
+
+/** One product's quantity inside a warehouse (Warehouse Detail → Products). */
+export interface WarehouseStockRow {
+  /** Client-side row key — mirrors the productId returned by the backend. */
+  id: string;
+  productId: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  reserved: number;
+  available: number;
+  updatedAt: string;
+}
+
+export type WarehouseMovementType =
+  | "stock_in"
+  | "stock_out"
+  | "transfer_in"
+  | "transfer_out"
+  | "adjustment";
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  warehouseId: string;
+  warehouseName: string;
+  type: WarehouseMovementType;
+  /** Signed: positive increases the warehouse, negative decreases. */
+  qty: number;
+  reference?: string | undefined;
+  note?: string | undefined;
+  actor: string;
+  at: string;
+}
+
+export type TransferStatus = "draft" | "pending" | "approved" | "completed" | "cancelled";
+
+export interface StockTransfer {
+  id: string;
+  fromWarehouseId: string;
+  fromWarehouseName: string;
+  toWarehouseId: string;
+  toWarehouseName: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  status: TransferStatus;
+  notes?: string | undefined;
+  createdBy: string;
+  createdAt: string;
+  completedAt?: string | undefined;
+}
+
+/** Aggregated per-product stock across warehouses (Products page). */
+export interface ProductStockInfo {
+  productId: string;
+  wooStock: number | null;
+  wooStatus: string;
+  totalPhysical: number;
+  warehouses: { warehouseId: string; name: string; quantity: number }[];
+  updatedAt: string;
 }
 
 export interface Category {

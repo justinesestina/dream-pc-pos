@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, Warehouse as WarehouseIcon } from "lucide-react";
+import { ArrowRight, Pencil, Plus, Trash2, Warehouse as WarehouseIcon } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { EmptyState, Panel } from "@/components/nexus/primitives";
 import { ResultCount, SearchInput, Toolbar } from "@/components/nexus/toolbar";
@@ -34,8 +35,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+
 import {
   createBackendWarehouse,
   deleteBackendWarehouse,
@@ -45,9 +47,17 @@ import {
 import { num } from "@/lib/format";
 import type { Warehouse, WarehouseType } from "@/lib/types";
 
-const WAREHOUSE_TYPES: WarehouseType[] = ["main", "branch", "storage", "service"];
+const WAREHOUSE_TYPES: WarehouseType[] = ["selling", "storage", "service", "damaged"];
+
+const TYPE_LABEL: Record<WarehouseType, string> = {
+  selling: "Selling",
+  storage: "Storage",
+  service: "Service",
+  damaged: "Damaged",
+};
 
 export function WarehousesPage({ openNew }: { openNew?: boolean }) {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -55,7 +65,8 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const [editing, setEditing] = useState<Warehouse | null>(null);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [type, setType] = useState<WarehouseType>("branch");
+  const [type, setType] = useState<WarehouseType>("storage");
+  const [sync, setSync] = useState(false);
   const [manager, setManager] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -65,7 +76,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const [notes, setNotes] = useState("");
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true);
     fetchBackendWarehouses()
       .then((data) => setRows(data))
@@ -74,40 +85,16 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
         toast.error("Could not load warehouses.");
       })
       .finally(() => setLoading(false));
-  }, []);
-
-  const reload = () => {
-    fetchBackendWarehouses()
-      .then((data) => setRows(data))
-      .catch(() => {
-        setRows([]);
-        toast.error("Could not load warehouses.");
-      })
-      .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    if (openNew) {
-      setEditing(null);
-      setName("");
-      setCode("");
-      setType("branch");
-      setManager("");
-      setPhone("");
-      setAddress("");
-      setCapacity("");
-      setIsDefault(false);
-      setStatus("active");
-      setNotes("");
-      setDialogOpen(true);
-    }
-  }, [openNew]);
+  useEffect(load, []);
 
-  const openAdd = () => {
+  const resetForm = () => {
     setEditing(null);
     setName("");
     setCode("");
-    setType("branch");
+    setType("storage");
+    setSync(false);
     setManager("");
     setPhone("");
     setAddress("");
@@ -115,6 +102,17 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     setIsDefault(false);
     setStatus("active");
     setNotes("");
+  };
+
+  useEffect(() => {
+    if (openNew) {
+      resetForm();
+      setDialogOpen(true);
+    }
+  }, [openNew]);
+
+  const openAdd = () => {
+    resetForm();
     setDialogOpen(true);
   };
 
@@ -123,6 +121,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     setName(w.name);
     setCode(w.code);
     setType(w.type);
+    setSync(w.sync);
     setManager(w.manager ?? "");
     setPhone(w.phone ?? "");
     setAddress(w.address ?? "");
@@ -146,6 +145,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
       name: name.trim(),
       code: code.trim(),
       type,
+      sync,
       default: isDefault,
       status,
     };
@@ -155,37 +155,28 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     if (capacity.trim()) payload.capacity = Number(capacity.trim());
     if (notes.trim()) payload.notes = notes.trim();
 
-    if (editing) {
-      const res = await updateBackendWarehouse(editing.id, payload);
-      if (!res) {
-        toast.error("Could not update warehouse.");
-        return;
-      }
-      toast.success(`Warehouse "${res.name}" updated.`);
-    } else {
-      const res = await createBackendWarehouse(payload);
-      if (!res) {
-        toast.error("Could not create warehouse.");
-        return;
-      }
-      toast.success(`Warehouse "${res.name}" created.`);
+    const res = editing
+      ? await updateBackendWarehouse(editing.id, payload)
+      : await createBackendWarehouse(payload);
+    if (!res) {
+      toast.error(editing ? "Could not update warehouse." : "Could not create warehouse.");
+      return;
     }
+    toast.success(`Warehouse "${res.name}" ${editing ? "updated" : "created"}.`);
     setDialogOpen(false);
-    reload();
+    load();
   };
 
   const confirmDelete = async () => {
-    if (!deleting) {
-      return;
-    }
-    const ok = await deleteBackendWarehouse(deleting.id);
-    if (!ok) {
+    if (!deleting) return;
+    const removed = await deleteBackendWarehouse(deleting.id);
+    if (!removed) {
       toast.error("Could not delete warehouse.");
       return;
     }
     toast.success(`Warehouse "${deleting.name}" deleted.`);
     setDeleting(null);
-    reload();
+    load();
   };
 
   const filtered = useMemo(() => {
@@ -204,7 +195,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const columns: Column<Warehouse>[] = [
     {
       key: "name",
-      header: "Name",
+      header: "Warehouse",
       cell: (w) => (
         <div className="min-w-0">
           <p className="truncate font-medium text-foreground">
@@ -215,32 +206,60 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
               </span>
             )}
           </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{w.id}</p>
+          <p className="mono mt-0.5 truncate text-[11px] text-muted-foreground">{w.code}</p>
         </div>
       ),
       sortValue: (w) => w.name,
-    },
-    {
-      key: "code",
-      header: "Code",
-      cell: (w) => <span className="mono text-xs text-muted-foreground">{w.code}</span>,
-      sortValue: (w) => w.code,
+      className: "min-w-[12rem]",
     },
     {
       key: "type",
       header: "Type",
       align: "center",
-      cell: (w) => <span className="label-tech">{w.type}</span>,
+      cell: (w) => <span className="label-tech">{TYPE_LABEL[w.type]}</span>,
       sortValue: (w) => w.type,
     },
     {
-      key: "manager",
-      header: "Manager",
-      cell: (w) => {
-        const text = w.manager || "—";
-        return <span className="truncate text-[13px] text-muted-foreground">{text}</span>;
-      },
-      sortValue: (w) => w.manager ?? "",
+      key: "sync",
+      header: "WC Sync",
+      align: "center",
+      cell: (w) =>
+        w.type === "selling" ? (
+          w.sync ? (
+            <StatusBadge status="active" label="Syncing" />
+          ) : (
+            <StatusBadge status="inactive" label="Manual" />
+          )
+        ) : (
+          <span className="text-xs text-subtle">—</span>
+        ),
+      sortValue: (w) => (w.sync ? 1 : 0),
+    },
+    {
+      key: "products",
+      header: "Products",
+      align: "right",
+      cell: (w) => <span className="mono tabular-nums">{num(w.totalProducts ?? 0)}</span>,
+      sortValue: (w) => w.totalProducts ?? 0,
+    },
+    {
+      key: "quantity",
+      header: "Total Qty",
+      align: "right",
+      cell: (w) => (
+        <span className="mono tabular-nums text-foreground">{num(w.totalQuantity ?? 0)}</span>
+      ),
+      sortValue: (w) => w.totalQuantity ?? 0,
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      cell: (w) => (
+        <span className="text-xs text-muted-foreground">
+          {w.createdAt ? new Date(w.createdAt).toLocaleDateString() : "—"}
+        </span>
+      ),
+      sortValue: (w) => w.createdAt,
     },
     {
       key: "status",
@@ -253,9 +272,19 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
       key: "actions",
       header: "",
       align: "right",
-      className: "w-24",
+      className: "w-36",
       cell: (w) => (
         <div className="flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2"
+            onClick={() =>
+              navigate({ to: "/warehouses/$warehouseId", params: { warehouseId: w.id } })
+            }
+          >
+            Manage <ArrowRight className="size-3.5" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -265,31 +294,15 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
           >
             <Pencil className="size-3.5" />
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-destructive hover:text-destructive"
-                onClick={() => setDeleting(w)}
-                aria-label={`Delete warehouse ${w.name}`}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete warehouse?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  "{w.name}" ({w.code}) will be removed from the warehouse table.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>Delete warehouse</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-destructive hover:text-destructive"
+            onClick={() => setDeleting(w)}
+            aria-label={`Delete warehouse ${w.name}`}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
         </div>
       ),
     },
@@ -299,7 +312,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Warehouses"
-        description="Branch and storage locations. Custom table in the backend (WooCommerce has no native warehouses)."
+        description="Physical inventory locations. Stored in WooCommerce, so they survive restarts."
         actions={
           <Button size="sm" onClick={openAdd}>
             <Plus className="size-4" /> New warehouse
@@ -347,7 +360,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
                 id="wh-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Main Branch"
+                placeholder="e.g. Main Warehouse"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit();
                 }}
@@ -371,7 +384,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
                 <SelectContent>
                   {WAREHOUSE_TYPES.map((t) => (
                     <SelectItem key={t} value={t}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                      {TYPE_LABEL[t]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -430,6 +443,31 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
                 </SelectContent>
               </Select>
             </div>
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 sm:col-span-2",
+                type === "selling" && sync
+                  ? "border-info/40 bg-info/5"
+                  : "border-border bg-elevated",
+              )}
+            >
+              <div>
+                <Label htmlFor="wh-sync" className="text-[13px]">
+                  Sync warehouse to WooCommerce
+                </Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {type === "selling"
+                    ? "Selling warehouse — its quantity drives the storefront stock."
+                    : "Only Selling warehouses can push stock to WooCommerce."}
+                </p>
+              </div>
+              <Switch
+                id="wh-sync"
+                checked={sync}
+                disabled={type !== "selling"}
+                onCheckedChange={setSync}
+              />
+            </div>
             <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-elevated px-3 py-2.5 sm:col-span-2">
               <div>
                 <Label htmlFor="wh-default" className="text-[13px]">
@@ -467,7 +505,8 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete warehouse?</AlertDialogTitle>
               <AlertDialogDescription>
-                "{deleting.name}" ({deleting.code}) will be removed from the warehouse table.
+                "{deleting.name}" ({deleting.code}) will be removed. Its stock records stay on the
+                products.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

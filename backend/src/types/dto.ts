@@ -63,13 +63,20 @@ export interface Category {
   count?: number;
 }
 
-/** Custom warehouse record — WooCommerce has no native warehouse entity, so
- *  this lives in a backend-managed store (backend/data/warehouses.json). */
+/** Selling warehouse = pushes its stock to WooCommerce when `sync` is on.
+ *  Storage/Service/Damaged hold physical stock but never drive the storefront. */
+export type WarehouseType = "selling" | "storage" | "service" | "damaged";
+
+/** Custom warehouse record — WooCommerce has no native warehouse entity, so the
+ *  row is stored as a WC order tagged `_dpc_record = "warehouse"` (the same
+ *  durable trick quotations use). See lib/warehouse-store.ts. */
 export interface Warehouse {
   id: string;
   name: string;
   code: string;
-  type: "main" | "branch" | "storage" | "service";
+  type: WarehouseType;
+  /** Push this warehouse's quantity to WooCommerce sellable stock. */
+  sync: boolean;
   address?: string;
   phone?: string;
   manager?: string;
@@ -78,6 +85,75 @@ export interface Warehouse {
   default: boolean;
   status: "active" | "inactive";
   createdAt: string;
+  /** Derived: number of distinct products stocked here. */
+  totalProducts?: number;
+  /** Derived: sum of all quantities in this warehouse. */
+  totalQuantity?: number;
+}
+
+/** One product's quantity inside a warehouse (Warehouse Detail → Products). */
+export interface WarehouseStockRow {
+  productId: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  reserved: number;
+  available: number;
+  updatedAt: string;
+}
+
+/** Immutable audit entry for any physical stock change. Stored as a tagged WC
+ *  order (`_dpc_record = "movement"`). */
+export type WarehouseMovementType =
+  | "stock_in"
+  | "stock_out"
+  | "transfer_in"
+  | "transfer_out"
+  | "adjustment";
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  warehouseId: string;
+  warehouseName: string;
+  type: WarehouseMovementType;
+  /** Signed: positive increases the warehouse, negative decreases it. */
+  qty: number;
+  reference?: string;
+  note?: string;
+  actor: string;
+  at: string;
+}
+
+export type TransferStatus = "draft" | "pending" | "approved" | "completed" | "cancelled";
+
+export interface StockTransfer {
+  id: string;
+  fromWarehouseId: string;
+  fromWarehouseName: string;
+  toWarehouseId: string;
+  toWarehouseName: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  status: TransferStatus;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+/** Aggregated per-product stock across all warehouses (Products page). */
+export interface ProductStockInfo {
+  productId: string;
+  wooStock: number | null;
+  wooStatus: string;
+  totalPhysical: number;
+  warehouses: { warehouseId: string; name: string; quantity: number }[];
+  updatedAt: string;
 }
 
 export interface ProductSpecs {

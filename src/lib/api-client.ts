@@ -9,6 +9,11 @@ import type {
   AttributeMeta,
   AttributeTerm,
   Warehouse,
+  WarehouseStockRow,
+  StockMovement,
+  StockTransfer,
+  TransferStatus,
+  ProductStockInfo,
 } from "./types";
 
 /**
@@ -312,12 +317,18 @@ export async function deleteBackendAttributeTerm(
 }
 
 // ---------------------------------------------------------------------------
-// Warehouses (custom table — see backend lib/warehouse-store.ts)
+// Warehouses + multi-warehouse inventory (WooCommerce-backed — see backend
+// lib/warehouse-store.ts and lib/inventory-store.ts)
 // ---------------------------------------------------------------------------
 
 export async function fetchBackendWarehouses(): Promise<Warehouse[]> {
   const res = await apiRequest<Warehouse[]>("/api/v1/warehouses");
   return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchBackendWarehouse(id: string): Promise<Warehouse | null> {
+  const res = await apiRequest<Warehouse>(`/api/v1/warehouses/${id}`);
+  return res.ok ? res.data || null : null;
 }
 
 export async function createBackendWarehouse(
@@ -338,6 +349,103 @@ export async function updateBackendWarehouse(
 export async function deleteBackendWarehouse(id: string): Promise<boolean> {
   const res = await apiRequest(`/api/v1/warehouses/${id}`, "DELETE");
   return res.ok;
+}
+
+export async function fetchWarehouseStock(id: string): Promise<WarehouseStockRow[]> {
+  const res = await apiRequest<Omit<WarehouseStockRow, "id">[]>(`/api/v1/warehouses/${id}/stock`);
+  return res.ok && res.data ? res.data.map((r) => ({ ...r, id: r.productId })) : [];
+}
+
+export interface AddStockInput {
+  productId: string;
+  quantity: number;
+  costPrice?: number;
+  supplier?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export async function addWarehouseStock(
+  warehouseId: string,
+  input: AddStockInput,
+): Promise<{ movement: StockMovement; product: ProductStockInfo } | null> {
+  const res = await apiRequest<{ movement: StockMovement; product: ProductStockInfo }>(
+    `/api/v1/warehouses/${warehouseId}/stock`,
+    "POST",
+    input,
+  );
+  return res.ok ? res.data || null : null;
+}
+
+export async function fetchWarehouseMovements(id: string): Promise<StockMovement[]> {
+  const res = await apiRequest<StockMovement[]>(`/api/v1/warehouses/${id}/movements`);
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchWarehouseTransfers(id: string): Promise<StockTransfer[]> {
+  const res = await apiRequest<StockTransfer[]>(`/api/v1/warehouses/${id}/transfers`);
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchBackendTransfers(warehouseId?: string): Promise<StockTransfer[]> {
+  const qs = warehouseId ? `?warehouseId=${encodeURIComponent(warehouseId)}` : "";
+  const res = await apiRequest<StockTransfer[]>(`/api/v1/transfers${qs}`);
+  return res.ok && res.data ? res.data : [];
+}
+
+export interface CreateTransferInput {
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  productId: string;
+  quantity: number;
+  notes?: string;
+}
+
+export async function createBackendTransfer(input: CreateTransferInput): Promise<StockTransfer | null> {
+  const res = await apiRequest<StockTransfer>("/api/v1/transfers", "POST", input);
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateBackendTransferStatus(
+  id: string,
+  status: TransferStatus,
+): Promise<StockTransfer | null> {
+  const res = await apiRequest<StockTransfer>(`/api/v1/transfers/${id}`, "PUT", { status });
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteBackendTransfer(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/transfers/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function fetchBackendProductStock(): Promise<ProductStockInfo[]> {
+  const res = await apiRequest<ProductStockInfo[]>("/api/v1/inventory/stock");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function fetchBackendInventoryMovements(params?: {
+  warehouseId?: string;
+  productId?: string;
+}): Promise<StockMovement[]> {
+  const qs = new URLSearchParams();
+  if (params?.warehouseId) qs.set("warehouseId", params.warehouseId);
+  if (params?.productId) qs.set("productId", params.productId);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  const res = await apiRequest<StockMovement[]>(`/api/v1/inventory/movements${suffix}`);
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function adjustBackendStock(
+  productId: string,
+  input: { warehouseId: string; delta: number; reference?: string; note?: string },
+): Promise<StockMovement | null> {
+  const res = await apiRequest<StockMovement>(
+    `/api/v1/inventory/stock/${productId}/adjust`,
+    "POST",
+    input,
+  );
+  return res.ok ? res.data || null : null;
 }
 
 export async function fetchBackendCustomers(): Promise<Customer[]> {

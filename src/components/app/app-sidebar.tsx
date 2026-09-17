@@ -87,7 +87,7 @@ function Flyout({
     return (
       <DropdownMenuItem
         asChild
-        key={child.to ?? child.label}
+        key={`${child.label}-${String(child.to ?? "")}-${JSON.stringify(child.search ?? {})}`}
         className={cn(
           "gap-2 py-1.5 text-[13px]",
           active && "bg-sidebar-accent/60 font-medium text-foreground",

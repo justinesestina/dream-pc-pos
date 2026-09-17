@@ -95,7 +95,7 @@ export const navGroups: NavGroup[] = [
           { label: "Manage Warehouses", to: "/warehouses", cap: "inventory" },
         ],
       },
-      { label: "Stock Transfer", icon: ArrowLeftRight, soon: true, cap: "inventory" },
+      { label: "Stock Transfer", to: "/transfers", icon: ArrowLeftRight, cap: "inventory" },
       {
         label: "Purchase Orders",
         icon: ClipboardList,

@@ -20,6 +20,7 @@ import { tagsRoutes } from "./routes/tags.js";
 import { brandsRoutes } from "./routes/brands.js";
 import { attributesRoutes } from "./routes/attributes.js";
 import { warehousesRoutes } from "./routes/warehouses.js";
+import { transfersRoutes } from "./routes/transfers.js";
 import { mediaRoutes } from "./routes/media.js";
 import { inventoryRoutes } from "./routes/inventory.js";
 import { serialsRoutes } from "./routes/serials.js";
@@ -92,6 +93,7 @@ app.get("/api/v1/health", (c) => {
       "brands",
       "attributes",
       "warehouses",
+      "transfers",
       "media",
       "inventory",
       "serials",
@@ -119,6 +121,7 @@ app.route("/api/v1/tags", tagsRoutes());
 app.route("/api/v1/brands", brandsRoutes());
 app.route("/api/v1/attributes", attributesRoutes());
 app.route("/api/v1/warehouses", warehousesRoutes());
+app.route("/api/v1/transfers", transfersRoutes());
 app.route("/api/v1/media", mediaRoutes());
 app.route("/api/v1/inventory", inventoryRoutes());
 app.route("/api/v1/serials", serialsRoutes());
