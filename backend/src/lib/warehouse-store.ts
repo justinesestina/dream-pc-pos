@@ -28,6 +28,7 @@ const META = {
   notes: "_dpc_wh_notes",
   isDefault: "_dpc_wh_default",
   status: "_dpc_wh_status",
+  hydrated: "_dpc_wh_hydrated",
 };
 
 export const WAREHOUSE_TYPES: WarehouseType[] = ["selling", "storage", "service", "damaged"];
@@ -200,5 +201,26 @@ export async function deleteWarehouse(id: string): Promise<boolean> {
     return Boolean(deleted) && !Array.isArray(deleted);
   } catch {
     return false;
+  }
+}
+
+/** True once a warehouse's quantities have been seeded from WooCommerce stock. */
+export async function isWarehouseHydrated(id: string): Promise<boolean> {
+  try {
+    const order = await woocommerce.order(orderIdFromWarehouseId(id));
+    return metaBool(order, META.hydrated);
+  } catch {
+    return false;
+  }
+}
+
+/** Mark a warehouse as hydrated so stock is never re-seeded automatically. */
+export async function markWarehouseHydrated(id: string): Promise<void> {
+  try {
+    await woocommerce.updateOrder(orderIdFromWarehouseId(id), {
+      meta_data: [{ key: META.hydrated, value: true }],
+    });
+  } catch {
+    // best-effort — hydration marker is not critical to the write path
   }
 }

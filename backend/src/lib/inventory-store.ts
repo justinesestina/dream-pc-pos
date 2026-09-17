@@ -13,8 +13,15 @@
  */
 import { woocommerce, type WcOrder, type WcMetaDatum, type WcProduct } from "./woocommerce.js";
 import { ApiError, NotFoundError } from "./errors.js";
-import { RECORD_KEY, isWarehouseOrder, listWarehouses, getWarehouse } from "./warehouse-store.js";
-import type {
+import {
+  RECORD_KEY,
+  isWarehouseOrder,
+  listWarehouses,
+  getWarehouse,
+  createWarehouse,
+  isWarehouseHydrated,
+  markWarehouseHydrated,
+} from "./warehouse-store.js";import type {
   ProductStockInfo,
   StockMovement,
   StockTransfer,
@@ -156,37 +163,32 @@ export async function syncProductToWoo(productId: string | number): Promise<WcPr
 export async function listProductStock(): Promise<ProductStockInfo[]> {
   const [products, warehouses] = await Promise.all([woocommerce.products(), listWarehouses()]);
   const nameOf = new Map(warehouses.map((w) => [w.id, w.name]));
-  return products.map((p) => {
-    const map = parseStockMap(p);
-    const perWarehouse = Object.entries(map)
-      .filter(([id, qty]) => qty > 0 && nameOf.has(id))
-      .map(([id, qty]) => ({ warehouseId: id, name: nameOf.get(id) ?? id, quantity: qty }));
-    return {
-      productId: String(p.id),
-      wooStock: p.stock_quantity,
-      wooStatus: p.stock_status,
-      totalPhysical: perWarehouse.reduce((s, w) => s + w.quantity, 0),
-      warehouses: perWarehouse.sort((a, b) => b.quantity - a.quantity),
-      updatedAt: stockUpdatedAt(p),
-    };
-  });
+  return products.map((p) => buildProductStockInfo(p, nameOf));
 }
 
 export async function productStockInfo(productId: string | number): Promise<ProductStockInfo> {
   const [product, warehouses] = await Promise.all([fetchProduct(productId), listWarehouses()]);
-  const map = parseStockMap(product);
-  const nameOf = new Map(warehouses.map((w) => [w.id, w.name]));
+  return buildProductStockInfo(product, new Map(warehouses.map((w) => [w.id, w.name])));
+}
+
+function buildProductStockInfo(p: WcProduct, nameOf: Map<string, string>): ProductStockInfo {
+  const map = parseStockMap(p);
   const perWarehouse = Object.entries(map)
     .filter(([id, qty]) => qty > 0 && nameOf.has(id))
     .map(([id, qty]) => ({ warehouseId: id, name: nameOf.get(id) ?? id, quantity: qty }));
-  return {
-    productId: String(product.id),
-    wooStock: product.stock_quantity,
-    wooStatus: product.stock_status,
+  const info: ProductStockInfo = {
+    productId: String(p.id),
+    name: p.name,
+    sku: p.sku || String(p.id),
+    wooStock: p.stock_quantity,
+    wooStatus: p.stock_status,
     totalPhysical: perWarehouse.reduce((s, w) => s + w.quantity, 0),
     warehouses: perWarehouse.sort((a, b) => b.quantity - a.quantity),
-    updatedAt: stockUpdatedAt(product),
+    updatedAt: stockUpdatedAt(p),
   };
+  const image = p.images?.[0]?.src;
+  if (image) info.image = image;
+  return info;
 }
 
 /** Warehouse detail → Products tab. */
@@ -197,7 +199,7 @@ export async function warehouseStockRows(warehouseId: string): Promise<Warehouse
     const map = parseStockMap(p);
     const qty = map[warehouseId] ?? 0;
     if (qty <= 0) continue;
-    rows.push({
+    const row: WarehouseStockRow = {
       productId: String(p.id),
       name: p.name,
       sku: p.sku || String(p.id),
@@ -205,7 +207,10 @@ export async function warehouseStockRows(warehouseId: string): Promise<Warehouse
       reserved: 0,
       available: qty,
       updatedAt: stockUpdatedAt(p),
-    });
+    };
+    const image = p.images?.[0]?.src;
+    if (image) row.image = image;
+    rows.push(row);
   }
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -544,6 +549,64 @@ export async function deleteTransfer(id: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/* ------------------------------------------------- selling warehouse */
+
+/**
+ * Guarantee a default "WooCommerce" selling warehouse exists, and seed its
+ * quantities from the storefront's own stock exactly once. This makes the
+ * WooCommerce/Selling location visible, transferable and editable like any
+ * other warehouse. Hydration runs once per warehouse (marker meta) so it never
+ * overwrites later Add/Deduct/Transfer edits.
+ */
+export async function ensureSellingWarehouse(): Promise<Warehouse> {
+  const warehouses = await listWarehouses();
+  let selling = warehouses.find((w) => w.type === "selling");
+  if (!selling) {
+    selling = await createWarehouse({
+      name: "WooCommerce",
+      code: "WOO",
+      type: "selling",
+      sync: true,
+      default: true,
+      status: "active",
+      notes: "Storefront stock — kept in sync with WooCommerce.",
+    });
+  }
+  if (!(await isWarehouseHydrated(selling.id))) {
+    const done = await hydrateSellingWarehouse(selling);
+    if (done) await markWarehouseHydrated(selling.id);
+  }
+  return selling;
+}
+
+/**
+ * Copy each managed product's WooCommerce stock into the selling warehouse.
+ * Bounded per call so a large catalog never exceeds the serverless timeout;
+ * returns `true` only once every product has been seeded (then it's marked done
+ * and never re-run). Products already carrying an entry are skipped cheaply.
+ */
+const HYDRATE_BATCH = 25;
+async function hydrateSellingWarehouse(warehouse: Warehouse): Promise<boolean> {
+  const products = await woocommerce.products();
+  let written = 0;
+  let remaining = 0;
+  for (const p of products) {
+    if (!p.manage_stock) continue;
+    const qty = typeof p.stock_quantity === "number" ? Math.floor(p.stock_quantity) : 0;
+    if (qty <= 0) continue;
+    const map = parseStockMap(p);
+    if (map[warehouse.id] !== undefined) continue;
+    if (written >= HYDRATE_BATCH) {
+      remaining++;
+      continue;
+    }
+    map[warehouse.id] = qty;
+    await writeStockMap(p.id, map);
+    written++;
+  }
+  return remaining === 0;
 }
 
 /** Warehouse list totals (Total Products / Total Quantity). */

@@ -13,17 +13,25 @@
 import { Hono } from "hono";
 import { requireAuth, type AppVars } from "../middleware/auth.js";
 import { ok, ApiError } from "../lib/errors.js";
-import { adjustStock, listMovements, listProductStock, productStockInfo } from "../lib/inventory-store.js";
+import {
+  adjustStock,
+  ensureSellingWarehouse,
+  listMovements,
+  listProductStock,
+  productStockInfo,
+} from "../lib/inventory-store.js";
 
 export function inventoryRoutes() {
   const app = new Hono<{ Variables: AppVars }>();
 
   app.get("/", requireAuth, async (c) => {
+    await ensureSellingWarehouse();
     const rows = await listProductStock();
     return c.json(ok(rows, { total: rows.length }));
   });
 
   app.get("/stock", requireAuth, async (c) => {
+    await ensureSellingWarehouse();
     const rows = await listProductStock();
     return c.json(ok(rows, { total: rows.length }));
   });

@@ -28,6 +28,7 @@ import {
 } from "../lib/warehouse-store.js";
 import {
   addStock,
+  ensureSellingWarehouse,
   listMovements,
   listTransfers,
   warehouseStockRows,
@@ -45,6 +46,9 @@ export function warehousesRoutes() {
   const app = new Hono<{ Variables: AppVars }>();
 
   app.get("/", requireAuth, async (c) => {
+    // First listing also creates + seeds the default WooCommerce selling
+    // warehouse, so the storefront stock is visible as a normal warehouse.
+    await ensureSellingWarehouse();
     const [rows, totals] = await Promise.all([listWarehouses(), warehouseTotals()]);
     const enriched = rows.map((w) => {
       const t = totals.get(w.id);

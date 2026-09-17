@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRightLeft, Package, PackagePlus, Trash2, Warehouse as WarehouseIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  MinusCircle,
+  Package,
+  PackagePlus,
+  Trash2,
+  Warehouse as WarehouseIcon,
+} from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { EmptyState, Panel } from "@/components/nexus/primitives";
 import { Segmented } from "@/components/nexus/toolbar";
@@ -74,7 +82,10 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
-  const [addStockOpen, setAddStockOpen] = useState(false);
+  const [stockDialog, setStockDialog] = useState<{ open: boolean; mode: "add" | "deduct" }>({
+    open: false,
+    mode: "add",
+  });
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
@@ -160,6 +171,20 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
 
   const stockColumns: Column<WarehouseStockRow>[] = [
     {
+      key: "image",
+      header: "",
+      className: "w-14",
+      cell: (r) => (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40 p-1">
+          {r.image ? (
+            <img src={r.image} alt={r.name} className="h-full w-full object-contain" />
+          ) : (
+            <span className="text-[10px] text-muted-foreground/50">N/A</span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "product",
       header: "Product",
       cell: (r) => <span className="font-medium text-foreground">{r.name}</span>,
@@ -224,7 +249,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
       align: "right",
       cell: (m) => (
         <span
-          className={m.qty >= 0 ? "mono tabular-nums text-success" : "mono tabular-nums text-destructive"}
+          className={
+            m.qty >= 0 ? "mono tabular-nums text-success" : "mono tabular-nums text-destructive"
+          }
         >
           {m.qty >= 0 ? `+${num(m.qty)}` : num(m.qty)}
         </span>
@@ -294,7 +321,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         status={warehouse ? <StatusBadge status={warehouse.status} /> : undefined}
         description={
           warehouse
-            ? `${TYPE_LABEL[warehouse.type]} warehouse · ${warehouse.code}`
+            ? `${TYPE_LABEL[warehouse.type]} warehouse · ${warehouse.code}${
+                warehouse.type === "selling" ? " · WooCommerce storefront" : ""
+              }`
             : "Loading warehouse…"
         }
         meta={
@@ -319,8 +348,19 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
             >
               <ArrowLeft className="size-4" /> Warehouses
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setAddStockOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStockDialog({ open: true, mode: "add" })}
+            >
               <PackagePlus className="size-4" /> Add Stock
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStockDialog({ open: true, mode: "deduct" })}
+            >
+              <MinusCircle className="size-4" /> Deduct
             </Button>
           </>
         }
@@ -350,7 +390,7 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
                 title="No stock recorded here"
                 description="Add stock to start tracking quantities for this warehouse."
                 action={
-                  <Button size="sm" onClick={() => setAddStockOpen(true)}>
+                  <Button size="sm" onClick={() => setStockDialog({ open: true, mode: "add" })}>
                     <PackagePlus className="size-4" /> Add Stock
                   </Button>
                 }
@@ -429,7 +469,10 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ws-status">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as WarehouseModel["status"])}>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as WarehouseModel["status"])}
+              >
                 <SelectTrigger id="ws-status">
                   <SelectValue />
                 </SelectTrigger>
@@ -462,7 +505,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
                 <Label htmlFor="ws-default" className="text-[13px]">
                   Default warehouse
                 </Label>
-                <p className="mt-0.5 text-xs text-muted-foreground">Receiving location for new stock</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Receiving location for new stock
+                </p>
               </div>
               <Switch id="ws-default" checked={isDefault} onCheckedChange={setIsDefault} />
             </div>
@@ -470,7 +515,11 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
                   <Trash2 className="size-4" /> Delete warehouse
                 </Button>
               </AlertDialogTrigger>
@@ -495,9 +544,10 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
       )}
 
       <AddStockDialog
-        open={addStockOpen}
-        onOpenChange={setAddStockOpen}
+        open={stockDialog.open}
+        onOpenChange={(v) => setStockDialog((d) => ({ ...d, open: v }))}
         warehouseId={warehouseId}
+        initialMode={stockDialog.mode}
         onDone={() => setReloadKey((k) => k + 1)}
       />
     </div>

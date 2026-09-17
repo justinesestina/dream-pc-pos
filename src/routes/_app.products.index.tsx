@@ -3,7 +3,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
 import { StatCard } from "@/components/nexus/stat-card";
-import { Toolbar, SearchInput, FilterSelect, Segmented, ResultCount } from "@/components/nexus/toolbar";
+import {
+  Toolbar,
+  SearchInput,
+  FilterSelect,
+  Segmented,
+  ResultCount,
+} from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
@@ -12,18 +18,24 @@ import { Check } from "lucide-react";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { CategoryFormDialog } from "@/components/products/category-form-dialog";
+import { ProductStockView } from "@/components/catalog/product-stock-view";
 import { money, num } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Category, Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
-  validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    openNew: search["new"] === "1" || search["new"] === true,
+  }),
   head: () => ({
     meta: [
       { title: "Products — DPC POS" },
       { name: "description", content: "Catalog of components, peripherals and prebuilt systems." },
       { property: "og:title", content: "Products — DPC POS" },
-      { property: "og:description", content: "Catalog of components, peripherals and prebuilt systems." },
+      {
+        property: "og:description",
+        content: "Catalog of components, peripherals and prebuilt systems.",
+      },
     ],
   }),
   component: ProductsIndexPage,
@@ -33,7 +45,10 @@ type StockFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 type Tab = "products" | "categories" | "archived";
 type ArchivedView = "products" | "categories";
 
-function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_stock" | "out_of_stock" {
+function stockStatus(
+  onHand: number,
+  reorderPoint: number,
+): "in_stock" | "low_stock" | "out_of_stock" {
   if (onHand === Infinity) return "in_stock"; // Infinite stock is always in stock
   if (onHand <= 0) return "out_of_stock";
   if (onHand <= reorderPoint) return "low_stock";
@@ -103,18 +118,31 @@ function InlineNumberField({
 }
 
 function ProductsIndexPage() {
-  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct, updateProduct, updateProductStock } = useStore();
+  const {
+    products,
+    categories,
+    invFor,
+    categoryNameOf,
+    archiveCategory,
+    reactivateCategory,
+    reactivateProduct,
+    updateProduct,
+    updateProductStock,
+  } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const { openNew } = Route.useSearch();
   const [tab, setTab] = useState<Tab>("products");
+  const [view, setView] = useState<"catalog" | "stock">("catalog");
   const [archivedView, setArchivedView] = useState<ArchivedView>("products");
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("all");
   const [brand, setBrand] = useState("all");
   const [stock, setStock] = useState<StockFilter>("all");
   const [dialog, setDialog] = useState<{ open: boolean; product?: Product }>({ open: false });
-  const [catDialog, setCatDialog] = useState<{ open: boolean; category?: Category }>({ open: false });
+  const [catDialog, setCatDialog] = useState<{ open: boolean; category?: Category }>({
+    open: false,
+  });
 
   useEffect(() => {
     if (openNew) setDialog((d) => ({ ...d, open: true }));
@@ -204,7 +232,9 @@ function ProductsIndexPage() {
     {
       key: "category",
       header: "Category",
-      cell: (p) => <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>,
+      cell: (p) => (
+        <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>
+      ),
       sortValue: (p) => categoryNameOf(p.categoryId),
     },
     {
@@ -362,13 +392,17 @@ function ProductsIndexPage() {
     {
       key: "category",
       header: "Category",
-      cell: (p) => <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>,
+      cell: (p) => (
+        <span className="text-xs text-muted-foreground">{categoryNameOf(p.categoryId)}</span>
+      ),
       sortValue: (p) => categoryNameOf(p.categoryId),
     },
     {
       key: "price",
       header: "Price",
-      cell: (p) => <div className="mono text-right tabular-nums text-muted-foreground">{money(p.price)}</div>,
+      cell: (p) => (
+        <div className="mono text-right tabular-nums text-muted-foreground">{money(p.price)}</div>
+      ),
       sortValue: (p) => p.price,
       align: "right",
     },
@@ -412,15 +446,30 @@ function ProductsIndexPage() {
 
       {tab !== "categories" && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Total SKUs" numericValue={stats.total} format={(n) => num(Math.round(n))} accent="info" />
+          <StatCard
+            label="Total SKUs"
+            numericValue={stats.total}
+            format={(n) => num(Math.round(n))}
+            accent="info"
+          />
           <StatCard
             label="Catalog value (cost)"
             numericValue={stats.value}
             format={(n) => money(Math.round(n))}
             accent="neutral"
           />
-          <StatCard label="Low stock" numericValue={stats.low} format={(n) => num(Math.round(n))} accent="warning" />
-          <StatCard label="Out of stock" numericValue={stats.out} format={(n) => num(Math.round(n))} accent="danger" />
+          <StatCard
+            label="Low stock"
+            numericValue={stats.low}
+            format={(n) => num(Math.round(n))}
+            accent="warning"
+          />
+          <StatCard
+            label="Out of stock"
+            numericValue={stats.out}
+            format={(n) => num(Math.round(n))}
+            accent="danger"
+          />
         </div>
       )}
 
@@ -435,42 +484,58 @@ function ProductsIndexPage() {
       />
 
       {tab === "products" && (
-        <Panel>
-          <Toolbar>
-            <SearchInput value={q} onChange={setQ} placeholder="Search name, SKU or brand…" />
-            <FilterSelect
-              value={category}
-              onChange={setCategory}
-              options={activeCategories.map((c) => ({ value: c.id, label: c.name }))}
-              label="Category"
-            />
-            <FilterSelect value={brand} onChange={setBrand} options={brands} label="Brand" />
-            <FilterSelect
-              value={stock}
-              onChange={(v) => setStock(v as StockFilter)}
-              options={["in_stock", "low_stock", "out_of_stock"]}
-              label="Stock"
-            />
-            <ResultCount shown={rows.length} total={activeProducts.length} noun="products" />
-          </Toolbar>
-          <DataTable
-            rows={rows.map((p) => ({ ...p }))}
-            columns={columns}
-            loading={loading}
-            onRowClick={(p) => navigate({ to: "/products/$productId", params: { productId: p.id } })}
-            empty={
-              <EmptyState
-                title="No products match your filters"
-                description="Try clearing the search or filters, or add a new product."
-                action={
-                  <Button size="sm" onClick={() => setDialog({ open: true })}>
-                    Add product
-                  </Button>
+        <div className="space-y-4">
+          <Segmented
+            value={view}
+            onChange={(v) => setView(v as "catalog" | "stock")}
+            options={[
+              { value: "catalog", label: "Catalog" },
+              { value: "stock", label: "Stock by warehouse" },
+            ]}
+          />
+          {view === "catalog" ? (
+            <Panel>
+              <Toolbar>
+                <SearchInput value={q} onChange={setQ} placeholder="Search name, SKU or brand…" />
+                <FilterSelect
+                  value={category}
+                  onChange={setCategory}
+                  options={activeCategories.map((c) => ({ value: c.id, label: c.name }))}
+                  label="Category"
+                />
+                <FilterSelect value={brand} onChange={setBrand} options={brands} label="Brand" />
+                <FilterSelect
+                  value={stock}
+                  onChange={(v) => setStock(v as StockFilter)}
+                  options={["in_stock", "low_stock", "out_of_stock"]}
+                  label="Stock"
+                />
+                <ResultCount shown={rows.length} total={activeProducts.length} noun="products" />
+              </Toolbar>
+              <DataTable
+                rows={rows.map((p) => ({ ...p }))}
+                columns={columns}
+                loading={loading}
+                onRowClick={(p) =>
+                  navigate({ to: "/products/$productId", params: { productId: p.id } })
+                }
+                empty={
+                  <EmptyState
+                    title="No products match your filters"
+                    description="Try clearing the search or filters, or add a new product."
+                    action={
+                      <Button size="sm" onClick={() => setDialog({ open: true })}>
+                        Add product
+                      </Button>
+                    }
+                  />
                 }
               />
-            }
-          />
-        </Panel>
+            </Panel>
+          ) : (
+            <ProductStockView />
+          )}
+        </div>
       )}
 
       {tab === "categories" && (
@@ -502,7 +567,9 @@ function ProductsIndexPage() {
                 {
                   key: "products",
                   header: "Products",
-                  cell: (c) => <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>,
+                  cell: (c) => (
+                    <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>
+                  ),
                   sortValue: (c) => categoryCount(c.id),
                 },
                 {
@@ -579,7 +646,11 @@ function ProductsIndexPage() {
           {archivedView === "products" ? (
             <Panel>
               <Toolbar>
-                <ResultCount shown={archivedProducts.length} total={archivedProducts.length} noun="archived products" />
+                <ResultCount
+                  shown={archivedProducts.length}
+                  total={archivedProducts.length}
+                  noun="archived products"
+                />
               </Toolbar>
               <DataTable
                 rows={archivedProducts.map((p) => ({ ...p }))}
@@ -603,14 +674,25 @@ function ProductsIndexPage() {
                   },
                 ]}
                 loading={loading}
-                onRowClick={(p) => navigate({ to: "/products/$productId", params: { productId: p.id } })}
-                empty={<EmptyState title="Nothing archived" description="Archived products will appear here." />}
+                onRowClick={(p) =>
+                  navigate({ to: "/products/$productId", params: { productId: p.id } })
+                }
+                empty={
+                  <EmptyState
+                    title="Nothing archived"
+                    description="Archived products will appear here."
+                  />
+                }
               />
             </Panel>
           ) : (
             <Panel>
               <Toolbar>
-                <ResultCount shown={archivedCategories.length} total={archivedCategories.length} noun="archived categories" />
+                <ResultCount
+                  shown={archivedCategories.length}
+                  total={archivedCategories.length}
+                  noun="archived categories"
+                />
               </Toolbar>
               <DataTable<Category>
                 rows={archivedCategories.map((c) => ({ ...c }))}
@@ -625,7 +707,9 @@ function ProductsIndexPage() {
                   {
                     key: "products",
                     header: "Products",
-                    cell: (c) => <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>,
+                    cell: (c) => (
+                      <span className="mono tabular-nums">{num(categoryCount(c.id))}</span>
+                    ),
                     sortValue: (c) => categoryCount(c.id),
                   },
                   {

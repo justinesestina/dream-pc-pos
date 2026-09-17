@@ -401,7 +401,9 @@ export interface CreateTransferInput {
   notes?: string;
 }
 
-export async function createBackendTransfer(input: CreateTransferInput): Promise<StockTransfer | null> {
+export async function createBackendTransfer(
+  input: CreateTransferInput,
+): Promise<StockTransfer | null> {
   const res = await apiRequest<StockTransfer>("/api/v1/transfers", "POST", input);
   return res.ok ? res.data || null : null;
 }

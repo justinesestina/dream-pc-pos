@@ -96,6 +96,7 @@ export interface WarehouseStockRow {
   productId: string;
   name: string;
   sku: string;
+  image?: string | undefined;
   quantity: number;
   reserved: number;
   available: number;
@@ -149,6 +150,9 @@ export interface StockTransfer {
 /** Aggregated per-product stock across all warehouses (Products page). */
 export interface ProductStockInfo {
   productId: string;
+  name: string;
+  sku: string;
+  image?: string | undefined;
   wooStock: number | null;
   wooStatus: string;
   totalPhysical: number;

@@ -176,7 +176,9 @@ export function TransfersPage() {
     {
       key: "product",
       header: "Product",
-      cell: (t) => <span className="text-foreground">{t.productName || productName(t.productId)}</span>,
+      cell: (t) => (
+        <span className="text-foreground">{t.productName || productName(t.productId)}</span>
+      ),
       sortValue: (t) => t.productName,
     },
     {
@@ -201,17 +203,32 @@ export function TransfersPage() {
       cell: (t) => (
         <div className="flex items-center justify-end gap-1">
           {(t.status === "draft" || t.status === "pending") && (
-            <Button variant="outline" size="sm" className="h-7" onClick={() => advance(t, "approved")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={() => advance(t, "approved")}
+            >
               Approve
             </Button>
           )}
           {t.status === "approved" && (
-            <Button variant="outline" size="sm" className="h-7" onClick={() => advance(t, "completed")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7"
+              onClick={() => advance(t, "completed")}
+            >
               Complete
             </Button>
           )}
           {(t.status === "draft" || t.status === "pending" || t.status === "approved") && (
-            <Button variant="ghost" size="sm" className="h-7" onClick={() => advance(t, "cancelled")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7"
+              onClick={() => advance(t, "cancelled")}
+            >
               Cancel
             </Button>
           )}

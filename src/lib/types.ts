@@ -76,6 +76,7 @@ export interface WarehouseStockRow {
   productId: string;
   name: string;
   sku: string;
+  image?: string | undefined;
   quantity: number;
   reserved: number;
   available: number;
@@ -83,11 +84,7 @@ export interface WarehouseStockRow {
 }
 
 export type WarehouseMovementType =
-  | "stock_in"
-  | "stock_out"
-  | "transfer_in"
-  | "transfer_out"
-  | "adjustment";
+  "stock_in" | "stock_out" | "transfer_in" | "transfer_out" | "adjustment";
 
 export interface StockMovement {
   id: string;
@@ -127,6 +124,9 @@ export interface StockTransfer {
 /** Aggregated per-product stock across warehouses (Products page). */
 export interface ProductStockInfo {
   productId: string;
+  name: string;
+  sku: string;
+  image?: string | undefined;
   wooStock: number | null;
   wooStatus: string;
   totalPhysical: number;
