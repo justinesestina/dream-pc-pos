@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
@@ -26,6 +26,9 @@ import { num } from "@/lib/format";
 import type { Supplier } from "@/lib/ops-types";
 
 export const Route = createFileRoute("/_app/suppliers/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    openNew: search["new"] === "1" || search["new"] === true,
+  }),
   head: () => ({
     meta: [
       { title: "Suppliers — DPC Nexus" },
@@ -43,10 +46,15 @@ function SuppliersIndexPage() {
   const { suppliers, purchaseOrders, updateSupplier } = useOps();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
+  const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("all");
   const [dialog, setDialog] = useState<{ open: boolean; supplier?: Supplier }>({ open: false });
+
+  useEffect(() => {
+    if (openNew) setDialog({ open: true });
+  }, [openNew]);
 
   const categories = useMemo(
     () => Array.from(new Set(suppliers.flatMap((s) => s.categories))).sort(),

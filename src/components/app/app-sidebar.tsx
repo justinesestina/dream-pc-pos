@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronsLeft, ChevronsRight, LogOut, Settings } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,12 +9,93 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NexusWordmark } from "@/components/brand/nexus-logo";
-import { navGroups } from "./nav-config";
+import { navGroups, isNavActive, type NavItem } from "./nav-config";
 import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
+
+const rowBase =
+  "group relative flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[13px] transition-colors";
+
+function rowCls(active: boolean, collapsed: boolean) {
+  return cn(
+    rowBase,
+    collapsed && "justify-center px-0",
+    active
+      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+  );
+}
+
+function ActiveBar({ active }: { active: boolean }) {
+  if (!active) return null;
+  return <span className="absolute top-1.5 bottom-1.5 -left-2 w-[2px] rounded-full bg-info" />;
+}
+
+/** Flyout panel listing an item's children; supports unlimited nesting. */
+function Flyout({
+  items,
+  pathname,
+  nested,
+}: {
+  items: NavItem[];
+  pathname: string;
+  nested?: boolean;
+}) {
+  const body = items.map((child) => {
+    if (child.children?.length) {
+      return (
+        <DropdownMenuSub key={child.label}>
+          <DropdownMenuSubTrigger className="gap-2 py-1.5 pr-1 text-[13px]">
+            <span className="flex-1 truncate">{child.label}</span>
+          </DropdownMenuSubTrigger>
+          <Flyout items={child.children} pathname={pathname} nested />
+        </DropdownMenuSub>
+      );
+    }
+    if (child.soon) {
+      return (
+        <DropdownMenuItem key={child.label} disabled className="gap-2 py-1.5 text-[13px]">
+          <span className="flex-1 truncate">{child.label}</span>
+          <span className="mono rounded border border-border bg-elevated px-1 py-px text-[9.5px] tracking-wide text-subtle uppercase">
+            Soon
+          </span>
+        </DropdownMenuItem>
+      );
+    }
+    const active = child.to ? isNavActive(child, pathname) : false;
+    return (
+      <DropdownMenuItem
+        asChild
+        key={child.to ?? child.label}
+        className={cn(
+          "gap-2 py-1.5 text-[13px]",
+          active && "bg-sidebar-accent/60 font-medium text-foreground",
+        )}
+      >
+        <Link to={child.to ?? ""} search={child.search as never}>
+          {child.label}
+        </Link>
+      </DropdownMenuItem>
+    );
+  });
+
+  const className = "min-w-52 p-1.5";
+  return nested ? (
+    <DropdownMenuSubContent sideOffset={6} className={className}>
+      {body}
+    </DropdownMenuSubContent>
+  ) : (
+    <DropdownMenuContent side="right" align="start" sideOffset={6} className={className}>
+      {body}
+    </DropdownMenuContent>
+  );
+}
 
 export function AppSidebar() {
   const store = useStore();
@@ -85,28 +166,63 @@ export function AppSidebar() {
               {!collapsed && <p className="label-tech px-2 pb-1.5">{group.label}</p>}
               <ul className="space-y-0.5">
                 {items.map((item) => {
-                  const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+                  const active = isNavActive(item, pathname);
+
+                  if (item.children?.length) {
+                    const content = (
+                      <>
+                        <ActiveBar active={active} />
+                        {item.icon && <item.icon className="size-4 shrink-0" />}
+                        {!collapsed && (
+                          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                        )}
+                        {!collapsed && <ChevronRight className="size-3.5 shrink-0 opacity-60" />}
+                      </>
+                    );
+                    return (
+                      <li key={item.label}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            {item.to ? (
+                              <Link
+                                to={item.to}
+                                search={item.search as never}
+                                aria-current={active ? "page" : undefined}
+                                className={rowCls(active, collapsed)}
+                              >
+                                {content}
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                aria-haspopup="menu"
+                                aria-current={active ? "page" : undefined}
+                                className={cn(rowCls(active, collapsed), "w-full")}
+                              >
+                                {content}
+                              </button>
+                            )}
+                          </DropdownMenuTrigger>
+                          <Flyout items={item.children} pathname={pathname} />
+                        </DropdownMenu>
+                      </li>
+                    );
+                  }
+
                   const link = (
                     <Link
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[13px] transition-colors",
-                        collapsed && "justify-center px-0",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-                      )}
+                      to={item.to ?? ""}
+                      search={item.search as never}
+                      className={rowCls(active, collapsed)}
                       aria-current={active ? "page" : undefined}
                     >
-                      {active && (
-                        <span className="absolute top-1.5 bottom-1.5 -left-2 w-[2px] rounded-full bg-info" />
-                      )}
-                      <item.icon className="size-4 shrink-0" />
+                      <ActiveBar active={active} />
+                      {item.icon && <item.icon className="size-4 shrink-0" />}
                       {!collapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   );
                   return (
-                    <li key={item.to}>
+                    <li key={item.to ?? item.label}>
                       {collapsed ? (
                         <Tooltip>
                           <TooltipTrigger asChild>{link}</TooltipTrigger>

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, Command, Menu, Search, Sun, Moon } from "lucide-react";
+import { Bell, ChevronDown, Command, Menu, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NexusWordmark } from "@/components/brand/nexus-logo";
-import { navGroups } from "./nav-config";
+import { navGroups, flattenNav, isNavActive, type NavItem } from "./nav-config";
 import { UserMenu } from "./app-sidebar";
 import { useStore } from "@/lib/store";
 import { can } from "@/lib/permissions";
@@ -16,16 +16,123 @@ import { relative } from "@/lib/format";
 function useCrumbs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const segments = pathname.split("/").filter(Boolean);
-  const all = navGroups.flatMap((g) => g.items);
-  const root = all.find((i) => i.to === `/${segments[0] ?? ""}`);
-  const title = root?.label ?? "Dashboard";
+  const seg0 = `/${segments[0] ?? ""}`;
+  const root = (() => {
+    for (const g of navGroups) {
+      for (const top of g.items) {
+        const leaves = flattenNav(top);
+        const leaf = leaves.find((l) => l.to === seg0);
+        if (leaf) return { title: top.label, to: leaf.to ?? "/dashboard" };
+      }
+    }
+    return null;
+  })();
+  const title = root?.title ?? "Dashboard";
   const detail = segments.length > 1 ? decodeURIComponent(segments[1] ?? "") : null;
   return { title, detail, rootTo: root?.to ?? "/dashboard" };
+}
+
+function SoonTag() {
+  return (
+    <span className="mono rounded border border-border bg-elevated px-1 py-px text-[9.5px] tracking-wide text-subtle uppercase">
+      Soon
+    </span>
+  );
+}
+
+function MobileNavItem({
+  item,
+  pathname,
+  onNavigate,
+  depth = 0,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
+  depth?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = isNavActive(item, pathname);
+  const pad = { paddingLeft: `${8 + depth * 14}px` };
+  const base =
+    "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-[13px] transition-colors hover:bg-sidebar-accent hover:text-foreground";
+  const icon = item.icon ? (
+    <item.icon className="size-4 shrink-0" />
+  ) : (
+    <span className="w-4 shrink-0" />
+  );
+
+  if (item.children?.length && !item.soon) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className={cn(base, active && "bg-sidebar-accent text-sidebar-accent-foreground")}
+          style={pad}
+        >
+          {icon}
+          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 opacity-60 transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+        {open && (
+          <ul className="mt-0.5 space-y-0.5">
+            {item.children.map((child) => (
+              <MobileNavItem
+                key={child.label}
+                item={child}
+                pathname={pathname}
+                onNavigate={onNavigate}
+                depth={depth + 1}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  if (item.soon) {
+    return (
+      <div
+        className={cn(base, "cursor-default text-muted-foreground/60 hover:bg-transparent")}
+        style={pad}
+      >
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+        <SoonTag />
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to={item.to as string}
+      search={item.search as never}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        base,
+        active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground",
+      )}
+      style={pad}
+    >
+      {icon}
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+    </Link>
+  );
 }
 
 export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const store = useStore();
   const { title, detail, rootTo } = useCrumbs();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileNav, setMobileNav] = useState(false);
   const unread = store.notifications.filter((n) => !n.read).length;
   const role = store.user?.role ?? "owner";
@@ -50,17 +157,16 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
               return (
                 <div key={g.label} className="mb-4">
                   <p className="label-tech px-2 pb-1.5">{g.label}</p>
-                  {items.map((i) => (
-                    <Link
-                      key={i.to}
-                      to={i.to}
-                      onClick={() => setMobileNav(false)}
-                      className="flex items-center gap-2.5 rounded-md px-2 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
-                    >
-                      <i.icon className="size-4" />
-                      {i.label}
-                    </Link>
-                  ))}
+                  <ul className="space-y-0.5">
+                    {items.map((item) => (
+                      <MobileNavItem
+                        key={item.label}
+                        item={item}
+                        pathname={pathname}
+                        onNavigate={() => setMobileNav(false)}
+                      />
+                    ))}
+                  </ul>
                 </div>
               );
             })}
