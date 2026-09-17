@@ -24,6 +24,7 @@ export function TransfersPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -45,18 +46,28 @@ export function TransfersPage() {
   }, []);
 
   const advance = async (t: StockTransfer, status: TransferStatus) => {
-    const res = await updateBackendTransferStatus(t.id, status);
+    if (busyId) return;
+    setBusyId(t.id);
+    const res = await updateBackendTransferStatus(t.id, status, `transfer-${status}:${t.id}`);
+    setBusyId(null);
     if (!res) {
       const message = getLastApiError() ?? "Could not update transfer.";
       toast.error("Could not update transfer", { description: message });
       return;
     }
-    toast.success(`Transfer ${t.id} ${status}.`);
+    toast.success(
+      status === "completed"
+        ? `Transfer ${t.id} completed — stock moved.`
+        : `Transfer ${t.id} ${status}.`,
+    );
     load();
   };
 
   const remove = async (t: StockTransfer) => {
+    if (busyId) return;
+    setBusyId(t.id);
     const ok = await deleteBackendTransfer(t.id);
+    setBusyId(null);
     if (!ok) {
       const message = getLastApiError() ?? "Could not delete transfer.";
       toast.error("Could not delete transfer", { description: message });
@@ -126,52 +137,49 @@ export function TransfersPage() {
       key: "actions",
       header: "",
       align: "right",
-      className: "w-56",
-      cell: (t) => (
-        <div className="flex items-center justify-end gap-1">
-          {(t.status === "draft" || t.status === "pending") && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7"
-              onClick={() => advance(t, "approved")}
-            >
-              Approve
-            </Button>
-          )}
-          {t.status === "approved" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7"
-              onClick={() => advance(t, "completed")}
-            >
-              Complete
-            </Button>
-          )}
-          {(t.status === "draft" || t.status === "pending" || t.status === "approved") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7"
-              onClick={() => advance(t, "cancelled")}
-            >
-              Cancel
-            </Button>
-          )}
-          {(t.status === "draft" || t.status === "cancelled") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-destructive hover:text-destructive"
-              onClick={() => remove(t)}
-              aria-label={`Delete transfer ${t.id}`}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          )}
-        </div>
-      ),
+      className: "w-64",
+      cell: (t) => {
+        const busy = busyId === t.id;
+        const open_ = t.status === "draft" || t.status === "pending" || t.status === "approved";
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {open_ && (
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7"
+                disabled={busy}
+                onClick={() => advance(t, "completed")}
+              >
+                {busy ? "Working…" : "Approve & complete"}
+              </Button>
+            )}
+            {open_ && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7"
+                disabled={busy}
+                onClick={() => advance(t, "cancelled")}
+              >
+                Cancel
+              </Button>
+            )}
+            {(t.status === "draft" || t.status === "cancelled") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-destructive hover:text-destructive"
+                disabled={busy}
+                onClick={() => remove(t)}
+                aria-label={`Delete transfer ${t.id}`}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

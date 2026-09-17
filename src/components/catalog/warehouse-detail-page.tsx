@@ -8,6 +8,7 @@ import {
   MinusCircle,
   Package,
   PackagePlus,
+  Pencil,
   Trash2,
   Warehouse as WarehouseIcon,
 } from "lucide-react";
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddStockDialog } from "@/components/inventory/add-stock-dialog";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
+import { EditStockDialog } from "@/components/inventory/edit-stock-dialog";
 import {
   deleteBackendWarehouse,
   fetchBackendWarehouse,
@@ -51,7 +53,7 @@ import {
   updateBackendWarehouse,
 } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import { dateTime, num } from "@/lib/format";
+import { dateTime, money, num } from "@/lib/format";
 import type {
   StockMovement,
   StockTransfer,
@@ -108,6 +110,7 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
   const [stockQ, setStockQ] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<WarehouseStockRow | null>(null);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -153,7 +156,8 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
   const totals = useMemo(() => {
     const inStock = stock.filter((r) => r.quantity > 0);
     const quantity = stock.reduce((sum, r) => sum + r.quantity, 0);
-    return { products: inStock.length, quantity, catalog: stock.length };
+    const totalValue = stock.reduce((sum, r) => sum + (r.value ?? 0), 0);
+    return { products: inStock.length, quantity, catalog: stock.length, totalValue };
   }, [stock]);
 
   const filteredStock = useMemo(() => {
@@ -252,6 +256,26 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
       sortValue: (r) => r.available,
     },
     {
+      key: "cost",
+      header: "Unit Cost",
+      align: "right",
+      cell: (r) => (
+        <span className="mono tabular-nums text-muted-foreground">
+          {r.cost ? money(r.cost) : "—"}
+        </span>
+      ),
+      sortValue: (r) => r.cost ?? 0,
+    },
+    {
+      key: "value",
+      header: "Value",
+      align: "right",
+      cell: (r) => (
+        <span className="mono tabular-nums text-foreground">{r.value ? money(r.value) : "—"}</span>
+      ),
+      sortValue: (r) => r.value ?? 0,
+    },
+    {
       key: "updatedAt",
       header: "Updated",
       cell: (r) => (
@@ -260,6 +284,23 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         </span>
       ),
       sortValue: (r) => r.updatedAt,
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      className: "w-20",
+      cell: (r) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2"
+          onClick={() => setEditingRow(r)}
+          aria-label={`Edit stock for ${r.name}`}
+        >
+          <Pencil className="size-3.5" /> Edit
+        </Button>
+      ),
     },
   ];
 
@@ -371,6 +412,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
               <span className="label-tech">{num(totals.products)} products</span>
               <span className="label-tech">{num(totals.quantity)} units on hand</span>
               <span className="label-tech">{num(totals.catalog)} in catalog</span>
+              {totals.totalValue > 0 && (
+                <span className="label-tech">Value {money(totals.totalValue)}</span>
+              )}
               {warehouse.type === "selling" && (
                 <span className="label-tech">
                   {warehouse.sync ? "Synced to WooCommerce" : "Not synced"}
@@ -644,6 +688,19 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         onOpenChange={setTransferOpen}
         initialFromId={warehouseId}
         onDone={() => setReloadKey((k) => k + 1)}
+      />
+
+      <EditStockDialog
+        open={Boolean(editingRow)}
+        onOpenChange={(v) => !v && setEditingRow(null)}
+        warehouseId={warehouseId}
+        productId={editingRow?.productId}
+        initialQuantity={editingRow?.quantity}
+        initialCost={editingRow?.cost}
+        onDone={() => {
+          setEditingRow(null);
+          setReloadKey((k) => k + 1);
+        }}
       />
     </div>
   );

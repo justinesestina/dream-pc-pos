@@ -141,7 +141,7 @@ export function TransferStockDialog({
       toast.error("Could not create transfer", { description: message });
       return;
     }
-    toast.success("Transfer created — approve and complete it on the Stock Transfers page.");
+    toast.success("Transfer created — approve & complete it on the Stock Transfers page.");
     onOpenChange(false);
     onDone?.();
   };
@@ -154,7 +154,8 @@ export function TransferStockDialog({
             <ArrowRightLeft className="size-4 text-info" /> New stock transfer
           </DialogTitle>
           <DialogDescription>
-            Creates a draft transfer. Approve then complete it to actually move the stock.
+            Creates a draft transfer. Approve & complete it on the Stock Transfers page to move the
+            stock.
           </DialogDescription>
         </DialogHeader>
 

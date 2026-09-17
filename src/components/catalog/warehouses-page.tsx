@@ -52,7 +52,7 @@ import {
   getLastApiError,
   updateBackendWarehouse,
 } from "@/lib/api-client";
-import { num } from "@/lib/format";
+import { money, num } from "@/lib/format";
 import type { Warehouse, WarehouseType } from "@/lib/types";
 
 const invalidClass = "border-destructive focus-visible:ring-destructive";
@@ -97,6 +97,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const [notes, setNotes] = useState("");
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -162,7 +163,8 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     if (!code.trim()) next.code = "Warehouse code is required.";
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-
+    if (saving) return;
+    setSaving(true);
     const payload: Partial<Warehouse> = {
       name: name.trim(),
       code: code.trim(),
@@ -180,6 +182,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     const res = editing
       ? await updateBackendWarehouse(editing.id, payload)
       : await createBackendWarehouse(payload);
+    setSaving(false);
     if (!res) {
       const message = getLastApiError() ?? "Could not save warehouse.";
       setErrors({ form: message });
@@ -194,8 +197,10 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   };
 
   const confirmDelete = async () => {
-    if (!deleting) return;
+    if (!deleting || saving) return;
+    setSaving(true);
     const removed = await deleteBackendWarehouse(deleting.id);
+    setSaving(false);
     if (!removed) {
       const message = getLastApiError() ?? "Could not delete warehouse.";
       toast.error("Could not delete warehouse", { description: message });
@@ -277,6 +282,17 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
         <span className="mono tabular-nums text-foreground">{num(w.totalQuantity ?? 0)}</span>
       ),
       sortValue: (w) => w.totalQuantity ?? 0,
+    },
+    {
+      key: "value",
+      header: "Value",
+      align: "right",
+      cell: (w) => (
+        <span className="mono tabular-nums text-foreground">
+          {w.totalValue ? money(w.totalValue) : "—"}
+        </span>
+      ),
+      sortValue: (w) => w.totalValue ?? 0,
     },
     {
       key: "createdAt",
@@ -541,7 +557,9 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submit}>{editing ? "Save changes" : "Create warehouse"}</Button>
+            <Button onClick={submit} disabled={saving}>
+              {saving ? "Saving…" : editing ? "Save changes" : "Create warehouse"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -558,7 +576,9 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>Delete warehouse</AlertDialogAction>
+              <AlertDialogAction onClick={confirmDelete} disabled={saving}>
+                Delete warehouse
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

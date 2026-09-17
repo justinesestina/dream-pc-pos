@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle, MinusCircle, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   fetchBackendWarehouses,
   fetchWarehouseStock,
   getLastApiError,
+  newIdempotencyKey,
   type AddStockInput,
 } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,9 @@ export function AddStockDialog({
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  // One key per dialog session: a retry after a failure reuses it so the
+  // backend applies the change at most once.
+  const idemRef = useRef(newIdempotencyKey());
 
   useEffect(() => {
     if (!open) return;
@@ -92,6 +96,7 @@ export function AddStockDialog({
     setReference("");
     setNotes("");
     setErrors({});
+    idemRef.current = newIdempotencyKey();
   }, [open, initialMode, initialProductId, warehouseId]);
 
   useEffect(() => {
@@ -152,6 +157,7 @@ export function AddStockDialog({
         delta: -qty,
         ...(reference.trim() ? { reference: reference.trim() } : {}),
         ...(notes.trim() ? { note: notes.trim() } : {}),
+        idempotencyKey: idemRef.current,
       });
       setSaving(false);
       if (!res) {
@@ -162,7 +168,11 @@ export function AddStockDialog({
       }
       toast.success(`Deducted ${qty} × ${product?.name ?? "product"}.`);
     } else {
-      const payload: AddStockInput = { productId, quantity: qty };
+      const payload: AddStockInput = {
+        productId,
+        quantity: qty,
+        idempotencyKey: idemRef.current,
+      };
       if (costPrice.trim()) payload.costPrice = Number(costPrice.trim());
       if (supplier.trim()) payload.supplier = supplier.trim();
       if (reference.trim()) payload.reference = reference.trim();

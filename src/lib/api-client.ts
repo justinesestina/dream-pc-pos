@@ -375,6 +375,23 @@ export interface AddStockInput {
   supplier?: string;
   reference?: string;
   notes?: string;
+  idempotencyKey?: string;
+}
+
+/**
+ * Generate a one-shot key for a mutating action. Reusing it on a retry tells the
+ * backend to apply the change at most once (protects add/deduct/edit/transfers
+ * against spam-clicks and network retries).
+ */
+export function newIdempotencyKey(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through
+  }
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export async function addWarehouseStock(
@@ -423,8 +440,31 @@ export async function createBackendTransfer(
 export async function updateBackendTransferStatus(
   id: string,
   status: TransferStatus,
+  idempotencyKey?: string,
 ): Promise<StockTransfer | null> {
-  const res = await apiRequest<StockTransfer>(`/api/v1/transfers/${id}`, "PUT", { status });
+  const body = idempotencyKey ? { status, idempotencyKey } : { status };
+  const res = await apiRequest<StockTransfer>(`/api/v1/transfers/${id}`, "PUT", body);
+  return res.ok ? res.data || null : null;
+}
+
+export interface SetWarehouseStockInput {
+  quantity?: number;
+  costPrice?: number;
+  note?: string;
+  idempotencyKey?: string;
+}
+
+/** Inline row edit: set a product's absolute quantity / unit cost in a warehouse. */
+export async function setWarehouseStock(
+  warehouseId: string,
+  productId: string,
+  input: SetWarehouseStockInput,
+): Promise<{ movement?: StockMovement; row: WarehouseStockRow } | null> {
+  const res = await apiRequest<{ movement?: StockMovement; row: WarehouseStockRow }>(
+    `/api/v1/warehouses/${warehouseId}/stock/${productId}`,
+    "PUT",
+    input,
+  );
   return res.ok ? res.data || null : null;
 }
 
@@ -452,7 +492,13 @@ export async function fetchBackendInventoryMovements(params?: {
 
 export async function adjustBackendStock(
   productId: string,
-  input: { warehouseId: string; delta: number; reference?: string; note?: string },
+  input: {
+    warehouseId: string;
+    delta: number;
+    reference?: string;
+    note?: string;
+    idempotencyKey?: string;
+  },
 ): Promise<StockMovement | null> {
   const res = await apiRequest<StockMovement>(
     `/api/v1/inventory/stock/${productId}/adjust`,

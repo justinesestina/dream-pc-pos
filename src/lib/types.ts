@@ -67,6 +67,8 @@ export interface Warehouse {
   /** Derived totals returned by the warehouses list endpoint. */
   totalProducts?: number | undefined;
   totalQuantity?: number | undefined;
+  /** Derived: sum of (qty × cost) for products that carry a cost. */
+  totalValue?: number | undefined;
 }
 
 /** One product's quantity inside a warehouse (Warehouse Detail → Products). */
@@ -80,6 +82,10 @@ export interface WarehouseStockRow {
   quantity: number;
   reserved: number;
   available: number;
+  /** Per-unit cost in this warehouse (falls back to the product cost). */
+  cost?: number | undefined;
+  /** quantity × cost, when a cost is known. */
+  value?: number | undefined;
   updatedAt: string;
 }
 
@@ -130,7 +136,15 @@ export interface ProductStockInfo {
   wooStock: number | null;
   wooStatus: string;
   totalPhysical: number;
-  warehouses: { warehouseId: string; name: string; quantity: number }[];
+  /** Sum of (qty × cost) across warehouses that carry a cost. */
+  totalValue?: number | undefined;
+  warehouses: {
+    warehouseId: string;
+    name: string;
+    quantity: number;
+    cost?: number | undefined;
+    value?: number | undefined;
+  }[];
   updatedAt: string;
 }
 

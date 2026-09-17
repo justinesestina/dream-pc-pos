@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowRightLeft, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Pencil, RefreshCw } from "lucide-react";
 import { Panel, EmptyState } from "@/components/nexus/primitives";
 import { ResultCount, SearchInput, Toolbar } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
@@ -8,8 +8,9 @@ import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import { AddStockDialog } from "@/components/inventory/add-stock-dialog";
+import { EditStockDialog } from "@/components/inventory/edit-stock-dialog";
 import { fetchBackendProductStock, fetchBackendWarehouses } from "@/lib/api-client";
-import { num } from "@/lib/format";
+import { money, num } from "@/lib/format";
 import type { ProductStockInfo, Warehouse } from "@/lib/types";
 
 function isOutOnStorefront(r: ProductStockInfo): boolean {
@@ -29,6 +30,11 @@ export function ProductStockView() {
     productId: "",
   });
   const [addStock, setAddStock] = useState({ open: false, productId: "" });
+  const [edit, setEdit] = useState({
+    open: false,
+    productId: "",
+    warehouseId: "",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +122,17 @@ export function ProductStockView() {
       sortValue: (r) => r.totalPhysical,
     },
     {
+      key: "value",
+      header: "Value",
+      align: "right",
+      cell: (r) => (
+        <span className="mono tabular-nums text-foreground">
+          {r.totalValue ? money(r.totalValue) : "—"}
+        </span>
+      ),
+      sortValue: (r) => r.totalValue ?? 0,
+    },
+    {
       key: "warehouses",
       header: "Warehouse Availability",
       cell: (r) => {
@@ -169,7 +186,7 @@ export function ProductStockView() {
       key: "actions",
       header: "",
       align: "right",
-      className: "w-40",
+      className: "w-52",
       cell: (r) => (
         <div className="flex items-center justify-end gap-1">
           <Button
@@ -179,6 +196,21 @@ export function ProductStockView() {
             onClick={() => setAddStock({ open: true, productId: r.productId })}
           >
             Add
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2"
+            onClick={() =>
+              setEdit({
+                open: true,
+                productId: r.productId,
+                warehouseId: r.warehouses[0]?.warehouseId ?? "",
+              })
+            }
+            aria-label={`Edit stock for ${r.name}`}
+          >
+            <Pencil className="size-3.5" /> Edit
           </Button>
           <Button
             variant="outline"
@@ -245,6 +277,15 @@ export function ProductStockView() {
         onOpenChange={(v) => setAddStock((s) => ({ ...s, open: v }))}
         initialMode="add"
         initialProductId={addStock.productId}
+        onDone={() => setReloadKey((k) => k + 1)}
+      />
+
+      <EditStockDialog
+        open={edit.open}
+        onOpenChange={(v) => setEdit((e) => ({ ...e, open: v }))}
+        productId={edit.productId}
+        initialWarehouseId={edit.warehouseId}
+        warehouses={warehouses}
         onDone={() => setReloadKey((k) => k + 1)}
       />
     </div>

@@ -61,6 +61,7 @@ export function inventoryRoutes() {
       reference: body.reference ? String(body.reference) : undefined,
       note: body.note ? String(body.note) : undefined,
       actor: c.get("user").sub,
+      idempotencyKey: body.idempotencyKey ? String(body.idempotencyKey) : undefined,
     });
     return c.json(ok(movement), 201);
   });

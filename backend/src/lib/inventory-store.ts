@@ -33,6 +33,8 @@ import {
 
 const STOCK_META = "_dpc_wh_stock";
 const STOCK_UPDATED_META = "_dpc_wh_updated";
+const COST_META = "_dpc_wh_cost";
+const PRODUCT_COST_META = "_dpc_cost";
 
 const M = {
   // movement
@@ -46,6 +48,7 @@ const M = {
   reference: "_dpc_mv_reference",
   note: "_dpc_mv_note",
   actor: "_dpc_mv_actor",
+  idem: "_dpc_mv_idem",
   // transfer
   fromId: "_dpc_tr_from_id",
   fromName: "_dpc_tr_from_name",
@@ -118,6 +121,37 @@ function stockUpdatedAt(product: WcProduct): string {
   return raw ? String(raw) : product.date_modified || "";
 }
 
+/** Parse a product's per-warehouse unit-cost map (`{ "WH-123": 12.5 }`). */
+export function parseCostMap(product: WcProduct): Record<string, number> {
+  const raw = product.meta_data?.find((m: WcMetaDatum) => m.key === COST_META)?.value;
+  if (!raw) return {};
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) out[k] = n;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Product-level default cost (set on the Products page). */
+function productCostOf(product: WcProduct): number {
+  const raw = product.meta_data?.find((m: WcMetaDatum) => m.key === PRODUCT_COST_META)?.value;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Cost used for a product inside a warehouse: per-warehouse, else product default. */
+function costInWarehouse(product: WcProduct, warehouseId: string): number {
+  const map = parseCostMap(product);
+  return map[warehouseId] ?? productCostOf(product);
+}
+
 async function fetchProduct(productId: string | number): Promise<WcProduct> {
   let raw: WcProduct;
   try {
@@ -136,6 +170,12 @@ async function writeStockMap(productId: string | number, map: Record<string, num
       { key: STOCK_META, value: JSON.stringify(map) },
       { key: STOCK_UPDATED_META, value: now },
     ],
+  });
+}
+
+async function writeCostMap(productId: string | number, map: Record<string, number>): Promise<void> {
+  await woocommerce.updateProduct(productId, {
+    meta_data: [{ key: COST_META, value: JSON.stringify(map) }],
   });
 }
 
@@ -173,9 +213,24 @@ export async function productStockInfo(productId: string | number): Promise<Prod
 
 function buildProductStockInfo(p: WcProduct, nameOf: Map<string, string>): ProductStockInfo {
   const map = parseStockMap(p);
+  const costs = parseCostMap(p);
+  const fallbackCost = productCostOf(p);
   const perWarehouse = Object.entries(map)
     .filter(([id, qty]) => qty > 0 && nameOf.has(id))
-    .map(([id, qty]) => ({ warehouseId: id, name: nameOf.get(id) ?? id, quantity: qty }));
+    .map(([id, qty]) => {
+      const cost = costs[id] ?? fallbackCost;
+      const entry: ProductStockInfo["warehouses"][number] = {
+        warehouseId: id,
+        name: nameOf.get(id) ?? id,
+        quantity: qty,
+      };
+      if (cost > 0) {
+        entry.cost = cost;
+        entry.value = Number((qty * cost).toFixed(2));
+      }
+      return entry;
+    });
+  const totalValue = perWarehouse.reduce((s, w) => s + (w.value ?? 0), 0);
   const info: ProductStockInfo = {
     productId: String(p.id),
     name: p.name,
@@ -186,6 +241,7 @@ function buildProductStockInfo(p: WcProduct, nameOf: Map<string, string>): Produ
     warehouses: perWarehouse.sort((a, b) => b.quantity - a.quantity),
     updatedAt: stockUpdatedAt(p),
   };
+  if (totalValue > 0) info.totalValue = Number(totalValue.toFixed(2));
   const image = p.images?.[0]?.src;
   if (image) info.image = image;
   return info;
@@ -196,6 +252,7 @@ export async function warehouseStockRows(warehouseId: string): Promise<Warehouse
   const products = await woocommerce.products();
   const rows: WarehouseStockRow[] = products.map((p) => {
     const qty = parseStockMap(p)[warehouseId] ?? 0;
+    const cost = costInWarehouse(p, warehouseId);
     const row: WarehouseStockRow = {
       productId: String(p.id),
       name: p.name,
@@ -205,6 +262,10 @@ export async function warehouseStockRows(warehouseId: string): Promise<Warehouse
       available: qty,
       updatedAt: stockUpdatedAt(p),
     };
+    if (cost > 0) {
+      row.cost = cost;
+      row.value = Number((qty * cost).toFixed(2));
+    }
     const image = p.images?.[0]?.src;
     if (image) row.image = image;
     return row;
@@ -243,6 +304,29 @@ export async function listMovements(warehouseId?: string): Promise<StockMovement
     .filter((m) => !warehouseId || m.warehouseId === warehouseId);
 }
 
+/**
+ * Idempotency guard: find a movement already written for a client-supplied
+ * key, so a retried / double-clicked mutation is applied at most once.
+ */
+async function findMovementByIdem(key: string): Promise<StockMovement | undefined> {
+  if (!key) return undefined;
+  const orders = await woocommerce.ordersAll();
+  const found = orders.find((o) => isMovementOrder(o) && mStr(o, M.idem) === key);
+  return found ? mapMovement(found) : undefined;
+}
+
+/** Find an existing transfer leg (used to make completion idempotent). */
+async function findMovementByReference(
+  reference: string,
+  type: WarehouseMovementType,
+): Promise<StockMovement | undefined> {
+  const orders = await woocommerce.ordersAll();
+  const found = orders.find(
+    (o) => isMovementOrder(o) && mStr(o, M.reference) === reference && mStr(o, M.type) === type,
+  );
+  return found ? mapMovement(found) : undefined;
+}
+
 async function recordMovement(input: {
   productId: string;
   productName: string;
@@ -253,6 +337,7 @@ async function recordMovement(input: {
   reference?: string;
   note?: string;
   actor: string;
+  idempotencyKey?: string;
 }): Promise<StockMovement> {
   const order = await woocommerce.createOrder({
     status: "pending",
@@ -272,6 +357,7 @@ async function recordMovement(input: {
       [M.reference]: input.reference,
       [M.note]: input.note,
       [M.actor]: input.actor,
+      [M.idem]: input.idempotencyKey,
     }),
   });
   return mapMovement(order);
@@ -322,7 +408,14 @@ export async function addStock(input: {
   reference?: string;
   notes?: string;
   actor: string;
+  idempotencyKey?: string;
 }): Promise<{ movement: StockMovement; product: ProductStockInfo }> {
+  const existing = input.idempotencyKey
+    ? await findMovementByIdem(input.idempotencyKey)
+    : undefined;
+  if (existing) {
+    return { movement: existing, product: await productStockInfo(existing.productId) };
+  }
   const quantity = Math.floor(Number(input.quantity));
   if (!Number.isFinite(quantity) || quantity <= 0) {
     throw new ApiError(400, "BAD_REQUEST", "quantity must be greater than 0");
@@ -342,12 +435,22 @@ export async function addStock(input: {
     reference: input.reference,
     note: noteParts.join(" · "),
     actor: input.actor,
+    idempotencyKey: input.idempotencyKey,
   });
 
   if (input.costPrice !== undefined && Number.isFinite(Number(input.costPrice))) {
-    await woocommerce.updateProduct(product.id, {
-      meta_data: [{ key: "_dpc_cost", value: Number(input.costPrice) }],
-    });
+    const cost = Number(input.costPrice);
+    if (cost > 0) {
+      const costMap = parseCostMap(product);
+      costMap[warehouse.id] = cost;
+      await writeCostMap(product.id, costMap);
+      // Seed the product-level cost too when it has never been set.
+      if (productCostOf(product) === 0) {
+        await woocommerce.updateProduct(product.id, {
+          meta_data: [{ key: PRODUCT_COST_META, value: cost }],
+        });
+      }
+    }
   }
 
   return { movement, product: await productStockInfo(product.id) };
@@ -362,7 +465,13 @@ export async function adjustStock(input: {
   reference?: string;
   note?: string;
   actor: string;
+  idempotencyKey?: string;
 }): Promise<StockMovement> {
+  const existing = input.idempotencyKey
+    ? await findMovementByIdem(input.idempotencyKey)
+    : undefined;
+  if (existing) return existing;
+
   const delta = Math.floor(Number(input.delta));
   if (!Number.isFinite(delta) || delta === 0) {
     throw new ApiError(400, "BAD_REQUEST", "delta must be a non-zero integer");
@@ -376,7 +485,79 @@ export async function adjustStock(input: {
     reference: input.reference,
     note: input.note,
     actor: input.actor,
+    idempotencyKey: input.idempotencyKey,
   });
+}
+
+/**
+ * Set a product's absolute quantity (and optional unit cost) in one warehouse.
+ * Used by the inline row editor — safe to retry via `idempotencyKey`.
+ */
+export async function setWarehouseStock(input: {
+  productId: string;
+  warehouseId: string;
+  quantity?: number;
+  costPrice?: number;
+  note?: string;
+  actor: string;
+  idempotencyKey?: string;
+}): Promise<{ movement?: StockMovement; row: WarehouseStockRow }> {
+  const existing = input.idempotencyKey ? await findMovementByIdem(input.idempotencyKey) : undefined;
+  const product = await fetchProduct(input.productId);
+  const warehouse = await getWarehouse(input.warehouseId);
+  if (!warehouse) throw new NotFoundError("Warehouse not found");
+
+  const current = parseStockMap(product)[warehouse.id] ?? 0;
+  let target = current;
+  if (input.quantity !== undefined) {
+    target = Math.floor(Number(input.quantity));
+    if (!Number.isFinite(target) || target < 0) {
+      throw new ApiError(400, "BAD_REQUEST", "quantity must be 0 or greater");
+    }
+  }
+
+  // Cost can be saved on its own, even when the quantity is unchanged.
+  if (input.costPrice !== undefined && Number.isFinite(Number(input.costPrice))) {
+    const cost = Number(input.costPrice);
+    const costMap = parseCostMap(product);
+    if (cost > 0) costMap[warehouse.id] = cost;
+    else delete costMap[warehouse.id];
+    await writeCostMap(product.id, costMap);
+  }
+
+  let movement: StockMovement | undefined;
+  if (!existing) {
+    const delta = target - current;
+    if (delta !== 0) {
+      movement = await applyDelta(product, warehouse, delta, {
+        type: "adjustment",
+        qty: delta,
+        note: input.note,
+        actor: input.actor,
+        idempotencyKey: input.idempotencyKey,
+      });
+    }
+  } else {
+    movement = existing;
+  }
+
+  const rows = await warehouseStockRows(warehouse.id);
+  const row = rows.find((r) => r.productId === String(product.id));
+  if (!row) {
+    return {
+      ...(movement ? { movement } : {}),
+      row: {
+        productId: String(product.id),
+        name: product.name,
+        sku: product.sku || String(product.id),
+        quantity: target,
+        reserved: 0,
+        available: target,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+  }
+  return { ...(movement ? { movement } : {}), row };
 }
 
 /* -------------------------------------------------------------- transfers */
@@ -488,6 +669,7 @@ export async function createTransfer(input: {
 export async function setTransferStatus(
   id: string,
   status: TransferStatus,
+  idempotencyKey?: string,
 ): Promise<StockTransfer> {
   const orderId = transferIdToOrderId(id);
   let order: WcOrder;
@@ -498,39 +680,54 @@ export async function setTransferStatus(
   }
   if (!isTransferOrder(order)) throw new NotFoundError("Transfer not found");
   const transfer = mapTransfer(order);
+
+  if (status === "completed" && transfer.status === "cancelled") {
+    throw new ApiError(400, "BAD_REQUEST", "a cancelled transfer cannot be completed");
+  }
   if (transfer.status === "completed" && status !== "completed") {
     throw new ApiError(400, "BAD_REQUEST", "a completed transfer cannot be reopened");
   }
+
   if (status === "completed" && transfer.status !== "completed") {
-    const from = await getWarehouse(transfer.fromWarehouseId);
-    const to = await getWarehouse(transfer.toWarehouseId);
-    if (!from || !to) throw new NotFoundError("Transfer warehouse not found");
-    // Take from source, give to destination (validates availability).
-    await adjustStock({
-      productId: transfer.productId,
-      warehouseId: from.id,
-      delta: -transfer.quantity,
-      type: "transfer_out",
-      reference: transfer.id,
-      note: `Transfer to ${to.name}`,
-      actor: transfer.createdBy,
-    });
-    await adjustStock({
-      productId: transfer.productId,
-      warehouseId: to.id,
-      delta: transfer.quantity,
-      type: "transfer_in",
-      reference: transfer.id,
-      note: `Transfer from ${from.name}`,
-      actor: transfer.createdBy,
-    });
-    const updated = await woocommerce.updateOrder(orderId, {
+    // Idempotency: a retried / double-clicked completion must not move stock
+    // twice. If either leg (client key or this transfer's reference) already
+    // exists, treat the request as already applied and just settle the status.
+    const already =
+      (idempotencyKey ? await findMovementByIdem(idempotencyKey) : undefined) ??
+      (await findMovementByReference(transfer.id, "transfer_out"));
+    if (!already) {
+      const from = await getWarehouse(transfer.fromWarehouseId);
+      const to = await getWarehouse(transfer.toWarehouseId);
+      if (!from || !to) throw new NotFoundError("Transfer warehouse not found");
+      // Take from source, give to destination (validates availability).
+      await adjustStock({
+        productId: transfer.productId,
+        warehouseId: from.id,
+        delta: -transfer.quantity,
+        type: "transfer_out",
+        reference: transfer.id,
+        note: `Transfer to ${to.name}`,
+        actor: transfer.createdBy,
+        ...(idempotencyKey ? { idempotencyKey: `${idempotencyKey}:out` } : {}),
+      });
+      await adjustStock({
+        productId: transfer.productId,
+        warehouseId: to.id,
+        delta: transfer.quantity,
+        type: "transfer_in",
+        reference: transfer.id,
+        note: `Transfer from ${from.name}`,
+        actor: transfer.createdBy,
+        ...(idempotencyKey ? { idempotencyKey: `${idempotencyKey}:in` } : {}),
+      });
+    }
+    const settled = await woocommerce.updateOrder(orderId, {
       meta_data: toMeta({
         [M.status]: "completed",
         [M.completedAt]: new Date().toISOString(),
       }),
     });
-    return mapTransfer(updated);
+    return mapTransfer(settled);
   }
 
   const updated = await woocommerce.updateOrder(orderId, {
@@ -606,20 +803,29 @@ async function hydrateSellingWarehouse(warehouse: Warehouse): Promise<boolean> {
   return remaining === 0;
 }
 
-/** Warehouse list totals (Total Products / Total Quantity). */
+/** Warehouse list totals (Total Products / Total Quantity / Total Value). */
 export async function warehouseTotals(): Promise<
-  Map<string, { totalProducts: number; totalQuantity: number }>
+  Map<string, { totalProducts: number; totalQuantity: number; totalValue: number }>
 > {
   const rows = await listProductStock();
-  const totals = new Map<string, { totalProducts: number; totalQuantity: number }>();
+  const totals = new Map<
+    string,
+    { totalProducts: number; totalQuantity: number; totalValue: number }
+  >();
   for (const row of rows) {
     for (const w of row.warehouses) {
-      const entry = totals.get(w.warehouseId) ?? { totalProducts: 0, totalQuantity: 0 };
+      const entry = totals.get(w.warehouseId) ?? {
+        totalProducts: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+      };
       entry.totalProducts += 1;
       entry.totalQuantity += w.quantity;
+      entry.totalValue += w.value ?? 0;
       totals.set(w.warehouseId, entry);
     }
   }
+  for (const entry of totals.values()) entry.totalValue = Number(entry.totalValue.toFixed(2));
   return totals;
 }
 
