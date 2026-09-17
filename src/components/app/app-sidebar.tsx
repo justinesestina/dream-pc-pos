@@ -37,6 +37,14 @@ function ActiveBar({ active }: { active: boolean }) {
   return <span className="absolute top-1.5 bottom-1.5 -left-2 w-[2px] rounded-full bg-info" />;
 }
 
+function SoonTag() {
+  return (
+    <span className="mono rounded border border-border bg-elevated px-1 py-px text-[9.5px] tracking-wide text-subtle uppercase">
+      Soon
+    </span>
+  );
+}
+
 /** Flyout panel listing an item's children; supports unlimited nesting. */
 function Flyout({
   items,
@@ -62,9 +70,7 @@ function Flyout({
       return (
         <DropdownMenuItem key={child.label} disabled className="gap-2 py-1.5 text-[13px]">
           <span className="flex-1 truncate">{child.label}</span>
-          <span className="mono rounded border border-border bg-elevated px-1 py-px text-[9.5px] tracking-wide text-subtle uppercase">
-            Soon
-          </span>
+          <SoonTag />
         </DropdownMenuItem>
       );
     }
@@ -205,6 +211,39 @@ export function AppSidebar() {
                           </DropdownMenuTrigger>
                           <Flyout items={item.children} pathname={pathname} />
                         </DropdownMenu>
+                      </li>
+                    );
+                  }
+
+                  if (item.soon) {
+                    const row = (
+                      <div
+                        aria-disabled
+                        className={cn(
+                          rowCls(active, collapsed),
+                          "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
+                        )}
+                      >
+                        <ActiveBar active={false} />
+                        {item.icon && <item.icon className="size-4 shrink-0" />}
+                        {!collapsed && (
+                          <>
+                            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                            <SoonTag />
+                          </>
+                        )}
+                      </div>
+                    );
+                    return (
+                      <li key={item.label}>
+                        {collapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>{row}</TooltipTrigger>
+                            <TooltipContent side="right">{item.label}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          row
+                        )}
                       </li>
                     );
                   }
