@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, PanelHeader, EmptyState, Mono, IdLink, TechLabel } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, TotalsRows, DemoNote, ProgressBar } from "@/components/nexus/detail";
+import { Section, KeyValueGrid, TotalsRows, ProgressBar } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -562,9 +562,9 @@ function BuildsBuildidPage() {
               ))}
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-border p-4">
-              <DemoNote className="flex-1">
+              <p className="flex-1 text-[11.5px] leading-relaxed text-muted-foreground">
                 Finalizing QA records a pass/fail result and moves the build to "Ready" on pass.
-              </DemoNote>
+              </p>
               <div className="flex shrink-0 gap-2">
                 <Button
                   size="sm"

@@ -20,7 +20,7 @@ export function PageHeader({
     <header className={cn("flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between", className)}>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-[19px] leading-tight font-semibold tracking-tight text-foreground">
+          <h1 className="text-[21px] leading-tight font-semibold tracking-tight text-foreground">
             {title}
           </h1>
           {status}

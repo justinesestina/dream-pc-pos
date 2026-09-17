@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, DemoNote } from "@/components/nexus/detail";
+import { Section, KeyValueGrid } from "@/components/nexus/detail";
 import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
@@ -266,11 +266,6 @@ function SerialsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <DemoNote>
-        Serial history is reconstructed from local demo data. Real deployments should log every scan event (receive,
-        reserve, install, sell, RMA) as an immutable movement record.
-      </DemoNote>
     </div>
   );
 }

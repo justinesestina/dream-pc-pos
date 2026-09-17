@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Cpu, Hammer, User } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, PanelHeader, EmptyState, Mono, TechLabel } from "@/components/nexus/primitives";
-import { ProgressBar, DemoNote } from "@/components/nexus/detail";
+import { ProgressBar } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Toolbar, SearchInput, ResultCount } from "@/components/nexus/toolbar";
 import { StatCard } from "@/components/nexus/stat-card";
@@ -381,11 +381,6 @@ function AssemblyWorkspacePage() {
           })}
         </div>
       )}
-
-      <DemoNote>
-        The assembly workspace reads from local demo state. Drag-and-drop between columns is not
-        implemented — use the quick-action buttons or the full build detail page to advance stages.
-      </DemoNote>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
 import { StatusBadge } from "@/components/nexus/status-badge";
-import { KeyValueGrid, Section, DemoNote } from "@/components/nexus/detail";
+import { KeyValueGrid, Section } from "@/components/nexus/detail";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -192,10 +192,6 @@ function ReceiptDetailPage() {
           />
         </div>
       </Section>
-
-      <DemoNote>
-        Completing this receipt posts stock movements to inventory via the demo store — no warehouse scanner integration exists.
-      </DemoNote>
     </div>
   );
 }

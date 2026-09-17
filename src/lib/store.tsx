@@ -48,6 +48,7 @@ import type {
   CartLine,
   Category,
   ClaimEvent,
+  ClientType,
   Customer,
   InventoryItem,
   InventoryMovement,
@@ -97,7 +98,14 @@ interface Snapshot {
   cart: CartLine[];
   cartDiscount: number;
   cartCustomerId: string | null;
-  heldCarts: { id: string; at: string; lines: CartLine[]; customerId: string | null }[];
+  cartClientType: ClientType;
+  heldCarts: {
+    id: string;
+    at: string;
+    lines: CartLine[];
+    customerId: string | null;
+    clientType?: ClientType;
+  }[];
   counters: { order: number; quote: number; build: number; service: number; customer: number };
   sidebarCollapsed: boolean;
   theme: "light" | "dark";
@@ -124,6 +132,7 @@ function seed(): Snapshot {
     cart: [],
     cartDiscount: 0,
     cartCustomerId: null,
+    cartClientType: "walk-in",
     heldCarts: [],
     counters: { order: 10483, quote: 10246, build: 10483, service: 10483, customer: 7 },
     sidebarCollapsed: false,
@@ -178,6 +187,7 @@ function emptyState(): Snapshot {
     cart: [],
     cartDiscount: 0,
     cartCustomerId: null,
+    cartClientType: "walk-in",
     heldCarts: [],
     counters: { order: 1, quote: 1, build: 1, service: 1, customer: 1 },
     sidebarCollapsed: false,
@@ -237,6 +247,7 @@ interface StoreValue extends Snapshot {
   clearCart: () => void;
   setCartDiscount: (v: number) => void;
   setCartCustomer: (id: string | null) => void;
+  setCartClientType: (t: ClientType) => void;
   holdCart: () => void;
   resumeHeldCart: (id: string) => void;
   completeSale: (
@@ -532,7 +543,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const log = (s: Snapshot, action: string, entity: string): AuditLog[] => [
     {
       id: `al-${Math.random().toString(36).slice(2, 9)}`,
-      actor: s.user?.name ?? "Demo User",
+      actor: s.user?.name ?? "System",
       role: s.user?.role ?? "owner",
       action,
       entity,
@@ -577,7 +588,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!u || !u.password || password !== u.password) {
           return {
             ok: false,
-            error: "Incorrect password for this role. Use the demo password shown below.",
+            error: "Incorrect password for this role.",
           };
         }
         try {
@@ -665,9 +676,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })),
       removeCartLine: (productId) =>
         patch((s) => ({ ...s, cart: s.cart.filter((l) => l.productId !== productId) })),
-      clearCart: () => patch((s) => ({ ...s, cart: [], cartDiscount: 0, cartCustomerId: null })),
+      clearCart: () =>
+        patch((s) => ({
+          ...s,
+          cart: [],
+          cartDiscount: 0,
+          cartCustomerId: null,
+          cartClientType: "walk-in",
+        })),
       setCartDiscount: (v) => patch((s) => ({ ...s, cartDiscount: Math.max(0, v) })),
       setCartCustomer: (id) => patch((s) => ({ ...s, cartCustomerId: id })),
+      setCartClientType: (t) => patch((s) => ({ ...s, cartClientType: t })),
       holdCart: () =>
         patch((s) =>
           s.cart.length === 0
@@ -680,6 +699,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     at: new Date().toISOString(),
                     lines: s.cart,
                     customerId: s.cartCustomerId,
+                    clientType: s.cartClientType,
                   },
                   ...s.heldCarts,
                 ],
@@ -695,6 +715,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             ...s,
             cart: held.lines,
             cartCustomerId: held.customerId,
+            cartClientType: held.clientType ?? "walk-in",
             heldCarts: s.heldCarts.filter((h) => h.id !== id),
           };
         }),
@@ -753,6 +774,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           id,
           customerId: state.cartCustomerId,
           customerName: customer?.name ?? "Walk-in Customer",
+          clientType: state.cartClientType,
           type: items.some((i) => productById(i.productId)?.isService) ? "service" : "retail",
           status: "paid",
           items,
@@ -767,7 +789,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           payment,
           createdAt: at,
           notes: opts.notes,
-          cashier: state.user?.name ?? "Demo User",
+          cashier: state.user?.name ?? "System",
           timeline: [
             { label: "Order created", at, actor: state.user?.name, state: "done" },
             { label: "Payment received", at, actor: state.user?.name, state: "done" },
@@ -794,7 +816,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               type: "sold" as const,
               qty: i.qty,
               at,
-              actor: s.user?.name ?? "Demo User",
+              actor: s.user?.name ?? "System",
               reference: id,
             })),
             ...s.movements,
@@ -979,7 +1001,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     type: "adjusted" as const,
                     qty: opts.onHand - (invFor(productId)?.onHand ?? 0),
                     at: new Date().toISOString(),
-                    actor: s.user?.name ?? "Demo User",
+                    actor: s.user?.name ?? "System",
                     note: "Stock level edited in product form",
                   },
                 ]
@@ -1042,7 +1064,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 type: "adjusted" as const,
                 qty: stockDiff,
                 at: new Date().toISOString(),
-                actor: s.user?.name ?? "Demo User",
+                actor: s.user?.name ?? "System",
                 note: "Stock level edited inline",
               },
             ],
@@ -1230,7 +1252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           expiresAt: new Date(Date.now() + expiresInDays * 86400000).toISOString(),
           notes,
           originalRequest,
-          preparedBy: state.user?.name ?? "Demo User",
+          preparedBy: state.user?.name ?? "System",
         };
         patch((s) => ({
           ...s,
@@ -1356,7 +1378,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
           sentAt: undefined,
           orderId: undefined,
-          preparedBy: state.user?.name ?? "Demo User",
+          preparedBy: state.user?.name ?? "System",
           discountPercentage: existing.discountPercentage || 0,
         };
 
@@ -1430,7 +1452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           createdAt: at,
           quoteId: quote.id,
           buildId: quote.buildId,
-          cashier: state.user?.name ?? "Demo User",
+          cashier: state.user?.name ?? "System",
           timeline: [
             {
               label: `Converted from quote ${quote.id}`,
@@ -1660,7 +1682,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           expiresAt: new Date(Date.now() + 14 * 86400000).toISOString(),
           buildId: build.id,
           notes: `Quotation for ${build.purpose}.`,
-          preparedBy: state.user?.name ?? "Demo User",
+          preparedBy: state.user?.name ?? "System",
         };
         patch((s) => ({
           ...s,
@@ -1775,7 +1797,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 type: "adjusted" as const,
                 qty: -used,
                 at: new Date().toISOString(),
-                actor: s.user?.name ?? "Demo User",
+                actor: s.user?.name ?? "System",
                 note: `Parts used on ${ticketId}`,
               },
               ...s.movements,
@@ -1806,7 +1828,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 type: "received" as const,
                 qty: part.qty,
                 at: new Date().toISOString(),
-                actor: s.user?.name ?? "Demo User",
+                actor: s.user?.name ?? "System",
                 note: `Part unassigned from ${ticketId}`,
               },
               ...s.movements,
@@ -1828,7 +1850,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               type: delta >= 0 ? ("received" as const) : ("adjusted" as const),
               qty: delta,
               at: new Date().toISOString(),
-              actor: s.user?.name ?? "Demo User",
+              actor: s.user?.name ?? "System",
               note,
             },
             ...s.movements,

@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, PanelHeader, EmptyState } from "@/components/nexus/primitives";
-import { KeyValueGrid, DemoNote } from "@/components/nexus/detail";
+import { KeyValueGrid } from "@/components/nexus/detail";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,9 @@ export const Route = createFileRoute("/_app/settings")({
   head: () => ({
     meta: [
       { title: "Settings — DPC POS" },
-      { name: "description", content: "Store profile, appearance, tax, roles, notifications and demo system info." },
+      { name: "description", content: "Store profile, appearance, tax, roles, notifications and system info." },
       { property: "og:title", content: "Settings — DPC POS" },
-      { property: "og:description", content: "Store profile, appearance, tax, roles, notifications and demo system info." },
+      { property: "og:description", content: "Store profile, appearance, tax, roles, notifications and system info." },
     ],
   }),
   component: SettingsPage,
@@ -89,7 +89,7 @@ const SECTIONS = [
   { id: "roles", label: "Roles & permissions", icon: Shield, cap: "settings" },
   { id: "notifications", label: "Notifications", icon: Bell, cap: "settings" },
   { id: "documents", label: "Documents", icon: FileText, cap: "documents" },
-  { id: "system", label: "System & demo", icon: Database, cap: "settings" },
+  { id: "system", label: "System", icon: Database, cap: "settings" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -238,10 +238,10 @@ function GeneralSection({
           </div>
         </div>
         <div className="px-4 pb-4">
-          <DemoNote>
-            Store profile edits are held in local component state only — nothing is persisted. Wire
-            this form to a settings API to make changes durable.
-          </DemoNote>
+          <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+            Store profile edits are held in local component state only — nothing is persisted. Wire this form to
+            a settings API to make changes durable.
+          </p>
         </div>
       </Panel>
 
@@ -262,7 +262,8 @@ function GeneralSection({
         )}
         {ops.actor && (
           <div className="px-4 pb-4">
-            <DemoNote>Operations store acting user: {ops.actor}.</DemoNote>
+            <p className="label-tech">Operations store acting user</p>
+            <p className="mt-1 text-[13px] text-foreground">{ops.actor}</p>
           </div>
         )}
       </Panel>
@@ -332,7 +333,7 @@ function WooCommerceSection() {
       // Load the synced data into the store with proper stock quantities
       store.loadWooCommerceData(result);
       
-      toast.success("Sync completed successfully! Demo data cleared and WooCommerce data loaded.");
+      toast.success("Sync completed. WooCommerce store data loaded.");
       setSyncProgress("");
     } catch (error) {
       toast.error("Sync failed. Check connection and try again.");
@@ -407,10 +408,10 @@ function WooCommerceSection() {
           )}
         </div>
         <div className="px-4 pb-4">
-          <DemoNote>
-            Configure your WooCommerce REST API credentials in WooCommerce → Settings → Advanced → REST API.
-            Create API keys with Read/Write permissions for full functionality.
-          </DemoNote>
+          <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+            Configure your WooCommerce REST API credentials in WooCommerce → Settings → Advanced → REST API. Create
+            API keys with Read/Write permissions for full functionality.
+          </p>
         </div>
       </Panel>
 
@@ -419,9 +420,9 @@ function WooCommerceSection() {
         <div className="divide-y divide-border/60">
           <div className="flex items-center justify-between gap-3 p-4">
             <div>
-              <p className="text-[13px] text-foreground">Load demo data</p>
+              <p className="text-[13px] text-foreground">Restore default data</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Restore the original demo dataset for testing and development
+                Restore the original default dataset for testing and development
               </p>
             </div>
             <Button
@@ -429,10 +430,10 @@ function WooCommerceSection() {
               variant="outline"
               onClick={() => {
                 store.resetDemoData();
-                toast.success("Demo data restored.");
+                toast.success("Default data restored.");
               }}
             >
-              Load Demo Data
+              Restore Default Data
             </Button>
           </div>
           <div className="flex items-center justify-between gap-3 p-4">
@@ -472,12 +473,6 @@ function WooCommerceSection() {
             <div className="px-4 py-2 text-xs text-muted-foreground mono">{syncProgress}</div>
           )}
         </div>
-        <div className="px-4 pb-4">
-          <DemoNote>
-            The app now starts with empty data by default. Use "Load Demo Data" to restore the original
-            demo dataset, or "Load WooCommerce Data" to import your WooCommerce store data.
-          </DemoNote>
-        </div>
       </Panel>
     </>
   );
@@ -501,12 +496,6 @@ function AppearanceSection({ store }: { store: ReturnType<typeof useStore> }) {
           />
         </div>
       </div>
-      <div className="px-4 pb-4">
-        <DemoNote>
-          The visual theme is a fixed dark, minimalist, engineering-inspired design. A light-mode
-          theme toggle is not part of the current demo.
-        </DemoNote>
-      </div>
     </Panel>
   );
 }
@@ -526,10 +515,10 @@ function TaxSection() {
         />
       </div>
       <div className="px-4 pb-4">
-        <DemoNote>
-          The VAT rate is a compile-time constant shared by the POS, quotes, builds, orders and
-          receipts. Editing it requires a code change in this demo build.
-        </DemoNote>
+        <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+          The VAT rate is a compile-time constant shared by the POS, quotes, builds, orders and receipts. Editing
+          it requires a code change in the build.
+        </p>
       </div>
     </Panel>
   );
@@ -572,10 +561,10 @@ function RolesSection() {
         </table>
       </div>
       <div className="px-4 pb-4">
-        <DemoNote>
-          Capabilities gate navigation, page access and actions. They are enforced only in the UI —
-          a real backend would need to enforce them server-side.
-        </DemoNote>
+        <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+          Capabilities gate navigation, page access and actions. They are enforced only in the UI — a real
+          backend would need to enforce them server-side.
+        </p>
       </div>
     </Panel>
   );
@@ -624,10 +613,10 @@ function NotificationsSection({ store }: { store: ReturnType<typeof useStore> })
         ))}
       </div>
       <div className="px-4 pb-4">
-        <DemoNote>
-          Notifications are generated by demo workflows (stock, builds, quotes, warranty, services,
+        <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+          Notifications are generated by the workflows themselves (stock, builds, quotes, warranty, services,
           payments). No push or e-mail delivery is performed.
-        </DemoNote>
+        </p>
       </div>
     </Panel>
   );
@@ -643,7 +632,6 @@ function DocumentsSection() {
           items={[
             { label: "Print engine", value: "Browser print (window.print)" },
             { label: "Paper", value: "A4 · 80mm receipt-friendly layout" },
-            { label: "Demo marker", value: "Every document is stamped DEMO" },
             { label: "Thermal printer", value: "Not connected" },
           ]}
         />
@@ -654,12 +642,6 @@ function DocumentsSection() {
           <li>Service tickets print from ticket detail.</li>
           <li>Release / handover notes print from release detail.</li>
         </ul>
-      </div>
-      <div className="px-4 pb-4">
-        <DemoNote>
-          Documents are rendered from local demo data and printed through the browser — no BIR-accredited
-          receipt, e-invoicing or thermal printer integration is performed.
-        </DemoNote>
       </div>
     </Panel>
   );
@@ -684,7 +666,7 @@ function SystemSection({
   return (
     <>
       <Panel>
-        <PanelHeader title="Demo data volumes" hint="Seeded in localStorage" />
+        <PanelHeader title="Data volumes" hint="Current store contents" />
         <div className="p-4">
           <KeyValueGrid
             cols={4}
@@ -704,41 +686,41 @@ function SystemSection({
       </Panel>
 
       <Panel>
-        <PanelHeader title="Storage & runtime" hint="Where demo state lives" />
+        <PanelHeader title="Storage & runtime" hint="Where state lives" />
         <KeyValueGrid
           cols={2}
           items={[
             { label: "Retail store key", value: "dpc-nexus-demo-v1", mono: true },
             { label: "Operations store key", value: "dpc-nexus-ops-v1", mono: true },
             { label: "Persistence", value: "localStorage (per browser)" },
-            { label: "Auth", value: "Demo roles only — no real auth" },
-            { label: "Backend", value: "None — everything is local" },
+            { label: "Auth", value: "Role-based sessions (UI-level)" },
+            { label: "Backend", value: "Not connected — local storage" },
             { label: "Last activity", value: store.auditLogs[0] ? dateTime(store.auditLogs[0].at) : "—" },
           ]}
         />
       </Panel>
 
       <Panel>
-        <PanelHeader title="Demo data controls" hint="Reset all local demo state" />
+        <PanelHeader title="Data controls" hint="Reset all local data" />
         <div className="flex items-center justify-between gap-3 p-4">
           <p className="max-w-md text-xs text-muted-foreground">
             Restores every module — orders, inventory, builds, services, purchasing, shifts, returns,
-            releases and assembly state — to the original seeded demo dataset. Your signed-in session is
+            releases and assembly state — to the original default dataset. Your signed-in session is
             preserved.
           </p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
-                Reset demo data
+                Reset data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Reset all demo data?</AlertDialogTitle>
+                <AlertDialogTitle>Reset all data?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This clears every change made in this demo session — orders, inventory adjustments,
+                  This clears every change made in this session — orders, inventory adjustments,
                   builds, service tickets, purchasing, shifts, returns, releases and assembly state — and
-                  reseeds the original dataset. This cannot be undone.
+                  restores the original dataset. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -747,7 +729,7 @@ function SystemSection({
                   onClick={() => {
                     store.resetDemoData();
                     ops.resetOpsData();
-                    toast.success("Demo data has been reset.");
+                    toast.success("Data has been reset.");
                   }}
                 >
                   Reset data

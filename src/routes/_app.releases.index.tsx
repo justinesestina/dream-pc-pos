@@ -7,7 +7,6 @@ import { Toolbar, FilterSelect, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
-import { DemoNote } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
 import { NewReleaseDialog } from "@/components/releases/new-release-dialog";
 import { useOps } from "@/lib/ops-store";
@@ -159,8 +158,6 @@ function ReleasesPage() {
           empty={<EmptyState title="No releases match your filters" description="Try adjusting the status filter." />}
         />
       </Panel>
-
-      <DemoNote>Marking a release as completed updates local demo state only — no courier dispatch or SMS/email notifications occur.</DemoNote>
     </div>
   );
 }

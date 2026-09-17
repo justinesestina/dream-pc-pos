@@ -245,7 +245,6 @@ function buildQuotePdf(quote: Quote, customer?: Customer, logo?: string) {
   doc.setFont("courier", "normal");
   doc.setFontSize(7);
   doc.setTextColor(140, 148, 160);
-  doc.text("DEMO DOCUMENT — NOT A VALID BIR RECEIPT", pw / 2, ph - m, { align: "center" });
 
   return { doc, url: doc.output("bloburl") };
 }

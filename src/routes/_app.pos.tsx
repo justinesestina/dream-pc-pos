@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
-import { DemoNote } from "@/components/nexus/detail";
 import { ProductBrowser } from "@/components/pos/product-browser";
 import { CartPanel } from "@/components/pos/cart-panel";
 import { useStore, useSimulatedLoad } from "@/lib/store";

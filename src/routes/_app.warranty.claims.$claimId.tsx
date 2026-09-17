@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Check, Clock, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
-import { KeyValueGrid, Section, DemoNote } from "@/components/nexus/detail";
+import { KeyValueGrid, Section } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -193,10 +193,10 @@ function ClaimDetailPage() {
       >
         {claim.status === "open" || claim.status === "in_review" ? (
           <div className="px-4 py-3">
-            <DemoNote>
+            <p className="text-[11.5px] leading-relaxed text-muted-foreground">
               Start review, then approve or reject the claim. Approval records a resolution (replacement, repair,
               refund or store credit) and a note from the technician.
-            </DemoNote>
+            </p>
           </div>
         ) : (
           <div className="space-y-3 px-4 py-3">

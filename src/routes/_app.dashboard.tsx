@@ -173,16 +173,6 @@ function DashboardPage() {
                 day: "numeric",
                 year: "numeric",
               })}
-              meta={
-                <>
-                  <span className="label-tech">
-                    SYNC <span className="text-muted-foreground">Local demo</span>
-                  </span>
-                  <span className="label-tech">
-                    DATA <span className="text-warning">DEMO</span>
-                  </span>
-                </>
-              }
               actions={
                 <Button asChild>
                   <Link to="/quotes">
@@ -198,9 +188,6 @@ function DashboardPage() {
                 <span className="text-subtle">System</span>
                 <span className="text-success">Operational</span>
               </span>
-              <Telemetry label="Env">
-                <span className="text-warning">Demo</span>
-              </Telemetry>
               <Telemetry label="Skus">{num(store.products.length)}</Telemetry>
               <Telemetry label="Today">
                 {todays.length} txns · {money(todaySales)}
@@ -543,7 +530,7 @@ function DashboardPage() {
 
       <Reveal>
         <Panel>
-          <PanelHeader title="Activity log" hint="Demo audit trail" />
+          <PanelHeader title="Activity log" hint="Recent activity" />
           <ul className="divide-y divide-border">
             {store.auditLogs.slice(0, 7).map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2">
@@ -559,8 +546,7 @@ function DashboardPage() {
       </Reveal>
 
       <p className="mono text-[10.5px] text-subtle">
-        ALL FIGURES ARE DEMO DATA · {num(store.products.length)} SKUS LOADED ·{" "}
-        {dateShort(new Date().toISOString())}
+        {num(store.products.length)} SKUS LOADED · {dateShort(new Date().toISOString())}
       </p>
     </div>
   );

@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, DemoNote } from "@/components/nexus/detail";
+import { Section, KeyValueGrid } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { PrintButton } from "@/components/nexus/document";
 import { Timeline } from "@/components/nexus/timeline";
@@ -189,11 +189,6 @@ function ReleasesReleaseidPage() {
               </div>
             )}
           </Section>
-
-          <DemoNote>
-            Marking a release as released also advances the linked build, service or order status so the two demo
-            stores stay consistent; completing the handover closes the release record.
-          </DemoNote>
         </div>
       </div>
     </div>

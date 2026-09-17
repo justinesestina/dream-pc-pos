@@ -126,10 +126,6 @@ export function DocumentPreview({
       </div>
 
       {footer && <div className="mt-5 border-t border-border pt-3 text-[11.5px] text-muted-foreground">{footer}</div>}
-
-      <p className="mono mt-5 text-center text-[10px] tracking-wide text-subtle">
-        DEMO DOCUMENT — NOT A VALID BIR RECEIPT
-      </p>
     </div>
   );
 }

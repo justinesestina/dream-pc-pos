@@ -7,7 +7,6 @@ import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/ne
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
-import { DemoNote } from "@/components/nexus/detail";
 import { DocumentPreview, PrintButton, type DocKind, type DocLine } from "@/components/nexus/document";
 import { useStore } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
@@ -297,11 +296,6 @@ function DocumentsPage() {
           )}
         </div>
       </div>
-
-      <DemoNote className="print:hidden">
-        Documents are rendered from local demo data and printed through the browser — no BIR-accredited receipt,
-        e-invoicing or thermal printer integration is performed.
-      </DemoNote>
     </div>
   );
 }

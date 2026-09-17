@@ -128,7 +128,7 @@ function LoginPage() {
         </div>
 
         <div className="relative z-10 hidden items-center gap-2 text-xs font-medium tracking-widest text-subtle uppercase lg:flex">
-          <span className="status-dot-ok" /> System Online · Demo Environment
+          <span className="status-dot-ok" /> System Online
         </div>
       </div>
 

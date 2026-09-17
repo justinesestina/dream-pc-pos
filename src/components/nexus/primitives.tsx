@@ -38,7 +38,7 @@ export function PanelHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
+        <h2 className="truncate text-[13px] font-semibold text-foreground">{title}</h2>
         {hint && <p className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</p>}
       </div>
       {action}

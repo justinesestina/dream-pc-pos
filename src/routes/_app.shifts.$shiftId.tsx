@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, TechLabel } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/detail";
+import { Section, KeyValueGrid, TotalsRows } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,10 +203,10 @@ function ShiftDetailPage() {
           {shift.status === "open" ? (
             <Section title="Close shift">
               <div className="space-y-3 p-4">
-                <DemoNote>
+                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
                   Enter the per-method sales totals and the cashier's physical count. Expected cash includes cash
                   sales and any refunds entered below.
-                </DemoNote>
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   {METHODS.map((m) => (
                     <div key={m} className="space-y-1.5">

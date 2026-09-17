@@ -152,8 +152,8 @@ export function PaymentDialog({
         ) : (
           <div className="space-y-3">
             <p className="rounded-md border border-border bg-elevated px-3 py-2.5 text-[12.5px] text-muted-foreground">
-              {method === "card" && "Card payment is approved instantly in this demo."}
-              {method === "gcash" && "A GCash QR prompt would appear here."}
+              {method === "card" && "Card payment is approved instantly."}
+              {method === "gcash" && "Enter the reference from the GCash prompt before confirming."}
               {method === "bank" && "Bank transfer is marked paid on confirmation."}
             </p>
             <div className="space-y-1.5">

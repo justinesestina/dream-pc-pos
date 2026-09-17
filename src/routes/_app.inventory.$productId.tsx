@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, ProgressBar, DemoNote } from "@/components/nexus/detail";
+import { Section, KeyValueGrid, ProgressBar } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { StatCard } from "@/components/nexus/stat-card";
 import { useStore } from "@/lib/store";
@@ -126,8 +126,7 @@ function InventoryItemPage() {
               <Textarea id="inv-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Reason for adjustment" />
             </div>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <DemoNote>Adjustments write directly to local demo state; no backend sync occurs.</DemoNote>
+          <div className="flex items-center justify-end gap-3">
             <Button onClick={submit} className="shrink-0">Save adjustment</Button>
           </div>
         </div>

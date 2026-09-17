@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
-import { KeyValueGrid, Section, TotalsRows, DemoNote } from "@/components/nexus/detail";
+import { KeyValueGrid, Section, TotalsRows } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { PrintButton } from "@/components/nexus/document";
 import { Timeline } from "@/components/nexus/timeline";
@@ -216,8 +216,6 @@ function ServicesTicketidPage() {
           </div>
         </Section>
       </div>
-
-      <DemoNote>Status advancement and cost capture are simulated locally — no technician notifications or payment processing occur.</DemoNote>
     </div>
   );
 }

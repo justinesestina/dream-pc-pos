@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
 import { StatusBadge } from "@/components/nexus/status-badge";
-import { KeyValueGrid, Section, TotalsRows, DemoNote, ProgressBar } from "@/components/nexus/detail";
+import { KeyValueGrid, Section, TotalsRows, ProgressBar } from "@/components/nexus/detail";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -185,10 +185,6 @@ function PurchaseOrderDetailPage() {
           <p className="p-4 text-[13px] text-muted-foreground">{po.notes}</p>
         </Section>
       )}
-
-      <DemoNote>
-        Status transitions and receiving are simulated locally — no supplier EDI or accounting integration exists in this demo.
-      </DemoNote>
     </div>
   );
 }

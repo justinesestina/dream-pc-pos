@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader, EmptyState } from "@/components/nexus/primitives";
 import { Segmented } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
-import { KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/detail";
+import { KeyValueGrid, TotalsRows } from "@/components/nexus/detail";
 import { PrintButton } from "@/components/nexus/document";
 import { StatCard } from "@/components/nexus/stat-card";
 import { useStore } from "@/lib/store";
@@ -420,11 +420,11 @@ function ReportsPage() {
             ]}
           />
           <div className="px-4 pb-4">
-            <DemoNote>
-              Margin and valuation figures use the product cost field seeded in demo data — connect a real
-              costing/accounting feed to make these authoritative. CSV/JSON exports are generated entirely
-              in the browser from local demo data; nothing is sent to a server.
-            </DemoNote>
+            <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+              Margin and valuation figures use the product cost field — connect a real costing/accounting feed to
+              make these authoritative. CSV/JSON exports are generated entirely in the browser from the local data;
+              nothing is sent to a server.
+            </p>
           </div>
         </Panel>
       </div>

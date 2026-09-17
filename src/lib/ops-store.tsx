@@ -167,7 +167,7 @@ interface OpsValue extends OpsSnapshot {
 
 const Ctx = createContext<OpsValue | null>(null);
 
-export function OpsProvider({ children, actor = "Demo User" }: { children: ReactNode; actor?: string }) {
+export function OpsProvider({ children, actor = "System" }: { children: ReactNode; actor?: string }) {
   const [state, setState] = useState<OpsSnapshot>(() => seed());
   const [hydrated, setHydrated] = useState(false);
   const skip = useRef(true);

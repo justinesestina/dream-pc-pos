@@ -8,6 +8,9 @@
 
 export type Role = "owner" | "admin" | "cashier" | "inventory";
 
+/** Client classification attached to a sale from the POS. */
+export type ClientType = "walk-in" | "business" | "household";
+
 export interface User {
   id: string;
   name: string;
@@ -159,6 +162,7 @@ export interface Order {
   id: string;
   customerId: string | null;
   customerName: string;
+  clientType?: ClientType | undefined;
   type: "retail" | "custom_build" | "service";
   status: OrderStatus;
   items: OrderItem[];

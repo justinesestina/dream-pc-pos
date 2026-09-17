@@ -102,21 +102,6 @@ export function TotalsRows({
   );
 }
 
-/** Demo-scope disclaimer, used wherever a workflow is simulated. */
-export function DemoNote({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <p
-      className={cn(
-        "flex items-start gap-2 rounded-md border border-warning/25 bg-warning/5 px-3 py-2 text-[11.5px] text-muted-foreground",
-        className,
-      )}
-    >
-      <span className="mono shrink-0 text-[10px] tracking-wide text-warning">DEMO</span>
-      <span>{children}</span>
-    </p>
-  );
-}
-
 /** Thin progress bar with an optional label. */
 export function ProgressBar({
   value,

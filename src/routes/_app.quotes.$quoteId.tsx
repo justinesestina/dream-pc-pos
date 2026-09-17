@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, PanelHeader } from "@/components/nexus/primitives";
-import { DemoNote } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { DocumentPreview, PrintButton } from "@/components/nexus/document";
 import { QuoteEditorDialog } from "@/components/quotes/quote-editor-dialog";
@@ -73,7 +72,7 @@ function QuotesQuoteidPage() {
         <Panel>
           <EmptyState
             title="Quote not found"
-            description={`No quote matches "${quoteId}". It may have been removed from the demo dataset.`}
+            description={`No quote matches "${quoteId}". It may have been removed from the store data.`}
             action={
               <Button size="sm" variant="outline" onClick={() => navigate({ to: "/quotes" })}>
                 Back to quotes
@@ -271,18 +270,6 @@ function QuotesQuoteidPage() {
           </div>
         </Panel>
       )}
-
-      <DemoNote>
-        {quote.items.length === 0 && quote.serviceTotal > 0 ? (
-          <>
-            This quote currently contains <strong>setup services only</strong> — it has no parts yet. Add
-            components to the linked build, then <strong>Generate quote</strong> there to rebuild this
-            quotation with the parts and their totals included.
-          </>
-        ) : (
-          "Sending, approval and rejection are simulated status changes — no e-mail or e-signature integration is triggered."
-        )}
-      </DemoNote>
 
       {/* Revision history */}
       {(quote.revisions?.length ?? 0) > 0 && (

@@ -262,10 +262,6 @@ export function AppTopbar({
         <RefreshCw size={16} className={cn(refreshing && "animate-spin")} />
       </Button>
 
-      <span className="mono hidden items-center gap-1.5 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] tracking-wide text-warning uppercase sm:inline-flex">
-        Demo mode
-      </span>
-
       <Button
         size="icon"
         variant="ghost"

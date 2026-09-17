@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EmptyState, Mono, Panel, PanelHeader } from "@/components/nexus/primitives";
 import { TotalsRows } from "@/components/nexus/detail";
-import { CustomerSelect } from "./customer-select";
+import { ClientSelector } from "./client-select";
 import { PaymentDialog } from "./payment-dialog";
 import { useStore, computeTotals } from "@/lib/store";
 import { money, moneyExact, relative, VAT_RATE } from "@/lib/format";
@@ -238,8 +238,8 @@ export function CartPanel({
         }
       />
 
-      <div className="border-b border-border px-3 py-2.5">
-        <CustomerSelect />
+      <div className="border-b border-border px-3 py-3">
+        <ClientSelector />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -263,7 +263,7 @@ export function CartPanel({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13px] font-medium text-foreground">{l.product.name}</p>
-                    <p className="mono text-[10.5px] text-subtle">
+                    <p className="mono text-[11px] text-subtle">
                       {l.product.sku} · {money(l.product.price)} ea
                     </p>
                   </div>

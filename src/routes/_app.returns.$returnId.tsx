@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, PackageCheck, RotateCcw, ShieldX, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono, IdLink } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, DemoNote, TotalsRows } from "@/components/nexus/detail";
+import { Section, KeyValueGrid, TotalsRows } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
@@ -147,7 +147,7 @@ function ReturnDetailPage() {
         <Panel>
           <EmptyState
             title="Return not found"
-            description={`No RMA with reference ${returnId} exists in the demo dataset.`}
+            description={`No RMA with reference ${returnId} exists in the store data.`}
             action={
               <Button variant="outline" size="sm" onClick={() => navigate({ to: "/returns" })}>
                 <ArrowLeft className="mr-1.5 size-3.5" /> Back to returns
@@ -402,7 +402,7 @@ function ReturnDetailPage() {
                           <AlertDialogTitle>Reject this return?</AlertDialogTitle>
                           <AlertDialogDescription>
                             {rma.id} will be closed as rejected with no refund and no inventory adjustment. You can
-                            reopen it afterwards in this demo.
+                            reopen it afterwards.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -431,7 +431,7 @@ function ReturnDetailPage() {
                           {restock
                             ? `${rma.qty} unit(s) will be added back to available stock.`
                             : "No inventory adjustment will be applied."}{" "}
-                          This is simulated demo state — no money moves.
+                          Refunds are recorded against local state — no real money moves.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -495,11 +495,6 @@ function ReturnDetailPage() {
           </Section>
         </div>
       </div>
-
-      <DemoNote>
-        Returns are settled against local demo state only — no payment gateway refund, accounting entry or supplier RMA
-        is created.
-      </DemoNote>
     </div>
   );
 }

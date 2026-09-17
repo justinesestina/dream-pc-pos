@@ -149,8 +149,8 @@
   --secondary: oklch(0.245 0.005 286);
   --secondary-foreground: oklch(0.96 0 0);
   --muted: oklch(0.245 0.005 286);
-  --muted-foreground: oklch(0.68 0.008 286);
-  --subtle: oklch(0.55 0.008 286);
+  --muted-foreground: oklch(0.712 0.01 286);
+  --subtle: oklch(0.588 0.01 286);
   --accent: oklch(0.26 0.006 286);
   --accent-foreground: oklch(0.985 0 0);
 
@@ -212,6 +212,7 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-weight: 450;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   }
 
@@ -249,7 +250,8 @@
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   line-height: 1rem;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-muted-foreground);
 }

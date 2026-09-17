@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, IdLink, Mono } from "@/components/nexus/primitives";
-import { Section, KeyValueGrid, TotalsRows, DemoNote } from "@/components/nexus/detail";
+import { Section, KeyValueGrid, TotalsRows } from "@/components/nexus/detail";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Timeline } from "@/components/nexus/timeline";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ function OrdersOrderidPage() {
         <Panel>
           <EmptyState
             title="Order not found"
-            description={`No order matches "${orderId}". It may have been removed from the demo dataset.`}
+            description={`No order matches "${orderId}". It may have been removed from the store data.`}
             action={
               <Button size="sm" variant="outline" onClick={() => navigate({ to: "/orders" })}>
                 Back to orders
@@ -375,11 +375,6 @@ function OrdersOrderidPage() {
               ]}
             />
           </Section>
-
-          <DemoNote>
-            Status transitions and refunds are simulated locally — no payment gateway or inventory
-            reversal is triggered.
-          </DemoNote>
         </div>
       </div>
     </div>
