@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — build compatibility checker.
+ * DPC POS — build compatibility checker.
  *
  * Lightweight rules engine that flags mismatches between components
  * in a custom build. Runs entirely in the browser against the product

@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — WordPress authentication via the WP REST API.
+ * DPC POS — WordPress authentication via the WP REST API.
  *
  * Users sign in with their WordPress username + an Application Password
  * (wp-admin → Users → Profile → Application Passwords), validated against

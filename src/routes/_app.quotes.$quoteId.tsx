@@ -46,9 +46,9 @@ import type { PaymentMethod } from "@/lib/types";
 export const Route = createFileRoute("/_app/quotes/$quoteId")({
   head: () => ({
     meta: [
-      { title: "Quote detail — DPC Nexus" },
+      { title: "Quote detail — DPC POS" },
       { name: "description", content: "Quoted configuration, totals and approval state." },
-      { property: "og:title", content: "Quote detail — DPC Nexus" },
+      { property: "og:title", content: "Quote detail — DPC POS" },
       { property: "og:description", content: "Quoted configuration, totals and approval state." },
     ],
   }),

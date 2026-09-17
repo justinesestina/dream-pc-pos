@@ -12,9 +12,9 @@ import type { PaymentMethod } from "@/lib/types";
 export const Route = createFileRoute("/_app/pos")({
   head: () => ({
     meta: [
-      { title: "Point of Sale — DPC Nexus" },
+      { title: "Point of Sale — DPC POS" },
       { name: "description", content: "Ring up walk-in sales, apply discounts and take payment." },
-      { property: "og:title", content: "Point of Sale — DPC Nexus" },
+      { property: "og:title", content: "Point of Sale — DPC POS" },
       { property: "og:description", content: "Ring up walk-in sales, apply discounts and take payment." },
     ],
   }),

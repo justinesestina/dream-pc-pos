@@ -31,7 +31,7 @@ export const demoUsers: User[] = [
   {
     id: "u-1",
     name: "Justine Ramos",
-    email: "demo@dpcnexus.local",
+    email: "demo@dpcpos.local",
     role: "owner",
     initials: "JR",
     password: "demo1234",
@@ -39,7 +39,7 @@ export const demoUsers: User[] = [
   {
     id: "u-2",
     name: "Mika Santos",
-    email: "admin@dpcnexus.local",
+    email: "admin@dpcpos.local",
     role: "admin",
     initials: "MS",
     password: "admin1234",
@@ -47,7 +47,7 @@ export const demoUsers: User[] = [
   {
     id: "u-3",
     name: "Paolo Cruz",
-    email: "cashier@dpcnexus.local",
+    email: "cashier@dpcpos.local",
     role: "cashier",
     initials: "PC",
     password: "cashier1234",
@@ -55,7 +55,7 @@ export const demoUsers: User[] = [
   {
     id: "u-4",
     name: "Dana Lim",
-    email: "stock@dpcnexus.local",
+    email: "stock@dpcpos.local",
     role: "inventory",
     initials: "DL",
     password: "stock1234",

@@ -493,7 +493,7 @@ export const releases: ReleaseRecord[] = [
 
 export const company = {
   name: "Dream PC Build & IT Solutions",
-  short: "DPC NEXUS",
+  short: "DPC POS",
   address: "2F Unit 4, Aguinaldo Highway, Bacoor, Cavite",
   phone: "+63 917 555 0142",
   email: "sales@dreampcbuild.ph",

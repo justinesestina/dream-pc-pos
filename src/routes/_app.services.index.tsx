@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_app/services/")({
   validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
-      { title: "Service Tickets — DPC Nexus" },
+      { title: "Service Tickets — DPC POS" },
       { name: "description", content: "Repairs, diagnostics and upgrade jobs." },
-      { property: "og:title", content: "Service Tickets — DPC Nexus" },
+      { property: "og:title", content: "Service Tickets — DPC POS" },
       { property: "og:description", content: "Repairs, diagnostics and upgrade jobs." },
     ],
   }),

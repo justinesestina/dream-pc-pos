@@ -24,9 +24,9 @@ import type { PaymentMethod } from "@/lib/types";
 export const Route = createFileRoute("/_app/shifts/$shiftId")({
   head: () => ({
     meta: [
-      { title: "Shift — DPC Nexus" },
+      { title: "Shift — DPC POS" },
       { name: "description", content: "Shift detail with tender breakdown and variance." },
-      { property: "og:title", content: "Shift — DPC Nexus" },
+      { property: "og:title", content: "Shift — DPC POS" },
       { property: "og:description", content: "Shift detail with tender breakdown and variance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

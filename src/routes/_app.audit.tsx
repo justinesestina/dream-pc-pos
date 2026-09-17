@@ -19,9 +19,9 @@ import type { AuditLog } from "@/lib/types";
 export const Route = createFileRoute("/_app/audit")({
   head: () => ({
     meta: [
-      { title: "Audit Log — DPC Nexus" },
+      { title: "Audit Log — DPC POS" },
       { name: "description", content: "Read-only record of system activity." },
-      { property: "og:title", content: "Audit Log — DPC Nexus" },
+      { property: "og:title", content: "Audit Log — DPC POS" },
       { property: "og:description", content: "Read-only record of system activity." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

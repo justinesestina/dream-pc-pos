@@ -28,9 +28,9 @@ import type { ServiceStatus } from "@/lib/types";
 export const Route = createFileRoute("/_app/services/$ticketId")({
   head: () => ({
     meta: [
-      { title: "Ticket detail — DPC Nexus" },
+      { title: "Ticket detail — DPC POS" },
       { name: "description", content: "Diagnosis, parts used, labor and status timeline." },
-      { property: "og:title", content: "Ticket detail — DPC Nexus" },
+      { property: "og:title", content: "Ticket detail — DPC POS" },
       { property: "og:description", content: "Diagnosis, parts used, labor and status timeline." },
     ],
   }),

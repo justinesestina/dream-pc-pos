@@ -14,9 +14,9 @@ import type { InventoryItem } from "@/lib/types";
 export const Route = createFileRoute("/_app/inventory/")({
   head: () => ({
     meta: [
-      { title: "Inventory — DPC Nexus" },
+      { title: "Inventory — DPC POS" },
       { name: "description", content: "Stock on hand, reserved units, reorder points and serials." },
-      { property: "og:title", content: "Inventory — DPC Nexus" },
+      { property: "og:title", content: "Inventory — DPC POS" },
       { property: "og:description", content: "Stock on hand, reserved units, reorder points and serials." },
     ],
   }),

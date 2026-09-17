@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — WooCommerce Sync Functions
+ * DPC POS — WooCommerce Sync Functions
  *
  * Handles synchronization between POS and WooCommerce
  * Integrates with the existing store to sync products, categories, customers, and orders

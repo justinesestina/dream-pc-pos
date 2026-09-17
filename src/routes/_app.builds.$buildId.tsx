@@ -59,9 +59,9 @@ import type { BuildSlot, BuildStatus } from "@/lib/types";
 export const Route = createFileRoute("/_app/builds/$buildId")({
   head: () => ({
     meta: [
-      { title: "Build detail — DPC Nexus" },
+      { title: "Build detail — DPC POS" },
       { name: "description", content: "Parts list, compatibility checks, QA results and timeline." },
-      { property: "og:title", content: "Build detail — DPC Nexus" },
+      { property: "og:title", content: "Build detail — DPC POS" },
       { property: "og:description", content: "Parts list, compatibility checks, QA results and timeline." },
     ],
   }),

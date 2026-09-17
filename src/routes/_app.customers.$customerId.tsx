@@ -14,9 +14,9 @@ import type { Order, Quote, Build, ServiceTicket, Warranty } from "@/lib/types";
 export const Route = createFileRoute("/_app/customers/$customerId")({
   head: () => ({
     meta: [
-      { title: "Customer detail — DPC Nexus" },
+      { title: "Customer detail — DPC POS" },
       { name: "description", content: "Profile, owned systems, orders and tickets." },
-      { property: "og:title", content: "Customer detail — DPC Nexus" },
+      { property: "og:title", content: "Customer detail — DPC POS" },
       { property: "og:description", content: "Profile, owned systems, orders and tickets." },
     ],
   }),

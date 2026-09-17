@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * DPC NEXUS design system — dark technical/engineering console aesthetic.
+ * DPC POS design system — dark technical/engineering console aesthetic.
  * Near-black foundation, subtle borders, restrained semantic accents.
  * All colors use oklch. Never hardcode colors in components.
  */
@@ -19,6 +19,7 @@
 
   --font-sans: var(--font-sans-stack);
   --font-mono: var(--font-mono-stack);
+  --font-display: var(--font-display-stack);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -67,9 +68,10 @@
 
 :root {
   --radius: 0.5rem;
-  --font-sans-stack:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans-stack: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono-stack: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-display-stack:
+    "Orbitron", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* Premium light mode foundation */
   --background: oklch(0.98 0.005 240);
@@ -309,6 +311,76 @@
 
 @utility status-dot-ok {
   background: var(--color-success);
+}
+
+/* ── ambient background motion ──────────────────────────────────────── */
+/* Applied via .bg-anim-* on grid/glow/orb layers. Keyframes are gated to
+   `prefers-reduced-motion: no-preference` so reduced-motion users get a
+   fully static background. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes dpc-bg-grid-pan {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 44px 44px;
+    }
+  }
+
+  @keyframes dpc-bg-aurora {
+    0% {
+      transform: translate3d(-3%, -2%, 0) scale(1) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(4%, 3%, 0) scale(1.08) rotate(4deg);
+    }
+    100% {
+      transform: translate3d(-3%, -2%, 0) scale(1) rotate(0deg);
+    }
+  }
+
+  @keyframes dpc-bg-orb {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(6%, -10%, 0) scale(1.15);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+}
+
+.bg-anim-grid {
+  animation: dpc-bg-grid-pan 120s linear infinite;
+}
+
+.bg-anim-aurora {
+  animation: dpc-bg-aurora 30s ease-in-out infinite;
+}
+
+.bg-anim-orb {
+  animation: dpc-bg-orb 22s ease-in-out infinite;
+}
+
+.bg-anim-orb-slow {
+  animation: dpc-bg-orb 36s ease-in-out infinite reverse;
+}
+
+.bg-left-wash {
+  background-image:
+    radial-gradient(120% 100% at 78% 12%, oklch(0.76 0.11 210 / 0.12), transparent 52%),
+    linear-gradient(180deg, transparent 0%, oklch(0.145 0.004 285.8 / 0.55) 100%);
+}
+
+.grad-heading {
+  background-image: linear-gradient(105deg, var(--foreground) 20%, var(--info) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px oklch(0.76 0.11 210 / 0.3));
 }
 
 /* Hardware chassis corner brackets — subtle technical framing. */

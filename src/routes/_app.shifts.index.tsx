@@ -18,9 +18,9 @@ import type { Shift } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/shifts/")({
   head: () => ({
     meta: [
-      { title: "Cash Drawer — DPC Nexus" },
+      { title: "Cash Drawer — DPC POS" },
       { name: "description", content: "Cashier shifts, cash movements and end-of-shift reconciliation." },
-      { property: "og:title", content: "Cash Drawer — DPC Nexus" },
+      { property: "og:title", content: "Cash Drawer — DPC POS" },
       { property: "og:description", content: "Cashier shifts, cash movements and end-of-shift reconciliation." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

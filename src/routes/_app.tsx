@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  Outlet,
+  createFileRoute,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { AppTopbar } from "@/components/app/app-topbar";
@@ -14,10 +20,28 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const store = useStore();
+  const router = useRouter();
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const syncedUserId = useRef<string | null>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Refresh only the current page — reloads the active route's loaders and
+  // remounts its component, leaving the sidebar/topbar and other pages alone.
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const started = performance.now();
+    try {
+      await router.invalidate();
+      setRefreshTick((t) => t + 1);
+    } finally {
+      const wait = Math.max(0, 400 - (performance.now() - started));
+      window.setTimeout(() => setRefreshing(false), wait);
+    }
+  };
 
   // DEMO auth gate — UI-level only, not security.
   useEffect(() => {
@@ -84,18 +108,26 @@ function AppLayout() {
   if (!store.hydrated || !store.user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="mono animate-pulse text-xs text-subtle">INITIALIZING DPC NEXUS…</p>
+        <p className="mono animate-pulse text-xs text-subtle">INITIALIZING DPC POS…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="isolate flex min-h-screen bg-background">
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-[-10]">
+        <div className="bg-anim-aurora ambient-glow absolute inset-0 opacity-70" />
+        <div className="bg-anim-grid grid-backdrop absolute inset-0 opacity-[0.08]" />
+      </div>
       <ScrollProgress />
       <AppSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopbar onOpenPalette={() => setPaletteOpen(true)} />
-        <main key={pathname} className="animate-enter min-w-0 flex-1">
+        <AppTopbar
+          onOpenPalette={() => setPaletteOpen(true)}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+        />
+        <main key={`${pathname}|${refreshTick}`} className="animate-enter min-w-0 flex-1">
           <Outlet />
         </main>
       </div>

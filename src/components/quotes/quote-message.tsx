@@ -122,7 +122,7 @@ export function QuoteClientMessage({ quote, className }: { quote: Quote; classNa
       <div className="mt-auto border-t border-border bg-surface/50 px-4 py-3 text-[11.5px] text-muted-foreground">
         <p>Best regards,</p>
         <p className="text-foreground">{quote.preparedBy}</p>
-        <p className="mono text-subtle">DPC NEXUS · PC Retail &amp; Operations Platform</p>
+        <p className="mono text-subtle">DPC POS · PC Retail &amp; Operations Platform</p>
       </div>
     </div>
   );

@@ -20,9 +20,9 @@ import type { TimelineEvent } from "@/lib/types";
 export const Route = createFileRoute("/_app/releases/$releaseId")({
   head: () => ({
     meta: [
-      { title: "Release detail — DPC Nexus" },
+      { title: "Release detail — DPC POS" },
       { name: "description", content: "Pickup and delivery handover record." },
-      { property: "og:title", content: "Release detail — DPC Nexus" },
+      { property: "og:title", content: "Release detail — DPC POS" },
       { property: "og:description", content: "Pickup and delivery handover record." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

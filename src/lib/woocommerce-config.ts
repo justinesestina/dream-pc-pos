@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — WooCommerce API Configuration
+ * DPC POS — WooCommerce API Configuration
  *
  * Configuration for WooCommerce REST API integration
  * Store your WooCommerce credentials in environment variables or update the config below

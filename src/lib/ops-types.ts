@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — operations domain types (Phase 2).
+ * DPC POS — operations domain types (Phase 2).
  *
  * Purchasing, receiving, returns, cashier shifts and build assembly/QA/release
  * state. These live alongside src/lib/types.ts and reference the same entity

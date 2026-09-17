@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — demo data layer / state container.
+ * DPC POS — demo data layer / state container.
  *
  * This is the single seam between the UI and data. Today it is an in-memory
  * store seeded from demo-data.ts and persisted to localStorage. When a real

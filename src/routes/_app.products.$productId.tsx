@@ -14,9 +14,9 @@ import { Archive, ArchiveRestore, Boxes, Pencil } from "lucide-react";
 export const Route = createFileRoute("/_app/products/$productId")({
   head: () => ({
     meta: [
-      { title: "Product detail — DPC Nexus" },
+      { title: "Product detail — DPC POS" },
       { name: "description", content: "Specifications, pricing, stock and movement history." },
-      { property: "og:title", content: "Product detail — DPC Nexus" },
+      { property: "og:title", content: "Product detail — DPC POS" },
       { property: "og:description", content: "Specifications, pricing, stock and movement history." },
     ],
   }),

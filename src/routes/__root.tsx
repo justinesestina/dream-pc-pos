@@ -24,7 +24,7 @@ function NotFoundComponent() {
         <p className="label-tech">Error 404</p>
         <h1 className="mt-2 text-xl font-semibold text-foreground">Route not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This screen doesn&apos;t exist in DPC Nexus, or it has moved.
+          This screen doesn&apos;t exist in DPC POS, or it has moved.
         </p>
         <div className="mt-6">
           <Link
@@ -83,11 +83,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DPC Nexus — PC Retail & Operations Platform" },
+      { title: "DPC POS — PC Retail & Operations Platform" },
       {
         name: "description",
         content:
-          "DPC Nexus is the operational command center for Dream PC Build & IT Solutions — POS, inventory, custom builds, service and warranty.",
+          "DPC POS is the operational command center for Dream PC Build & IT Solutions — POS, inventory, custom builds, service and warranty.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -99,9 +99,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@500;600;700;800&display=swap",
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+    ],
+    scripts: [
+      {
+        children:
+          'if(!document.documentElement.classList.contains("dark")){document.documentElement.classList.add("dark")}',
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -112,7 +118,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>

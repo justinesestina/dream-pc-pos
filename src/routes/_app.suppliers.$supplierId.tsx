@@ -12,9 +12,9 @@ import type { PurchaseOrder } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/suppliers/$supplierId")({
   head: () => ({
     meta: [
-      { title: "Supplier — DPC Nexus" },
+      { title: "Supplier — DPC POS" },
       { name: "description", content: "Supplier profile, purchase history and supplied products." },
-      { property: "og:title", content: "Supplier — DPC Nexus" },
+      { property: "og:title", content: "Supplier — DPC POS" },
       { property: "og:description", content: "Supplier profile, purchase history and supplied products." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

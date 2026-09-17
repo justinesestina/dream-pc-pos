@@ -1,7 +1,7 @@
 import type { User, Product, Order, Quote, Category, Customer } from "./types";
 
 /**
- * DPC NEXUS — Frontend API client for the backend service.
+ * DPC POS — Frontend API client for the backend service.
  *
  * Handles authenticated requests to the Hono backend (backend/src/server.ts).
  */

@@ -19,9 +19,9 @@ import type { PaymentMethod, Product } from "@/lib/types";
 export const Route = createFileRoute("/_app/reports")({
   head: () => ({
     meta: [
-      { title: "Reports — DPC Nexus" },
+      { title: "Reports — DPC POS" },
       { name: "description", content: "Sales, margin, inventory valuation and cashier performance." },
-      { property: "og:title", content: "Reports — DPC Nexus" },
+      { property: "og:title", content: "Reports — DPC POS" },
       { property: "og:description", content: "Sales, margin, inventory valuation and cashier performance." },
     ],
   }),

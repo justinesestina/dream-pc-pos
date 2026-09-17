@@ -15,9 +15,9 @@ import type { ReturnRequest } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/returns/")({
   head: () => ({
     meta: [
-      { title: "Returns & Refunds — DPC Nexus" },
+      { title: "Returns & Refunds — DPC POS" },
       { name: "description", content: "Return requests, inspection outcomes and refunds." },
-      { property: "og:title", content: "Returns & Refunds — DPC Nexus" },
+      { property: "og:title", content: "Returns & Refunds — DPC POS" },
       { property: "og:description", content: "Return requests, inspection outcomes and refunds." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

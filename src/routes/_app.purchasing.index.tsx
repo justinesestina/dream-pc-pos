@@ -15,9 +15,9 @@ import type { PurchaseOrder, PurchaseStatus } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/purchasing/")({
   head: () => ({
     meta: [
-      { title: "Purchasing — DPC Nexus" },
+      { title: "Purchasing — DPC POS" },
       { name: "description", content: "Purchase orders, supplier commitments and expected deliveries." },
-      { property: "og:title", content: "Purchasing — DPC Nexus" },
+      { property: "og:title", content: "Purchasing — DPC POS" },
       { property: "og:description", content: "Purchase orders, supplier commitments and expected deliveries." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
