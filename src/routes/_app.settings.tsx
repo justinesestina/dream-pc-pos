@@ -46,9 +46,9 @@ import {
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — DPC Nexus" },
+      { title: "Settings — DPC POS" },
       { name: "description", content: "Store profile, appearance, tax, roles, notifications and demo system info." },
-      { property: "og:title", content: "Settings — DPC Nexus" },
+      { property: "og:title", content: "Settings — DPC POS" },
       { property: "og:description", content: "Store profile, appearance, tax, roles, notifications and demo system info." },
     ],
   }),

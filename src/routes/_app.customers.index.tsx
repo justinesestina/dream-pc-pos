@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_app/customers/")({
   validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
-      { title: "Customers — DPC Nexus" },
+      { title: "Customers — DPC POS" },
       { name: "description", content: "Customer directory with purchase and service history." },
-      { property: "og:title", content: "Customers — DPC Nexus" },
+      { property: "og:title", content: "Customers — DPC POS" },
       { property: "og:description", content: "Customer directory with purchase and service history." },
     ],
   }),

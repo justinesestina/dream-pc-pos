@@ -23,9 +23,9 @@ import type { WarrantyClaim } from "@/lib/types";
 export const Route = createFileRoute("/_app/warranty/$warrantyId")({
   head: () => ({
     meta: [
-      { title: "Warranty — DPC Nexus" },
+      { title: "Warranty — DPC POS" },
       { name: "description", content: "Coverage, claims and history for one warranty record." },
-      { property: "og:title", content: "Warranty — DPC Nexus" },
+      { property: "og:title", content: "Warranty — DPC POS" },
       { property: "og:description", content: "Coverage, claims and history for one warranty record." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

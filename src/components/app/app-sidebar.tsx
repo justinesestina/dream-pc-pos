@@ -142,7 +142,7 @@ export function AppSidebar() {
           <>
             <Link
               to="/dashboard"
-              aria-label="DPC Nexus home"
+              aria-label="DPC POS home"
               className="shrink-0 text-muted-foreground hover:text-foreground"
             >
               <img
@@ -163,7 +163,7 @@ export function AppSidebar() {
           </>
         ) : (
           <>
-            <Link to="/dashboard" aria-label="DPC Nexus home">
+            <Link to="/dashboard" aria-label="DPC POS home">
               <NexusWordmark />
             </Link>
             <Button

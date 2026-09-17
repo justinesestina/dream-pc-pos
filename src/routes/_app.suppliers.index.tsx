@@ -31,9 +31,9 @@ export const Route = createFileRoute("/_app/suppliers/")({
   }),
   head: () => ({
     meta: [
-      { title: "Suppliers — DPC Nexus" },
+      { title: "Suppliers — DPC POS" },
       { name: "description", content: "Supplier directory, terms and lead times." },
-      { property: "og:title", content: "Suppliers — DPC Nexus" },
+      { property: "og:title", content: "Suppliers — DPC POS" },
       { property: "og:description", content: "Supplier directory, terms and lead times." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

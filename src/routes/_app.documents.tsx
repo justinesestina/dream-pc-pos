@@ -16,9 +16,9 @@ import { dateShort, money, moneyExact, titleCase, VAT_RATE } from "@/lib/format"
 export const Route = createFileRoute("/_app/documents")({
   head: () => ({
     meta: [
-      { title: "Documents — DPC Nexus" },
+      { title: "Documents — DPC POS" },
       { name: "description", content: "Receipts, invoices, quotations and release documents." },
-      { property: "og:title", content: "Documents — DPC Nexus" },
+      { property: "og:title", content: "Documents — DPC POS" },
       { property: "og:description", content: "Receipts, invoices, quotations and release documents." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

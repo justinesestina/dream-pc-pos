@@ -20,9 +20,9 @@ export const Route = createFileRoute("/_app/products/")({
   validateSearch: (search: Record<string, unknown>) => ({ openNew: search["new"] === "1" || search["new"] === true }),
   head: () => ({
     meta: [
-      { title: "Products — DPC Nexus" },
+      { title: "Products — DPC POS" },
       { name: "description", content: "Catalog of components, peripherals and prebuilt systems." },
-      { property: "og:title", content: "Products — DPC Nexus" },
+      { property: "og:title", content: "Products — DPC POS" },
       { property: "og:description", content: "Catalog of components, peripherals and prebuilt systems." },
     ],
   }),

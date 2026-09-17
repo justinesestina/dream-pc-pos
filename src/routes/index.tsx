@@ -13,13 +13,13 @@ import { authenticateWordPress, wpSiteUrl } from "@/lib/wp-auth";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Sign in — DPC Nexus" },
+      { title: "Sign in — DPC POS" },
       {
         name: "description",
         content:
-          "Sign in to DPC Nexus, the PC retail and operations platform for Dream PC Build & IT Solutions.",
+          "Sign in to DPC POS, the PC retail and operations platform for Dream PC Build & IT Solutions.",
       },
-      { property: "og:title", content: "Sign in — DPC Nexus" },
+      { property: "og:title", content: "Sign in — DPC POS" },
       {
         property: "og:description",
         content: "Internal operations platform for a PC custom-build and IT solutions business.",
@@ -42,13 +42,13 @@ function LoginPage() {
 
   useEffect(() => {
     if (!store.hydrated) return;
-    
+
     // Check if user is already logged in
     if (store.user) {
       void navigate({ to: homeFor(store.user.role), replace: true });
       return;
     }
-    
+
     // Try to restore user session from localStorage
     try {
       const savedUser = localStorage.getItem("dpc-nexus-user");
@@ -96,17 +96,25 @@ function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background lg:flex-row">
-      {/* ── Left Panel (Branding / Showcase) ───────────────────────── */}
-      <div className="relative flex flex-1 flex-col justify-between overflow-hidden border-b border-border bg-surface/30 p-8 lg:grow-[7] lg:border-b-0 lg:border-r lg:p-12">
-        <div className="grid-backdrop pointer-events-none absolute inset-0 opacity-40" />
-        <div className="ambient-glow pointer-events-none absolute inset-0" />
-        <div className="pointer-events-none absolute -left-[10%] top-[20%] size-[500px] rounded-full bg-info/10 blur-[120px]" />
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background lg:flex-row">
+      {/* Global ambient background — visible on every screen size */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="bg-anim-aurora ambient-glow absolute inset-0 opacity-60" />
+        <div className="bg-anim-grid grid-backdrop absolute inset-0 opacity-[0.12]" />
+      </div>
+
+      {/* ── Left Panel (Branding / Showcase) — large screens only ──────── */}
+      <div className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-surface/30 lg:grow-[7] lg:flex lg:border-r lg:p-12">
+        <div className="bg-left-wash pointer-events-none absolute inset-0" />
+        <div className="bg-anim-grid grid-backdrop pointer-events-none absolute inset-0 opacity-40" />
+        <div className="bg-anim-aurora ambient-glow pointer-events-none absolute inset-0" />
+        <div className="bg-anim-orb pointer-events-none absolute -left-[10%] top-[20%] size-[500px] rounded-full bg-info/10 blur-[120px]" />
+        <div className="bg-anim-orb-slow pointer-events-none absolute top-[6%] right-[-6%] size-[360px] rounded-full bg-info/[0.09] blur-[110px]" />
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
             <DreamLogo className="size-10 rounded-lg ring-1 ring-border shadow-sm" />
-            <span className="text-xl font-semibold tracking-tight">DPC Nexus</span>
+            <span className="text-xl font-semibold tracking-tight">DPC POS</span>
           </div>
         </div>
 
@@ -134,10 +142,14 @@ function LoginPage() {
             className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500"
           >
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+              <div
+                aria-hidden
+                className="mb-4 h-1 w-10 rounded-full bg-gradient-to-r from-info via-info to-info/0"
+              />
+              <h2 className="grad-heading font-display text-2xl font-bold leading-snug tracking-[0.12em] sm:text-3xl">
                 Welcome to Dream PC POS
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-3 text-sm text-muted-foreground">
                 Authenticate with your operator account
               </p>
             </div>

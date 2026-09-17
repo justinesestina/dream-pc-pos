@@ -17,9 +17,9 @@ import { Package } from "lucide-react";
 export const Route = createFileRoute("/_app/inventory/$productId")({
   head: () => ({
     meta: [
-      { title: "Stock Item — DPC Nexus" },
+      { title: "Stock Item — DPC POS" },
       { name: "description", content: "Stock levels, movements and serial numbers for one product." },
-      { property: "og:title", content: "Stock Item — DPC Nexus" },
+      { property: "og:title", content: "Stock Item — DPC POS" },
       { property: "og:description", content: "Stock levels, movements and serial numbers for one product." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -36,9 +36,9 @@ import type { OrderStatus } from "@/lib/types";
 export const Route = createFileRoute("/_app/orders/$orderId")({
   head: () => ({
     meta: [
-      { title: "Order detail — DPC Nexus" },
+      { title: "Order detail — DPC POS" },
       { name: "description", content: "Line items, payment breakdown and receipt actions." },
-      { property: "og:title", content: "Order detail — DPC Nexus" },
+      { property: "og:title", content: "Order detail — DPC POS" },
       { property: "og:description", content: "Line items, payment breakdown and receipt actions." },
     ],
   }),

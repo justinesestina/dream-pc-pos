@@ -31,9 +31,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/warranty/claims/$claimId")({
   head: () => ({
     meta: [
-      { title: "Claim — DPC Nexus" },
+      { title: "Claim — DPC POS" },
       { name: "description", content: "Warranty claim workflow and history." },
-      { property: "og:title", content: "Claim — DPC Nexus" },
+      { property: "og:title", content: "Claim — DPC POS" },
       { property: "og:description", content: "Warranty claim workflow and history." },
     ],
   }),

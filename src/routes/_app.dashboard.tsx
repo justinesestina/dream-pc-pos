@@ -35,13 +35,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({
     meta: [
-      { title: "Operations Dashboard — DPC Nexus" },
+      { title: "Operations Dashboard — DPC POS" },
       {
         name: "description",
         content:
           "Today's sales, live orders, quotations, stock alerts and recent activity for Dream PC Build & IT Solutions.",
       },
-      { property: "og:title", content: "Operations Dashboard — DPC Nexus" },
+      { property: "og:title", content: "Operations Dashboard — DPC POS" },
       {
         property: "og:description",
         content: "Live operational overview: sales, orders, quotes, inventory alerts and activity.",

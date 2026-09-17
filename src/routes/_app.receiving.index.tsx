@@ -14,9 +14,9 @@ import type { GoodsReceipt } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/receiving/")({
   head: () => ({
     meta: [
-      { title: "Stock Receiving — DPC Nexus" },
+      { title: "Stock Receiving — DPC POS" },
       { name: "description", content: "Goods receipts against purchase orders." },
-      { property: "og:title", content: "Stock Receiving — DPC Nexus" },
+      { property: "og:title", content: "Stock Receiving — DPC POS" },
       { property: "og:description", content: "Goods receipts against purchase orders." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

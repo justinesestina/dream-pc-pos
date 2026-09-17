@@ -1,5 +1,5 @@
-﻿/**
- * DPC NEXUS — operations state container (Phase 2).
+/**
+ * DPC POS — operations state container (Phase 2).
  *
  * Sits beside StoreProvider and owns purchasing, receiving, returns, cashier
  * shifts and build assembly/QA/release state.

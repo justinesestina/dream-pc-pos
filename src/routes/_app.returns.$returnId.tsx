@@ -40,9 +40,9 @@ import type { PaymentMethod } from "@/lib/types";
 export const Route = createFileRoute("/_app/returns/$returnId")({
   head: () => ({
     meta: [
-      { title: "Return Request — DPC Nexus" },
+      { title: "Return Request — DPC POS" },
       { name: "description", content: "Inspection, approval and refund workflow for a return." },
-      { property: "og:title", content: "Return Request — DPC Nexus" },
+      { property: "og:title", content: "Return Request — DPC POS" },
       { property: "og:description", content: "Inspection, approval and refund workflow for a return." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

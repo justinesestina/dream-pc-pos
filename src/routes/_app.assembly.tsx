@@ -27,9 +27,9 @@ import type { Build } from "@/lib/types";
 export const Route = createFileRoute("/_app/assembly")({
   head: () => ({
     meta: [
-      { title: "Assembly Workspace — DPC Nexus" },
+      { title: "Assembly Workspace — DPC POS" },
       { name: "description", content: "Workshop kanban board for custom build assembly, testing and QA." },
-      { property: "og:title", content: "Assembly & QA — DPC Nexus" },
+      { property: "og:title", content: "Assembly & QA — DPC POS" },
       { property: "og:description", content: "Workshop kanban board for custom build assembly, testing and QA." },
     ],
   }),

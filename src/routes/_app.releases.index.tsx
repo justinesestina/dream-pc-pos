@@ -19,9 +19,9 @@ import type { ReleaseRecord } from "@/lib/ops-types";
 export const Route = createFileRoute("/_app/releases/")({
   head: () => ({
     meta: [
-      { title: "Delivery & Release — DPC Nexus" },
+      { title: "Delivery & Release — DPC POS" },
       { name: "description", content: "Pickup and delivery handover for builds and services." },
-      { property: "og:title", content: "Delivery & Release — DPC Nexus" },
+      { property: "og:title", content: "Delivery & Release — DPC POS" },
       { property: "og:description", content: "Pickup and delivery handover for builds and services." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

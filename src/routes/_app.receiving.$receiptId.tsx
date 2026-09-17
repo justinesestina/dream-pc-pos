@@ -16,9 +16,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/receiving/$receiptId")({
   head: () => ({
     meta: [
-      { title: "Goods Receipt — DPC Nexus" },
+      { title: "Goods Receipt — DPC POS" },
       { name: "description", content: "Receive items, record damage and capture serial numbers." },
-      { property: "og:title", content: "Goods Receipt — DPC Nexus" },
+      { property: "og:title", content: "Goods Receipt — DPC POS" },
       { property: "og:description", content: "Receive items, record damage and capture serial numbers." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — domain types.
+ * DPC POS — domain types.
  *
  * These mirror the intended Supabase schema in docs/DPC-NEXUS-SUPABASE-DATABASE-ARCHITECTURE.md.
  * All demo data conforms to these types so the data layer can be swapped for a real API

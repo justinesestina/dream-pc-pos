@@ -1,5 +1,5 @@
 /**
- * DPC NEXUS — WooCommerce API Client
+ * DPC POS — WooCommerce API Client
  *
  * Handles communication with WooCommerce REST API
  * Maps WooCommerce data structures to POS data structures

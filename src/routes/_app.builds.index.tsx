@@ -36,9 +36,9 @@ import type { Build, BuildStatus } from "@/lib/types";
 export const Route = createFileRoute("/_app/builds/")({
   head: () => ({
     meta: [
-      { title: "Custom Builds — DPC Nexus" },
+      { title: "Custom Builds — DPC POS" },
       { name: "description", content: "Build pipeline from quote through QA to release." },
-      { property: "og:title", content: "Custom Builds — DPC Nexus" },
+      { property: "og:title", content: "Custom Builds — DPC POS" },
       { property: "og:description", content: "Build pipeline from quote through QA to release." },
     ],
   }),

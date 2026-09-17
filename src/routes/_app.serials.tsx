@@ -36,9 +36,9 @@ export const Route = createFileRoute("/_app/serials")({
   }),
   head: () => ({
     meta: [
-      { title: "Serial Numbers — DPC Nexus" },
+      { title: "Serial Numbers — DPC POS" },
       { name: "description", content: "Unit-level traceability from receiving through sale, build and warranty." },
-      { property: "og:title", content: "Serial Numbers — DPC Nexus" },
+      { property: "og:title", content: "Serial Numbers — DPC POS" },
       {
         property: "og:description",
         content: "Unit-level traceability from receiving through sale, build and warranty.",

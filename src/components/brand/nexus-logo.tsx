@@ -56,7 +56,7 @@ export function NexusWordmark({
       <DreamLogo className="size-8 rounded-md" />
       <div className="leading-none">
         <div className="text-[15px] font-semibold tracking-tight">
-          DPC <span className="text-muted-foreground">NEXUS</span>
+          DPC <span className="text-muted-foreground">POS</span>
         </div>
         {showSubtitle && (
           <div className="mono mt-1 text-[10px] tracking-[0.14em] text-subtle uppercase">

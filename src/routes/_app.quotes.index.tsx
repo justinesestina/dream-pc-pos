@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/quotes/")({
   head: () => ({
     meta: [
-      { title: "Quotes — DPC Nexus" },
+      { title: "Quotes — DPC POS" },
       { name: "description", content: "Quotations, validity windows and conversion to orders." },
-      { property: "og:title", content: "Quotes — DPC Nexus" },
+      { property: "og:title", content: "Quotes — DPC POS" },
       { property: "og:description", content: "Quotations, validity windows and conversion to orders." },
     ],
   }),

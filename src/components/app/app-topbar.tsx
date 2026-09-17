@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, ChevronDown, Command, Menu, Search, Sun, Moon } from "lucide-react";
+import { Bell, ChevronDown, Command, Menu, RefreshCw, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -130,7 +130,15 @@ function MobileNavItem({
   );
 }
 
-export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
+export function AppTopbar({
+  onOpenPalette,
+  onRefresh,
+  refreshing,
+}: {
+  onOpenPalette: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
   const store = useStore();
   const { title, detail, rootTo } = useCrumbs();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -241,6 +249,17 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
         onClick={onOpenPalette}
       >
         <Command className="size-4" />
+      </Button>
+
+      <Button
+        size="icon"
+        variant="ghost"
+        disabled={refreshing}
+        onClick={onRefresh}
+        title="Refresh this page"
+        aria-label={refreshing ? "Refreshing page" : "Refresh this page"}
+      >
+        <RefreshCw size={16} className={cn(refreshing && "animate-spin")} />
       </Button>
 
       <span className="mono hidden items-center gap-1.5 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] tracking-wide text-warning uppercase sm:inline-flex">
