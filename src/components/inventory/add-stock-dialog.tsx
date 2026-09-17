@@ -240,6 +240,8 @@ export function AddStockDialog({
             <ProductPicker
               products={products}
               value={productId}
+              stockByProduct={stockMap}
+              stockNoun={targetId ? "in this warehouse" : "in stock"}
               onChange={(id) => {
                 setProductId(id);
                 setErrors((e) => ({ ...e, product: "", form: "" }));

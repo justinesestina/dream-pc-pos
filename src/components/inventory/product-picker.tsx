@@ -29,32 +29,49 @@ function Thumb({ product, size = "size-7" }: { product: Product; size?: string }
   );
 }
 
-/** "12 in stock" / "Out of stock" / "∞" (unlimited) from the WooCommerce stock field. */
-function stockLabel(product: Product): { text: string; tone: string } {
-  const qty = product.stock_quantity;
+/** "12 in stock" / "Out of stock" / "∞" for a given quantity source. */
+function stockLabel(qty: number | null | undefined, noun: string): { text: string; tone: string } {
   if (qty === null || qty === undefined) {
     return { text: "∞", tone: "text-muted-foreground" };
   }
   if (qty <= 0) return { text: "Out of stock", tone: "text-destructive" };
-  return { text: `${qty} in stock`, tone: "text-muted-foreground" };
+  return { text: `${qty} ${noun}`, tone: "text-muted-foreground" };
 }
 
-/** Searchable product combobox — matches name, SKU or id while you type. */
+/**
+ * Searchable product combobox — matches name, SKU or id while you type.
+ *
+ * When `stockByProduct` is supplied (e.g. the stock of the warehouse being
+ * added to / deducted from / transferred out of), the availability shown next
+ * to each product reflects that warehouse rather than the storefront total.
+ */
 export function ProductPicker({
   products,
   value,
   onChange,
   placeholder = "Select a product…",
   invalid,
+  stockByProduct,
+  stockNoun = "in stock",
 }: {
   products: Product[];
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
   invalid?: boolean;
+  /** Per-warehouse quantities keyed by productId; wins over the WC stock field. */
+  stockByProduct?: Record<string, number> | undefined;
+  stockNoun?: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = products.find((p) => p.id === value);
+
+  const useWarehouseStock = Boolean(stockByProduct && Object.keys(stockByProduct).length > 0);
+  const qtyOf = (p: Product): number | null => {
+    if (useWarehouseStock) return stockByProduct?.[p.id] ?? 0;
+    return p.stock_quantity ?? null;
+  };
+  const labelOf = (p: Product) => stockLabel(qtyOf(p), stockNoun);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -78,8 +95,8 @@ export function ProductPicker({
                   {selected.sku}
                 </span>
               )}
-              <span className={cn("shrink-0 text-[11px]", stockLabel(selected).tone)}>
-                {stockLabel(selected).text}
+              <span className={cn("shrink-0 text-[11px]", labelOf(selected).tone)}>
+                {labelOf(selected).text}
               </span>
             </span>
           ) : (
@@ -92,7 +109,6 @@ export function ProductPicker({
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         data-lenis-prevent
-        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command
           filter={(itemValue, search) => {
@@ -101,7 +117,7 @@ export function ProductPicker({
             return itemValue.toLowerCase().includes(needle) ? 1 : 0;
           }}
         >
-          <CommandInput placeholder="Type a name, SKU or id…" />
+          <CommandInput autoFocus placeholder="Type a name, SKU or id…" />
           <CommandEmpty>No product found.</CommandEmpty>
           <CommandList className="max-h-64 overscroll-contain" data-lenis-prevent>
             {products.map((p) => (
@@ -121,8 +137,8 @@ export function ProductPicker({
                     {p.sku || p.id}
                   </span>
                 </span>
-                <span className={cn("ml-auto shrink-0 text-[11px]", stockLabel(p).tone)}>
-                  {stockLabel(p).text}
+                <span className={cn("ml-auto shrink-0 text-[11px]", labelOf(p).tone)}>
+                  {labelOf(p).text}
                 </span>
                 {p.id === value && <Check className="size-4 shrink-0" />}
               </CommandItem>

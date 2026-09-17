@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, Receipt, Search as SearchIcon, ShoppingBag, Users } from "lucide-react";
+import {
+  FileText,
+  LayoutDashboard,
+  Receipt,
+  Search as SearchIcon,
+  ShoppingBag,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -9,11 +17,64 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/lib/store";
 import { money } from "@/lib/format";
-import { searchBackendGlobal } from "@/lib/api-client";
+import { searchBackendGlobal, type GlobalSearchResult } from "@/lib/api-client";
+import { navGroups, type NavItem } from "@/components/app/nav-config";
+import { can } from "@/lib/permissions";
+import type { Role } from "@/lib/types";
+
+interface PaletteEntry {
+  group: string;
+  label: string;
+  route: string;
+  icon: LucideIcon;
+}
+
+/** Flatten the sidebar nav into searchable entries, keeping group + icon. */
+function collectNav(role: Role): PaletteEntry[] {
+  const out: PaletteEntry[] = [];
+  const walk = (items: NavItem[], group: string, inherited?: LucideIcon) => {
+    for (const item of items) {
+      if (item.soon || !can(role, item.cap)) continue;
+      const icon = item.icon ?? inherited ?? SearchIcon;
+      if (item.to && !item.children?.length) {
+        const qs = item.search
+          ? `?${new URLSearchParams(item.search as Record<string, string>).toString()}`
+          : "";
+        out.push({ group, label: item.label, route: `${item.to}${qs}`, icon });
+      }
+      if (item.children) walk(item.children, group, icon);
+    }
+  };
+  for (const group of navGroups) walk(group.items, group.label);
+  return out;
+}
+
+const ACTIONS: PaletteEntry[] = [
+  { group: "Actions", label: "New Quotation", route: "/quotes?new=1", icon: FileText },
+];
+
+function ResultIcon({ item }: { item: GlobalSearchResult }) {
+  const Icon =
+    item.type === "products"
+      ? ShoppingBag
+      : item.type === "customers"
+        ? Users
+        : item.type === "dashboard"
+          ? LayoutDashboard
+          : SearchIcon;
+  if (item.imageUrl) {
+    return (
+      <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted/40">
+        <img src={item.imageUrl} alt="" className="h-full w-full object-contain" />
+      </span>
+    );
+  }
+  return <Icon className="size-4" />;
+}
 
 export function CommandPalette({
   open,
@@ -25,32 +86,54 @@ export function CommandPalette({
   const navigate = useNavigate();
   const store = useStore();
   const [query, setQuery] = useState("");
-  const [remoteResults, setRemoteResults] = useState<
-    Array<{ id: string; type: string; label: string; subtitle: string; route: string }>
-  >([]);
+  const [searching, setSearching] = useState(false);
+  const [remoteResults, setRemoteResults] = useState<GlobalSearchResult[]>([]);
+
+  const role = store.user?.role ?? "owner";
+  const navEntries = useMemo(() => collectNav(role), [role]);
+  const navByGroup = useMemo(() => {
+    const map = new Map<string, PaletteEntry[]>();
+    for (const entry of navEntries) {
+      const list = map.get(entry.group) ?? [];
+      list.push(entry);
+      map.set(entry.group, list);
+    }
+    return [...map.entries()];
+  }, [navEntries]);
 
   useEffect(() => {
-    if (!open) setQuery("");
+    if (!open) {
+      setQuery("");
+      setSearching(false);
+    }
   }, [open]);
 
   useEffect(() => {
     const q = query.trim();
     if (!q) {
       setRemoteResults([]);
+      setSearching(false);
       return;
     }
 
     let cancelled = false;
-    void searchBackendGlobal(q)
-      .then((results) => {
-        if (!cancelled) setRemoteResults(results.slice(0, 10));
-      })
-      .catch(() => {
-        if (!cancelled) setRemoteResults([]);
-      });
+    setSearching(true);
+    const timer = setTimeout(() => {
+      void searchBackendGlobal(q)
+        .then((results) => {
+          if (!cancelled) setRemoteResults(results.slice(0, 10));
+        })
+        .catch(() => {
+          if (!cancelled) setRemoteResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 220);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [query]);
 
@@ -67,15 +150,16 @@ export function CommandPalette({
     : [];
   const matchedQuotes = q
     ? store.quotes
-        .filter((qt) => qt.id.toLowerCase().includes(q) || qt.customerName.toLowerCase().includes(q))
+        .filter(
+          (qt) => qt.id.toLowerCase().includes(q) || qt.customerName.toLowerCase().includes(q),
+        )
         .slice(0, 4)
     : [];
 
   const summaryResults = useMemo(() => {
     if (!q) return [];
-    const combined = [...remoteResults];
     const byKey = new Set<string>();
-    return combined.filter((item) => {
+    return remoteResults.filter((item) => {
       const key = `${item.type}:${item.id}`;
       if (byKey.has(key)) return false;
       byKey.add(key);
@@ -86,52 +170,65 @@ export function CommandPalette({
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
-        placeholder="Search or run a command — orders, quotations…"
+        placeholder="Search products, orders, warehouses or pages…"
         value={query}
         onValueChange={setQuery}
       />
       <CommandList className="max-h-[420px]" data-lenis-prevent>
-        <CommandEmpty>No results found.</CommandEmpty>
+        {!searching && <CommandEmpty>No results found.</CommandEmpty>}
 
         <CommandGroup heading="Actions">
-          <CommandItem onSelect={() => go("/quotes?new=1")}>
-            <FileText /> New Quotation
-          </CommandItem>
+          {ACTIONS.map((action) => (
+            <CommandItem
+              key={action.label}
+              value={`${action.group} ${action.label}`}
+              onSelect={() => go(action.route)}
+            >
+              <action.icon className="size-4" />
+              {action.label}
+            </CommandItem>
+          ))}
         </CommandGroup>
 
-        {summaryResults.length > 0 && (
+        {searching && (
+          <div className="p-1">
+            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Results</div>
+            <div className="space-y-2 px-2 pb-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="size-7 rounded" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="h-2.5 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!searching && summaryResults.length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Results">
-              {summaryResults.map((item) => {
-                const Icon =
-                  item.type === "products"
-                    ? ShoppingBag
-                    : item.type === "customers"
-                      ? Users
-                      : item.type === "dashboard"
-                        ? LayoutDashboard
-                        : SearchIcon;
-
-                return (
-                  <CommandItem
-                    key={`${item.type}:${item.id}`}
-                    value={`${item.type}-${item.id}-${item.label}-${item.subtitle}`}
-                    onSelect={() => go(item.route)}
-                  >
-                    <Icon className="size-4" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{item.label}</div>
-                      <div className="truncate text-xs text-muted-foreground">{item.subtitle}</div>
-                    </div>
-                  </CommandItem>
-                );
-              })}
+              {summaryResults.map((item) => (
+                <CommandItem
+                  key={`${item.type}:${item.id}`}
+                  value={`${item.type}-${item.id}-${item.label}-${item.subtitle}`}
+                  onSelect={() => go(item.route)}
+                >
+                  <ResultIcon item={item} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{item.label}</div>
+                    <div className="truncate text-xs text-muted-foreground">{item.subtitle}</div>
+                  </div>
+                </CommandItem>
+              ))}
             </CommandGroup>
           </>
         )}
 
-        {matchedOrders.length > 0 && (
+        {!searching && matchedOrders.length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Orders">
@@ -151,7 +248,7 @@ export function CommandPalette({
           </>
         )}
 
-        {matchedQuotes.length > 0 && (
+        {!searching && matchedQuotes.length > 0 && (
           <>
             <CommandSeparator />
             <CommandGroup heading="Quotations">
@@ -171,24 +268,20 @@ export function CommandPalette({
           </>
         )}
 
-        <CommandSeparator />
-        <CommandGroup heading="Navigate">
-          <CommandItem onSelect={() => go("/dashboard")}>
-            <LayoutDashboard /> Dashboard
-          </CommandItem>
-          <CommandItem onSelect={() => go("/orders")}>
-            <Receipt /> Orders
-          </CommandItem>
-          <CommandItem onSelect={() => go("/customers")}>
-            <Users /> Customers
-          </CommandItem>
-          <CommandItem onSelect={() => go("/products")}>
-            <ShoppingBag /> Products
-          </CommandItem>
-          <CommandItem onSelect={() => go("/quotes")}>
-            <FileText /> Quotations
-          </CommandItem>
-        </CommandGroup>
+        {navByGroup.map(([group, items]) => (
+          <CommandGroup key={group} heading={group}>
+            {items.map((entry) => (
+              <CommandItem
+                key={`${group}:${entry.label}:${entry.route}`}
+                value={`${group} ${entry.label}`}
+                onSelect={() => go(entry.route)}
+              >
+                <entry.icon className="size-4" />
+                {entry.label}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
       </CommandList>
     </CommandDialog>
   );

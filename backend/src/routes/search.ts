@@ -17,6 +17,8 @@ export interface SearchResult {
   label: string;
   subtitle: string;
   route: string;
+  /** Thumbnail for products (and any other type that carries an image). */
+  imageUrl?: string | undefined;
 }
 
 function norm(value: string | undefined | null): string {
@@ -80,6 +82,7 @@ export function searchRoutes() {
           label: product.name,
           subtitle: `${product.sku || product.id} • ${product.brand ?? "General"}`,
           route: `/products/${product.id}`,
+          ...(product.images?.[0]?.src ? { imageUrl: product.images[0].src } : {}),
         });
       }
 

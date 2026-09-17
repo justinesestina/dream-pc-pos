@@ -227,6 +227,8 @@ export function TransferStockDialog({
             <ProductPicker
               products={products}
               value={productId}
+              stockByProduct={stockMap}
+              stockNoun={fromId ? "in source" : "in stock"}
               onChange={(id) => {
                 setProductId(id);
                 setErrors((e) => ({ ...e, product: "", quantity: "", form: "" }));

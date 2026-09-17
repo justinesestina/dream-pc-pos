@@ -565,26 +565,19 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
   return res.ok && res.data ? res.data : [];
 }
 
-export async function searchBackendGlobal(query: string): Promise<
-  Array<{
-    id: string;
-    type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "page";
-    label: string;
-    subtitle: string;
-    route: string;
-  }>
-> {
+export interface GlobalSearchResult {
+  id: string;
+  type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "page";
+  label: string;
+  subtitle: string;
+  route: string;
+  imageUrl?: string | undefined;
+}
+
+export async function searchBackendGlobal(query: string): Promise<GlobalSearchResult[]> {
   const q = query.trim();
   if (!q) return [];
-  const res = await apiRequest<
-    Array<{
-      id: string;
-      type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "page";
-      label: string;
-      subtitle: string;
-      route: string;
-    }>
-  >(`/api/v1/search?q=${encodeURIComponent(q)}`);
+  const res = await apiRequest<GlobalSearchResult[]>(`/api/v1/search?q=${encodeURIComponent(q)}`);
   return res.ok && res.data ? res.data : [];
 }
 
