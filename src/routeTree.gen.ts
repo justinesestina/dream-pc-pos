@@ -23,6 +23,7 @@ import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes
 import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
 import { Route as AppBuildsBuildIdRouteImport } from './routes/_app.builds.$buildId'
+import { Route as AppCategoriesIndexRouteImport } from './routes/_app.categories.index'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
 import { Route as AppCustomersCustomerIdRouteImport } from './routes/_app.customers.$customerId'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app.inventory.index'
@@ -48,6 +49,7 @@ import { Route as AppShiftsShiftIdRouteImport } from './routes/_app.shifts.$shif
 import { Route as AppSuppliersIndexRouteImport } from './routes/_app.suppliers.index'
 import { Route as AppSuppliersSupplierIdRouteImport } from './routes/_app.suppliers.$supplierId'
 import { Route as AppTagsIndexRouteImport } from './routes/_app.tags.index'
+import { Route as AppWarehousesIndexRouteImport } from './routes/_app.warehouses.index'
 import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
 import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
 import { Route as AppWarrantyClaimsClaimIdRouteImport } from './routes/_app.warranty.claims.$claimId'
@@ -119,6 +121,11 @@ const AppBuildsIndexRoute = AppBuildsIndexRouteImport.update({
 const AppBuildsBuildIdRoute = AppBuildsBuildIdRouteImport.update({
   id: '/builds/$buildId',
   path: '/builds/$buildId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCategoriesIndexRoute = AppCategoriesIndexRouteImport.update({
+  id: '/categories/',
+  path: '/categories/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
@@ -246,6 +253,11 @@ const AppTagsIndexRoute = AppTagsIndexRouteImport.update({
   path: '/tags/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWarehousesIndexRoute = AppWarehousesIndexRouteImport.update({
+  id: '/warehouses/',
+  path: '/warehouses/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppWarrantyIndexRoute = AppWarrantyIndexRouteImport.update({
   id: '/warranty/',
   path: '/warranty/',
@@ -290,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/attributes/': typeof AppAttributesIndexRoute
   '/brands/': typeof AppBrandsIndexRoute
   '/builds/': typeof AppBuildsIndexRoute
+  '/categories/': typeof AppCategoriesIndexRoute
   '/customers/': typeof AppCustomersIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
@@ -303,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/shifts/': typeof AppShiftsIndexRoute
   '/suppliers/': typeof AppSuppliersIndexRoute
   '/tags/': typeof AppTagsIndexRoute
+  '/warehouses/': typeof AppWarehousesIndexRoute
   '/warranty/': typeof AppWarrantyIndexRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -333,6 +347,7 @@ export interface FileRoutesByTo {
   '/attributes': typeof AppAttributesIndexRoute
   '/brands': typeof AppBrandsIndexRoute
   '/builds': typeof AppBuildsIndexRoute
+  '/categories': typeof AppCategoriesIndexRoute
   '/customers': typeof AppCustomersIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
   '/orders': typeof AppOrdersIndexRoute
@@ -346,6 +361,7 @@ export interface FileRoutesByTo {
   '/shifts': typeof AppShiftsIndexRoute
   '/suppliers': typeof AppSuppliersIndexRoute
   '/tags': typeof AppTagsIndexRoute
+  '/warehouses': typeof AppWarehousesIndexRoute
   '/warranty': typeof AppWarrantyIndexRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -378,6 +394,7 @@ export interface FileRoutesById {
   '/_app/attributes/': typeof AppAttributesIndexRoute
   '/_app/brands/': typeof AppBrandsIndexRoute
   '/_app/builds/': typeof AppBuildsIndexRoute
+  '/_app/categories/': typeof AppCategoriesIndexRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
@@ -391,6 +408,7 @@ export interface FileRoutesById {
   '/_app/shifts/': typeof AppShiftsIndexRoute
   '/_app/suppliers/': typeof AppSuppliersIndexRoute
   '/_app/tags/': typeof AppTagsIndexRoute
+  '/_app/warehouses/': typeof AppWarehousesIndexRoute
   '/_app/warranty/': typeof AppWarrantyIndexRoute
   '/_app/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -423,6 +441,7 @@ export interface FileRouteTypes {
     | '/attributes/'
     | '/brands/'
     | '/builds/'
+    | '/categories/'
     | '/customers/'
     | '/inventory/'
     | '/orders/'
@@ -436,6 +455,7 @@ export interface FileRouteTypes {
     | '/shifts/'
     | '/suppliers/'
     | '/tags/'
+    | '/warehouses/'
     | '/warranty/'
     | '/warranty/claims/$claimId'
   fileRoutesByTo: FileRoutesByTo
@@ -466,6 +486,7 @@ export interface FileRouteTypes {
     | '/attributes'
     | '/brands'
     | '/builds'
+    | '/categories'
     | '/customers'
     | '/inventory'
     | '/orders'
@@ -479,6 +500,7 @@ export interface FileRouteTypes {
     | '/shifts'
     | '/suppliers'
     | '/tags'
+    | '/warehouses'
     | '/warranty'
     | '/warranty/claims/$claimId'
   id:
@@ -510,6 +532,7 @@ export interface FileRouteTypes {
     | '/_app/attributes/'
     | '/_app/brands/'
     | '/_app/builds/'
+    | '/_app/categories/'
     | '/_app/customers/'
     | '/_app/inventory/'
     | '/_app/orders/'
@@ -523,6 +546,7 @@ export interface FileRouteTypes {
     | '/_app/shifts/'
     | '/_app/suppliers/'
     | '/_app/tags/'
+    | '/_app/warehouses/'
     | '/_app/warranty/'
     | '/_app/warranty/claims/$claimId'
   fileRoutesById: FileRoutesById
@@ -630,6 +654,13 @@ declare module '@tanstack/react-router' {
       path: '/builds/$buildId'
       fullPath: '/builds/$buildId'
       preLoaderRoute: typeof AppBuildsBuildIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/categories/': {
+      id: '/_app/categories/'
+      path: '/categories'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof AppCategoriesIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/customers/': {
@@ -807,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTagsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/warehouses/': {
+      id: '/_app/warehouses/'
+      path: '/warehouses'
+      fullPath: '/warehouses/'
+      preLoaderRoute: typeof AppWarehousesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/warranty/': {
       id: '/_app/warranty/'
       path: '/warranty'
@@ -857,6 +895,7 @@ interface AppRouteChildren {
   AppAttributesIndexRoute: typeof AppAttributesIndexRoute
   AppBrandsIndexRoute: typeof AppBrandsIndexRoute
   AppBuildsIndexRoute: typeof AppBuildsIndexRoute
+  AppCategoriesIndexRoute: typeof AppCategoriesIndexRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
@@ -870,6 +909,7 @@ interface AppRouteChildren {
   AppShiftsIndexRoute: typeof AppShiftsIndexRoute
   AppSuppliersIndexRoute: typeof AppSuppliersIndexRoute
   AppTagsIndexRoute: typeof AppTagsIndexRoute
+  AppWarehousesIndexRoute: typeof AppWarehousesIndexRoute
   AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
   AppWarrantyClaimsClaimIdRoute: typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -900,6 +940,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAttributesIndexRoute: AppAttributesIndexRoute,
   AppBrandsIndexRoute: AppBrandsIndexRoute,
   AppBuildsIndexRoute: AppBuildsIndexRoute,
+  AppCategoriesIndexRoute: AppCategoriesIndexRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
@@ -913,6 +954,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppShiftsIndexRoute: AppShiftsIndexRoute,
   AppSuppliersIndexRoute: AppSuppliersIndexRoute,
   AppTagsIndexRoute: AppTagsIndexRoute,
+  AppWarehousesIndexRoute: AppWarehousesIndexRoute,
   AppWarrantyIndexRoute: AppWarrantyIndexRoute,
   AppWarrantyClaimsClaimIdRoute: AppWarrantyClaimsClaimIdRoute,
 }

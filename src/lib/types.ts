@@ -44,6 +44,24 @@ export interface AttributeMeta {
 /** A single value term belonging to an attribute. */
 export type AttributeTerm = CatalogTerm;
 
+export type WarehouseType = "main" | "branch" | "storage" | "service";
+
+/** Custom warehouse record — backend-managed table (WooCommerce has none). */
+export interface Warehouse {
+  id: string;
+  name: string;
+  code: string;
+  type: WarehouseType;
+  address?: string | undefined;
+  phone?: string | undefined;
+  manager?: string | undefined;
+  capacity?: number | undefined;
+  notes?: string | undefined;
+  default: boolean;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -57,6 +75,8 @@ export interface Category {
   description?: string | undefined;
   display?: "default" | "products" | "subcategories" | "both" | undefined;
   image?: string | undefined;
+  /** Number of products assigned to the category (backend taxonomy count). */
+  count?: number | undefined;
 }
 
 export interface ProductSpecs {
