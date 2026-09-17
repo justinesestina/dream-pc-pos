@@ -191,14 +191,11 @@ function buildProductStockInfo(p: WcProduct, nameOf: Map<string, string>): Produ
   return info;
 }
 
-/** Warehouse detail → Products tab. */
+/** Warehouse detail → Products tab. Includes every product (qty may be 0). */
 export async function warehouseStockRows(warehouseId: string): Promise<WarehouseStockRow[]> {
   const products = await woocommerce.products();
-  const rows: WarehouseStockRow[] = [];
-  for (const p of products) {
-    const map = parseStockMap(p);
-    const qty = map[warehouseId] ?? 0;
-    if (qty <= 0) continue;
+  const rows: WarehouseStockRow[] = products.map((p) => {
+    const qty = parseStockMap(p)[warehouseId] ?? 0;
     const row: WarehouseStockRow = {
       productId: String(p.id),
       name: p.name,
@@ -210,9 +207,9 @@ export async function warehouseStockRows(warehouseId: string): Promise<Warehouse
     };
     const image = p.images?.[0]?.src;
     if (image) row.image = image;
-    rows.push(row);
-  }
-  return rows.sort((a, b) => a.name.localeCompare(b.name));
+    return row;
+  });
+  return rows.sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name));
 }
 
 /* -------------------------------------------------------------- movements */

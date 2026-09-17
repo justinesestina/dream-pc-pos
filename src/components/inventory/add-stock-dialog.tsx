@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MinusCircle, PackagePlus } from "lucide-react";
+import { AlertCircle, MinusCircle, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Segmented } from "@/components/nexus/toolbar";
+import { ProductPicker } from "@/components/inventory/product-picker";
 import {
   Dialog,
   DialogContent,
@@ -27,12 +28,28 @@ import {
   fetchBackendProducts,
   fetchBackendWarehouses,
   fetchWarehouseStock,
+  getLastApiError,
   type AddStockInput,
 } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { num } from "@/lib/format";
 import type { Product, Warehouse } from "@/lib/types";
 
 type Mode = "add" | "deduct";
+
+type FormErrors = {
+  warehouse?: string | undefined;
+  product?: string | undefined;
+  quantity?: string | undefined;
+  form?: string | undefined;
+};
+
+const invalidClass = "border-destructive focus-visible:ring-destructive";
+
+function FieldError({ message }: { message?: string | undefined }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-destructive">{message}</p>;
+}
 
 export function AddStockDialog({
   open,
@@ -62,6 +79,7 @@ export function AddStockDialog({
   const [notes, setNotes] = useState("");
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +91,7 @@ export function AddStockDialog({
     setSupplier("");
     setReference("");
     setNotes("");
+    setErrors({});
   }, [open, initialMode, initialProductId, warehouseId]);
 
   useEffect(() => {
@@ -114,19 +133,17 @@ export function AddStockDialog({
   const deducting = mode === "deduct";
 
   const submit = async () => {
-    if (!targetId) {
-      toast.error("Choose a warehouse.");
-      return;
-    }
-    if (!productId) {
-      toast.error("Choose a product.");
-      return;
-    }
+    const next: FormErrors = {};
+    if (!targetId) next.warehouse = "Please choose a warehouse.";
+    if (!productId) next.product = "Please choose a product.";
     const qty = Number(quantity);
-    if (!Number.isFinite(qty) || qty <= 0) {
-      toast.error("Quantity must be a positive number.");
-      return;
-    }
+    if (!quantity.trim()) next.quantity = "Quantity is required.";
+    else if (!Number.isFinite(qty) || qty <= 0) next.quantity = "Enter a number greater than 0.";
+    else if (deducting && qty > available)
+      next.quantity = `Only ${num(available)} unit(s) available in this warehouse.`;
+
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
 
     setSaving(true);
     if (deducting) {
@@ -138,7 +155,9 @@ export function AddStockDialog({
       });
       setSaving(false);
       if (!res) {
-        toast.error("Could not deduct stock. Check the available quantity.");
+        const message = getLastApiError() ?? "Could not deduct stock.";
+        setErrors({ form: message });
+        toast.error("Could not deduct stock", { description: message });
         return;
       }
       toast.success(`Deducted ${qty} × ${product?.name ?? "product"}.`);
@@ -151,7 +170,9 @@ export function AddStockDialog({
       const res = await addWarehouseStock(targetId, payload);
       setSaving(false);
       if (!res) {
-        toast.error("Could not add stock.");
+        const message = getLastApiError() ?? "Could not add stock.";
+        setErrors({ form: message });
+        toast.error("Could not add stock", { description: message });
         return;
       }
       toast.success(`Added ${qty} × ${product?.name ?? "product"} to stock.`);
@@ -181,39 +202,56 @@ export function AddStockDialog({
 
         <Segmented
           value={mode}
-          onChange={(v) => setMode(v as Mode)}
+          onChange={(v) => {
+            setMode(v as Mode);
+            setErrors({});
+          }}
           options={[
             { value: "add", label: "Add" },
             { value: "deduct", label: "Deduct" },
           ]}
         />
 
+        {errors.form && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <span>{errors.form}</span>
+          </div>
+        )}
+
         <div
           className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
           data-lenis-prevent
         >
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="as-product">Product</Label>
-            <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger id="as-product">
-                <SelectValue placeholder="Select a product…" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.slice(0, 200).map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                    {p.sku ? ` · ${p.sku}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="as-product">
+              Product <span className="text-destructive">*</span>
+            </Label>
+            <ProductPicker
+              products={products}
+              value={productId}
+              onChange={(id) => {
+                setProductId(id);
+                setErrors((e) => ({ ...e, product: "", form: "" }));
+              }}
+              invalid={Boolean(errors.product)}
+            />
+            <FieldError message={errors.product} />
           </div>
 
           {!warehouseId && (
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="as-warehouse">Warehouse</Label>
-              <Select value={targetId} onValueChange={setTargetId}>
-                <SelectTrigger id="as-warehouse">
+              <Label htmlFor="as-warehouse">
+                Warehouse <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={targetId}
+                onValueChange={(v) => {
+                  setTargetId(v);
+                  setErrors((e) => ({ ...e, warehouse: "", form: "" }));
+                }}
+              >
+                <SelectTrigger id="as-warehouse" className={cn(errors.warehouse && invalidClass)}>
                   <SelectValue placeholder="Select a warehouse…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -225,21 +263,30 @@ export function AddStockDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <FieldError message={errors.warehouse} />
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="as-qty">{deducting ? "Quantity to remove" : "Quantity"}</Label>
+            <Label htmlFor="as-qty">
+              {deducting ? "Quantity to remove" : "Quantity"}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="as-qty"
               type="number"
               min={1}
               max={deducting && available > 0 ? available : undefined}
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => {
+                setQuantity(e.target.value);
+                setErrors((er) => ({ ...er, quantity: "", form: "" }));
+              }}
               placeholder="0"
+              className={cn(errors.quantity && invalidClass)}
             />
-            {deducting && productId && targetId && (
+            <FieldError message={errors.quantity} />
+            {deducting && productId && targetId && !errors.quantity && (
               <p className="text-xs text-muted-foreground">
                 Available in this warehouse:{" "}
                 <span className="mono text-foreground">{num(available)}</span>

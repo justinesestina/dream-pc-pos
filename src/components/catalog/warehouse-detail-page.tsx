@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRightLeft,
   MinusCircle,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { EmptyState, Panel } from "@/components/nexus/primitives";
-import { Segmented } from "@/components/nexus/toolbar";
+import { ResultCount, SearchInput, Segmented, Toolbar } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Section } from "@/components/nexus/detail";
@@ -39,14 +40,17 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AddStockDialog } from "@/components/inventory/add-stock-dialog";
+import { TransferStockDialog } from "@/components/inventory/transfer-stock-dialog";
 import {
   deleteBackendWarehouse,
   fetchBackendWarehouse,
   fetchWarehouseMovements,
   fetchWarehouseStock,
   fetchWarehouseTransfers,
+  getLastApiError,
   updateBackendWarehouse,
 } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { dateTime, num } from "@/lib/format";
 import type {
   StockMovement,
@@ -57,6 +61,19 @@ import type {
 } from "@/lib/types";
 
 type Tab = "products" | "movements" | "transfers" | "settings";
+
+type FormErrors = {
+  name?: string | undefined;
+  code?: string | undefined;
+  form?: string | undefined;
+};
+
+const invalidClass = "border-destructive focus-visible:ring-destructive";
+
+function FieldError({ message }: { message?: string | undefined }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-destructive">{message}</p>;
+}
 
 const TYPE_LABEL: Record<WarehouseType, string> = {
   selling: "Selling",
@@ -87,6 +104,10 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     mode: "add",
   });
   const [saving, setSaving] = useState(false);
+  const [settingsErrors, setSettingsErrors] = useState<FormErrors>({});
+  const [stockQ, setStockQ] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -130,16 +151,31 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
   }, [warehouseId, reloadKey]);
 
   const totals = useMemo(() => {
+    const inStock = stock.filter((r) => r.quantity > 0);
     const quantity = stock.reduce((sum, r) => sum + r.quantity, 0);
-    return { products: stock.length, quantity };
+    return { products: inStock.length, quantity, catalog: stock.length };
   }, [stock]);
+
+  const filteredStock = useMemo(() => {
+    const needle = stockQ.trim().toLowerCase();
+    return stock.filter((r) => {
+      if (inStockOnly && r.quantity <= 0) return false;
+      if (!needle) return true;
+      return (
+        r.name.toLowerCase().includes(needle) ||
+        (r.sku ?? "").toLowerCase().includes(needle) ||
+        r.productId.toLowerCase().includes(needle)
+      );
+    });
+  }, [stock, stockQ, inStockOnly]);
 
   const saveSettings = async () => {
     if (!warehouse) return;
-    if (!name.trim() || !code.trim()) {
-      toast.error("Name and code are required.");
-      return;
-    }
+    const next: FormErrors = {};
+    if (!name.trim()) next.name = "Name is required.";
+    if (!code.trim()) next.code = "Code is required.";
+    setSettingsErrors(next);
+    if (Object.keys(next).length > 0) return;
     setSaving(true);
     const res = await updateBackendWarehouse(warehouse.id, {
       name: name.trim(),
@@ -151,7 +187,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     });
     setSaving(false);
     if (!res) {
-      toast.error("Could not save warehouse.");
+      const message = getLastApiError() ?? "Could not save warehouse.";
+      setSettingsErrors({ form: message });
+      toast.error("Could not save warehouse", { description: message });
       return;
     }
     toast.success("Warehouse updated.");
@@ -162,7 +200,8 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
     if (!warehouse) return;
     const ok = await deleteBackendWarehouse(warehouse.id);
     if (!ok) {
-      toast.error("Could not delete warehouse.");
+      const message = getLastApiError() ?? "Could not delete warehouse.";
+      toast.error("Could not delete warehouse", { description: message });
       return;
     }
     toast.success(`Warehouse "${warehouse.name}" deleted.`);
@@ -331,6 +370,7 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
             <>
               <span className="label-tech">{num(totals.products)} products</span>
               <span className="label-tech">{num(totals.quantity)} units on hand</span>
+              <span className="label-tech">{num(totals.catalog)} in catalog</span>
               {warehouse.type === "selling" && (
                 <span className="label-tech">
                   {warehouse.sync ? "Synced to WooCommerce" : "Not synced"}
@@ -362,6 +402,9 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
             >
               <MinusCircle className="size-4" /> Deduct
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}>
+              <ArrowRightLeft className="size-4" /> Transfer
+            </Button>
           </>
         }
       />
@@ -379,16 +422,33 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
 
       {tab === "products" && (
         <Panel>
+          <Toolbar>
+            <SearchInput
+              value={stockQ}
+              onChange={setStockQ}
+              placeholder="Search products by name or SKU…"
+            />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Switch checked={inStockOnly} onCheckedChange={setInStockOnly} />
+              In stock only
+            </label>
+            <ResultCount shown={filteredStock.length} total={stock.length} noun="products" />
+          </Toolbar>
           <DataTable
-            rows={stock}
+            rows={filteredStock}
             columns={stockColumns}
             loading={loading}
-            initialSort={{ key: "product", dir: "asc" }}
+            initialSort={{ key: "quantity", dir: "desc" }}
+            pageSize={25}
             empty={
               <EmptyState
                 icon={Package}
-                title="No stock recorded here"
-                description="Add stock to start tracking quantities for this warehouse."
+                title={stock.length > 0 ? "No matching products" : "No products found"}
+                description={
+                  stock.length > 0
+                    ? "Try a different search, or turn off the in-stock filter."
+                    : "Products from WooCommerce will appear here once synced."
+                }
                 action={
                   <Button size="sm" onClick={() => setStockDialog({ open: true, mode: "add" })}>
                     <PackagePlus className="size-4" /> Add Stock
@@ -444,13 +504,41 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
           bodyClassName="p-4"
         >
           <div className="grid gap-4 sm:grid-cols-2">
+            {settingsErrors.form && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-2">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <span>{settingsErrors.form}</span>
+              </div>
+            )}
             <div className="space-y-1.5">
-              <Label htmlFor="ws-name">Name</Label>
-              <Input id="ws-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Label htmlFor="ws-name">
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="ws-name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setSettingsErrors((er) => ({ ...er, name: "", form: "" }));
+                }}
+                className={cn(settingsErrors.name && invalidClass)}
+              />
+              <FieldError message={settingsErrors.name} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ws-code">Code</Label>
-              <Input id="ws-code" value={code} onChange={(e) => setCode(e.target.value)} />
+              <Label htmlFor="ws-code">
+                Code <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="ws-code"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setSettingsErrors((er) => ({ ...er, code: "", form: "" }));
+                }}
+                className={cn(settingsErrors.code && invalidClass)}
+              />
+              <FieldError message={settingsErrors.code} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ws-type">Type</Label>
@@ -548,6 +636,13 @@ export function WarehouseDetailPage({ warehouseId }: { warehouseId: string }) {
         onOpenChange={(v) => setStockDialog((d) => ({ ...d, open: v }))}
         warehouseId={warehouseId}
         initialMode={stockDialog.mode}
+        onDone={() => setReloadKey((k) => k + 1)}
+      />
+
+      <TransferStockDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        initialFromId={warehouseId}
         onDone={() => setReloadKey((k) => k + 1)}
       />
     </div>

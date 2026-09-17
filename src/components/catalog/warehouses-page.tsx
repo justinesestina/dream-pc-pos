@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowRight, Pencil, Plus, Trash2, Warehouse as WarehouseIcon } from "lucide-react";
+import {
+  ArrowRight,
+  AlertCircle,
+  Pencil,
+  Plus,
+  Trash2,
+  Warehouse as WarehouseIcon,
+} from "lucide-react";
 import { PageHeader } from "@/components/nexus/page-header";
 import { EmptyState, Panel } from "@/components/nexus/primitives";
 import { ResultCount, SearchInput, Toolbar } from "@/components/nexus/toolbar";
@@ -42,12 +49,26 @@ import {
   createBackendWarehouse,
   deleteBackendWarehouse,
   fetchBackendWarehouses,
+  getLastApiError,
   updateBackendWarehouse,
 } from "@/lib/api-client";
 import { num } from "@/lib/format";
 import type { Warehouse, WarehouseType } from "@/lib/types";
 
+const invalidClass = "border-destructive focus-visible:ring-destructive";
+
+function FieldError({ message }: { message?: string | undefined }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-destructive">{message}</p>;
+}
+
 const WAREHOUSE_TYPES: WarehouseType[] = ["selling", "storage", "service", "damaged"];
+
+type FormErrors = {
+  name?: string | undefined;
+  code?: string | undefined;
+  form?: string | undefined;
+};
 
 const TYPE_LABEL: Record<WarehouseType, string> = {
   selling: "Selling",
@@ -75,6 +96,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const [status, setStatus] = useState<Warehouse["status"]>("active");
   const [notes, setNotes] = useState("");
   const [deleting, setDeleting] = useState<Warehouse | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const load = () => {
     setLoading(true);
@@ -102,6 +124,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     setIsDefault(false);
     setStatus("active");
     setNotes("");
+    setErrors({});
   };
 
   useEffect(() => {
@@ -129,18 +152,17 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     setIsDefault(w.default);
     setStatus(w.status);
     setNotes(w.notes ?? "");
+    setErrors({});
     setDialogOpen(true);
   };
 
   const submit = async () => {
-    if (!name.trim()) {
-      toast.error("Warehouse name is required.");
-      return;
-    }
-    if (!code.trim()) {
-      toast.error("Warehouse code is required.");
-      return;
-    }
+    const next: FormErrors = {};
+    if (!name.trim()) next.name = "Warehouse name is required.";
+    if (!code.trim()) next.code = "Warehouse code is required.";
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
     const payload: Partial<Warehouse> = {
       name: name.trim(),
       code: code.trim(),
@@ -159,7 +181,11 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
       ? await updateBackendWarehouse(editing.id, payload)
       : await createBackendWarehouse(payload);
     if (!res) {
-      toast.error(editing ? "Could not update warehouse." : "Could not create warehouse.");
+      const message = getLastApiError() ?? "Could not save warehouse.";
+      setErrors({ form: message });
+      toast.error(editing ? "Could not update warehouse" : "Could not create warehouse", {
+        description: message,
+      });
       return;
     }
     toast.success(`Warehouse "${res.name}" ${editing ? "updated" : "created"}.`);
@@ -171,7 +197,8 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     if (!deleting) return;
     const removed = await deleteBackendWarehouse(deleting.id);
     if (!removed) {
-      toast.error("Could not delete warehouse.");
+      const message = getLastApiError() ?? "Could not delete warehouse.";
+      toast.error("Could not delete warehouse", { description: message });
       return;
     }
     toast.success(`Warehouse "${deleting.name}" deleted.`);
@@ -329,7 +356,7 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
           rows={filtered}
           columns={columns}
           loading={loading}
-          initialSort={{ key: "name", dir: "asc" }}
+          initialSort={{ key: "quantity", dir: "desc" }}
           empty={
             <EmptyState
               icon={WarehouseIcon}
@@ -350,30 +377,50 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit warehouse" : "New warehouse"}</DialogTitle>
           </DialogHeader>
+          {errors.form && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{errors.form}</span>
+            </div>
+          )}
           <div
             className="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 sm:grid-cols-2"
             data-lenis-prevent
           >
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="wh-name">Name</Label>
+              <Label htmlFor="wh-name">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="wh-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setErrors((er) => ({ ...er, name: "", form: "" }));
+                }}
                 placeholder="e.g. Main Warehouse"
+                className={cn(errors.name && invalidClass)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submit();
                 }}
               />
+              <FieldError message={errors.name} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="wh-code">Code</Label>
+              <Label htmlFor="wh-code">
+                Code <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="wh-code"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setErrors((er) => ({ ...er, code: "", form: "" }));
+                }}
                 placeholder="e.g. MAIN"
+                className={cn(errors.code && invalidClass)}
               />
+              <FieldError message={errors.code} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wh-type">Type</Label>

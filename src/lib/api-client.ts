@@ -32,6 +32,14 @@ const API_BASE =
 let backendPausedUntil = 0;
 let backendPauseReason: string | null = null;
 
+/** Message from the most recent failed request (used for precise toasts). */
+let lastApiError: string | null = null;
+
+/** Human-readable reason the last API call failed, if any. */
+export function getLastApiError(): string | null {
+  return lastApiError;
+}
+
 function pauseBackend(message: string) {
   backendPausedUntil = Date.now() + 60_000;
   backendPauseReason = message;
@@ -73,7 +81,8 @@ async function apiRequest<T>(
   opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
   if (opts.auth !== false && isBackendPaused()) {
-    return { ok: false, error: backendPauseReason ?? "Backend temporarily unavailable." };
+    lastApiError = backendPauseReason ?? "Backend temporarily unavailable.";
+    return { ok: false, error: lastApiError };
   }
 
   const headers: Record<string, string> = {};
@@ -103,17 +112,20 @@ async function apiRequest<T>(
 
     if (!res.ok) {
       const errMsg = json?.error?.message || json?.message || `HTTP ${res.status}`;
+      lastApiError = errMsg;
       return { ok: false, error: errMsg };
     }
 
+    lastApiError = null;
     return { ok: true, data: json?.data as T };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
     console.error("API request failed:", err);
     pauseBackend(`Could not reach backend. Is it running? (${message})`);
+    lastApiError = `Could not reach backend (${message})`;
     return {
       ok: false,
-      error: `Could not reach backend. Is it running? (${message})`,
+      error: lastApiError,
     };
   }
 }
