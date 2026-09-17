@@ -20,6 +20,27 @@ export interface User {
 
 export type ProductType = "product" | "service" | "bundle";
 
+/** Brand / tag taxonomy term returned by the backend (WooCommerce-backed). */
+export interface CatalogTerm {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+}
+
+/** Product attribute (from the backend `products/attributes` endpoints). */
+export interface AttributeMeta {
+  id: string;
+  name: string;
+  slug: string;
+  type: "text" | "color" | "select" | "button" | string;
+  orderBy: string;
+  hasArchives: boolean;
+}
+
+/** A single value term belonging to an attribute. */
+export type AttributeTerm = CatalogTerm;
+
 export interface Category {
   id: string;
   name: string;

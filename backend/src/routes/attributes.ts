@@ -2,6 +2,8 @@
  * Product attributes + terms CRUD — backed by WooCommerce `products/attributes`.
  *   GET    /api/v1/attributes                     list attributes
  *   POST   /api/v1/attributes                     create { name, slug?, type }
+ *   PUT    /api/v1/attributes/:id                 edit { name }
+ *   DELETE /api/v1/attributes/:id                 delete attribute (and its terms)
  *   GET    /api/v1/attributes/:id/terms           list terms
  *   POST   /api/v1/attributes/:id/terms           create term { name }
  *   PUT    /api/v1/attributes/:id/terms/:termId   edit term
@@ -42,8 +44,30 @@ export function attributesRoutes() {
     const name = String(body.name ?? "").trim();
     if (!name) throw new ApiError(400, "BAD_REQUEST", "name is required");
     const type = VALID_TYPES.includes(String(body.type)) ? String(body.type) : "text";
-    const created = await woocommerce.createAttribute({ name, type, slug: body.slug ? String(body.slug) : undefined });
+    const created = await woocommerce.createAttribute({
+      name,
+      type,
+      slug: body.slug ? String(body.slug) : undefined,
+    });
     return c.json(ok(toAttributeDto(created)), 201);
+  });
+
+  app.put("/:id", requireAuth, async (c) => {
+    const id = Number(c.req.param("id"));
+    const body = await c.req.json().catch(() => ({}));
+    if (!Number.isFinite(id)) throw new ApiError(400, "BAD_REQUEST", "invalid attribute id");
+    const updated = await woocommerce.updateAttribute(id, {
+      name: body.name ? String(body.name) : undefined,
+    });
+    return c.json(ok(toAttributeDto(updated)));
+  });
+
+  app.delete("/:id", requireAuth, async (c) => {
+    const id = Number(c.req.param("id"));
+    if (!Number.isFinite(id)) throw new ApiError(400, "BAD_REQUEST", "invalid attribute id");
+    const deleted = await woocommerce.deleteAttribute(id);
+    if (!deleted || Array.isArray(deleted)) throw new NotFoundError("Attribute not found");
+    return c.json(ok({ id: String(id), deleted: true }));
   });
 
   app.get("/:id/terms", requireAuth, async (c) => {
@@ -68,7 +92,8 @@ export function attributesRoutes() {
     const id = Number(c.req.param("id"));
     const termId = Number(c.req.param("termId"));
     const body = await c.req.json().catch(() => ({}));
-    if (!Number.isFinite(id) || !Number.isFinite(termId)) throw new ApiError(400, "BAD_REQUEST", "invalid id");
+    if (!Number.isFinite(id) || !Number.isFinite(termId))
+      throw new ApiError(400, "BAD_REQUEST", "invalid id");
     const updated = await woocommerce.setAttributeTerm(id, termId, {
       name: body.name ? String(body.name) : undefined,
     });
@@ -78,7 +103,8 @@ export function attributesRoutes() {
   app.delete("/:id/terms/:termId", requireAuth, async (c) => {
     const id = Number(c.req.param("id"));
     const termId = Number(c.req.param("termId"));
-    if (!Number.isFinite(id) || !Number.isFinite(termId)) throw new ApiError(400, "BAD_REQUEST", "invalid id");
+    if (!Number.isFinite(id) || !Number.isFinite(termId))
+      throw new ApiError(400, "BAD_REQUEST", "invalid id");
     const deleted = await woocommerce.deleteAttributeTerm(id, termId);
     if (!deleted || Array.isArray(deleted)) throw new NotFoundError("Term not found");
     return c.json(ok({ attributeId: String(id), termId: String(termId), deleted: true }));
