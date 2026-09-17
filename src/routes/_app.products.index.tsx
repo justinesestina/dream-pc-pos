@@ -72,7 +72,7 @@ function InlineNumberField({
   };
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex items-center justify-center gap-1">
       <Input
         type="number"
         min="0"
@@ -219,7 +219,7 @@ function ProductsIndexPage() {
         />
       ),
       sortValue: (p) => p.price,
-      align: "right",
+      align: "center",
       className: "min-w-[10rem]",
     },
     {
@@ -237,7 +237,7 @@ function ProductsIndexPage() {
           }
         };
         return (
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-1">
               <span className="mono text-[11px] text-subtle">₱</span>
               <InlineNumberField
@@ -248,19 +248,19 @@ function ProductsIndexPage() {
               />
             </div>
             <div className="flex items-center gap-1">
+              <span className="mono text-[11px] text-subtle">%</span>
               <InlineNumberField
                 value={Math.round(margin * 10) / 10}
                 step={0.1}
-                width="w-20"
+                width="w-24"
                 onSave={applyMargin}
               />
-              <span className="mono text-[11px] text-subtle">%</span>
             </div>
           </div>
         );
       },
       sortValue: (p) => (p.price > 0 ? (p.price - p.cost) / p.price : 0),
-      align: "right",
+      align: "center",
       className: "min-w-[11rem]",
     },
     {
@@ -270,7 +270,7 @@ function ProductsIndexPage() {
         const inv = invFor(p.id);
         const status = stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
         return (
-          <div className="flex justify-end">
+          <div className="flex justify-center">
             <StatusBadge status={status} />
           </div>
         );
@@ -279,7 +279,7 @@ function ProductsIndexPage() {
         const inv = invFor(p.id);
         return stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
       },
-      align: "right",
+      align: "center",
       className: "w-28",
     },
     {
@@ -300,7 +300,7 @@ function ProductsIndexPage() {
         );
       },
       sortValue: (p) => invFor(p.id)?.onHand ?? 0,
-      align: "right",
+      align: "center",
       className: "min-w-[10rem]",
     },
     {
