@@ -10,15 +10,20 @@ try {
 } catch {
   /* no .env present — rely on real environment (e.g. Vercel dashboard) */
 }
+try {
+  process.loadEnvFile(new URL("../../.env", import.meta.url));
+} catch {
+  /* local root env is optional when backend/.env or deployment env is present */
+}
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT || 8787),
 
   wp: {
-    url: (process.env.WOOCOMMERCE_URL || "").replace(/\/+$/, ""),
-    consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY || "",
-    consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET || "",
+    url: (process.env.WOOCOMMERCE_URL || process.env.VITE_WOOCOMMERCE_URL || "").replace(/\/+$/, ""),
+    consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY || process.env.VITE_WOOCOMMERCE_CONSUMER_KEY || "",
+    consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET || process.env.VITE_WOOCOMMERCE_CONSUMER_SECRET || "",
     /** Application password for the WP media library uploads (media endpoint). */
     mediaUsername: process.env.WP_MEDIA_USERNAME || "",
     mediaAppPassword: process.env.WP_MEDIA_APP_PASSWORD || "",

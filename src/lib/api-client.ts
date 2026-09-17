@@ -338,6 +338,29 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
   return res.ok && res.data ? res.data : [];
 }
 
+export async function searchBackendGlobal(query: string): Promise<
+  Array<{
+    id: string;
+    type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "page";
+    label: string;
+    subtitle: string;
+    route: string;
+  }>
+> {
+  const q = query.trim();
+  if (!q) return [];
+  const res = await apiRequest<
+    Array<{
+      id: string;
+      type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "page";
+      label: string;
+      subtitle: string;
+      route: string;
+    }>
+  >(`/api/v1/search?q=${encodeURIComponent(q)}`);
+  return res.ok && res.data ? res.data : [];
+}
+
 export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>("/api/v1/quotes", "POST", quote);
   return res.ok ? res.data || null : null;

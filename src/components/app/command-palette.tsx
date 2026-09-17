@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, Receipt } from "lucide-react";
+import { FileText, LayoutDashboard, Receipt, Search as SearchIcon, ShoppingBag, Users } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { useStore } from "@/lib/store";
 import { money } from "@/lib/format";
+import { searchBackendGlobal } from "@/lib/api-client";
 
 export function CommandPalette({
   open,
@@ -24,10 +25,34 @@ export function CommandPalette({
   const navigate = useNavigate();
   const store = useStore();
   const [query, setQuery] = useState("");
+  const [remoteResults, setRemoteResults] = useState<
+    Array<{ id: string; type: string; label: string; subtitle: string; route: string }>
+  >([]);
 
   useEffect(() => {
     if (!open) setQuery("");
   }, [open]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setRemoteResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    void searchBackendGlobal(q)
+      .then((results) => {
+        if (!cancelled) setRemoteResults(results.slice(0, 10));
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteResults([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
 
   const go = (to: string) => {
     onOpenChange(false);
@@ -46,6 +71,18 @@ export function CommandPalette({
         .slice(0, 4)
     : [];
 
+  const summaryResults = useMemo(() => {
+    if (!q) return [];
+    const combined = [...remoteResults];
+    const byKey = new Set<string>();
+    return combined.filter((item) => {
+      const key = `${item.type}:${item.id}`;
+      if (byKey.has(key)) return false;
+      byKey.add(key);
+      return true;
+    });
+  }, [q, remoteResults]);
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
@@ -61,6 +98,38 @@ export function CommandPalette({
             <FileText /> New Quotation
           </CommandItem>
         </CommandGroup>
+
+        {summaryResults.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Results">
+              {summaryResults.map((item) => {
+                const Icon =
+                  item.type === "products"
+                    ? ShoppingBag
+                    : item.type === "customers"
+                      ? Users
+                      : item.type === "dashboard"
+                        ? LayoutDashboard
+                        : SearchIcon;
+
+                return (
+                  <CommandItem
+                    key={`${item.type}:${item.id}`}
+                    value={`${item.type}-${item.id}-${item.label}-${item.subtitle}`}
+                    onSelect={() => go(item.route)}
+                  >
+                    <Icon className="size-4" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{item.label}</div>
+                      <div className="truncate text-xs text-muted-foreground">{item.subtitle}</div>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </>
+        )}
 
         {matchedOrders.length > 0 && (
           <>
@@ -110,8 +179,14 @@ export function CommandPalette({
           <CommandItem onSelect={() => go("/orders")}>
             <Receipt /> Orders
           </CommandItem>
+          <CommandItem onSelect={() => go("/customers")}>
+            <Users /> Customers
+          </CommandItem>
+          <CommandItem onSelect={() => go("/products")}>
+            <ShoppingBag /> Products
+          </CommandItem>
           <CommandItem onSelect={() => go("/quotes")}>
-            <FileText /> Quotation
+            <FileText /> Quotations
           </CommandItem>
         </CommandGroup>
       </CommandList>

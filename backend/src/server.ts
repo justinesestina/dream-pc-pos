@@ -35,6 +35,7 @@ import { shiftsRoutes } from "./routes/shifts.js";
 import { releasesRoutes } from "./routes/releases.js";
 import { auditRoutes } from "./routes/audit.js";
 import { notificationsRoutes } from "./routes/notifications.js";
+import { searchRoutes } from "./routes/search.js";
 
 export const app = new Hono();
 
@@ -113,6 +114,7 @@ app.route("/api/v1/shifts", shiftsRoutes());
 app.route("/api/v1/releases", releasesRoutes());
 app.route("/api/v1/audit", auditRoutes());
 app.route("/api/v1/notifications", notificationsRoutes());
+app.route("/api/v1/search", searchRoutes());
 
 app.notFound((c) => c.json({ error: { code: "NOT_FOUND", message: "No such route" } }, 404));
 

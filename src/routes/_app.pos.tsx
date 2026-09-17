@@ -51,12 +51,12 @@ function PosPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col gap-3 p-4 sm:p-6 overflow-hidden">
+    <div className="flex min-h-[calc(100vh-5rem)] flex-col gap-3 p-4 sm:p-6">
       <PageHeader
         title="Point of Sale"
         description="Ring up walk-in sales, apply discounts and take payment."
       />
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_380px] overflow-hidden">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_380px]">
         <ProductBrowser loading={loading} />
         <CartPanel notes={notes} onNotesChange={setNotes} onCheckout={checkout} />
       </div>
