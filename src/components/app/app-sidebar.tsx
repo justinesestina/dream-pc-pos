@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -59,10 +59,14 @@ function Flyout({
   items,
   pathname,
   nested,
+  onPointerEnter,
+  onPointerLeave,
 }: {
   items: NavItem[];
   pathname: string;
-  nested?: boolean;
+  nested?: boolean | undefined;
+  onPointerEnter?: (() => void) | undefined;
+  onPointerLeave?: (() => void) | undefined;
 }) {
   const body = items.map((child) => {
     if (child.children?.length) {
@@ -71,7 +75,13 @@ function Flyout({
           <DropdownMenuSubTrigger className="gap-2 py-1.5 pr-1 text-[13px]">
             <span className="flex-1 truncate">{child.label}</span>
           </DropdownMenuSubTrigger>
-          <Flyout items={child.children} pathname={pathname} nested />
+          <Flyout
+            items={child.children}
+            pathname={pathname}
+            nested
+            onPointerEnter={onPointerEnter}
+            onPointerLeave={onPointerLeave}
+          />
         </DropdownMenuSub>
       );
     }
@@ -102,13 +112,94 @@ function Flyout({
 
   const className = "min-w-52 p-1.5";
   return nested ? (
-    <DropdownMenuSubContent sideOffset={6} className={className}>
+    <DropdownMenuSubContent
+      sideOffset={6}
+      className={className}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
       {body}
     </DropdownMenuSubContent>
   ) : (
-    <DropdownMenuContent side="right" align="start" sideOffset={6} className={className}>
+    <DropdownMenuContent
+      side="right"
+      align="start"
+      sideOffset={6}
+      className={className}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
       {body}
     </DropdownMenuContent>
+  );
+}
+
+/**
+ * Sidebar row that owns sub-items. Hybrid interaction: opens on hover or on
+ * click, and stays open while the pointer is over the flyout.
+ */
+function NavFlyout({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+  const openNow = () => {
+    cancel();
+    setOpen(true);
+  };
+  const closeSoon = () => {
+    cancel();
+    timer.current = setTimeout(() => setOpen(false), 140);
+  };
+  useEffect(() => cancel, []);
+
+  const active = isNavActive(item, pathname);
+  const content = (
+    <>
+      <ActiveBar active={active} />
+      {item.icon && <item.icon className="size-4 shrink-0" />}
+      {!collapsed && <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>}
+      {!collapsed && <ChevronRight className="size-3.5 shrink-0 opacity-60" />}
+    </>
+  );
+  const handlers = {
+    onPointerEnter: openNow,
+    onPointerLeave: closeSoon,
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-current={active ? "page" : undefined}
+          className={cn(rowCls(active, collapsed), "w-full")}
+          {...handlers}
+        >
+          {content}
+        </button>
+      </DropdownMenuTrigger>
+      <Flyout
+        items={item.children ?? []}
+        pathname={pathname}
+        onPointerEnter={openNow}
+        onPointerLeave={closeSoon}
+      />
+    </DropdownMenu>
   );
 }
 
@@ -215,46 +306,9 @@ export function AppSidebar() {
                       const active = isNavActive(item, pathname);
 
                       if (item.children?.length) {
-                        const content = (
-                          <>
-                            <ActiveBar active={active} />
-                            {item.icon && <item.icon className="size-4 shrink-0" />}
-                            {!collapsed && (
-                              <span className="min-w-0 flex-1 truncate text-left">
-                                {item.label}
-                              </span>
-                            )}
-                            {!collapsed && (
-                              <ChevronRight className="size-3.5 shrink-0 opacity-60" />
-                            )}
-                          </>
-                        );
                         return (
                           <li key={item.label}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                {item.to ? (
-                                  <Link
-                                    to={item.to}
-                                    search={item.search as never}
-                                    aria-current={active ? "page" : undefined}
-                                    className={rowCls(active, collapsed)}
-                                  >
-                                    {content}
-                                  </Link>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    aria-haspopup="menu"
-                                    aria-current={active ? "page" : undefined}
-                                    className={cn(rowCls(active, collapsed), "w-full")}
-                                  >
-                                    {content}
-                                  </button>
-                                )}
-                              </DropdownMenuTrigger>
-                              <Flyout items={item.children} pathname={pathname} />
-                            </DropdownMenu>
+                            <NavFlyout item={item} pathname={pathname} collapsed={collapsed} />
                           </li>
                         );
                       }
