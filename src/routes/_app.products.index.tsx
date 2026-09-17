@@ -227,15 +227,41 @@ function ProductsIndexPage() {
       header: "Cost / Margin",
       cell: (p) => {
         const margin = p.price > 0 ? ((p.price - p.cost) / p.price) * 100 : 0;
+        const applyMargin = (m: number) => {
+          // Margin is on selling price: margin = (price - cost) / price.
+          // Editing the margin % re-derives the price from the cost.
+          const clamped = Math.max(0, Math.min(m, 99.9));
+          if (p.cost > 0 && clamped <= 99.8) {
+            const price = clamped <= 0 ? p.cost : p.cost / (1 - clamped / 100);
+            updateProduct(p.id, { price: Math.round(price * 100) / 100 });
+          }
+        };
         return (
-          <div className="text-right">
-            <p className="mono text-xs tabular-nums text-muted-foreground">{money(p.cost)}</p>
-            <p className="mono text-[11px] tabular-nums text-subtle">{margin.toFixed(1)}%</p>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <span className="mono text-[11px] text-subtle">₱</span>
+              <InlineNumberField
+                value={p.cost}
+                step={0.01}
+                width="w-24"
+                onSave={(next) => updateProduct(p.id, { cost: next })}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <InlineNumberField
+                value={Math.round(margin * 10) / 10}
+                step={0.1}
+                width="w-20"
+                onSave={applyMargin}
+              />
+              <span className="mono text-[11px] text-subtle">%</span>
+            </div>
           </div>
         );
       },
       sortValue: (p) => (p.price > 0 ? (p.price - p.cost) / p.price : 0),
       align: "right",
+      className: "min-w-[11rem]",
     },
     {
       key: "status",
