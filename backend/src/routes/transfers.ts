@@ -4,11 +4,13 @@
  *   GET    /api/v1/transfers          list (optional ?warehouseId=)
  *   GET    /api/v1/transfers/:id      one
  *   POST   /api/v1/transfers          create (validates same-warehouse + availability)
- *   PUT    /api/v1/transfers/:id      update status (draft → pending → approved → completed)
+ *   PUT    /api/v1/transfers/:id      status → completed (moves stock) or cancelled
  *   DELETE /api/v1/transfers/:id      delete
  *
- * Completing a transfer moves quantity out of the source and into the
- * destination, writing movement records and re-syncing WooCommerce stock.
+ * Completing a transfer (a single step — approve = move the stock) takes
+ * quantity out of the source and puts it into the destination, writing movement
+ * records and re-syncing WooCommerce stock. Completion is idempotent: re-sending
+ * the same request (or an `idempotencyKey`) never moves stock twice.
  * Persisted as tagged WooCommerce orders (lib/inventory-store.ts).
  */
 import { Hono } from "hono";
@@ -67,7 +69,11 @@ export function transfersRoutes() {
     if (body.status === undefined) {
       throw new ApiError(400, "BAD_REQUEST", "status is required");
     }
-    const updated = await setTransferStatus(c.req.param("id"), body.status as TransferStatus);
+    const updated = await setTransferStatus(
+      c.req.param("id"),
+      body.status as TransferStatus,
+      body.idempotencyKey ? String(body.idempotencyKey) : undefined,
+    );
     return c.json(ok(updated));
   });
 

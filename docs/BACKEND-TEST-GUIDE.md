@@ -209,31 +209,66 @@ Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`
 (attributes add `type`: `text | color | select | button`; categories add
 `parentId`; create returns `201`).
 
-### 4.5 Warehouses (custom table)
+### 4.5 Warehouses + multi-warehouse inventory
 
-WooCommerce has **no** native warehouse entity, so warehouses live in a
-backend-managed table at `backend/data/warehouses.json` (see
-`backend/src/lib/warehouse-store.ts`). API stays under `/api/v1` like the rest
-(auth required):
+WooCommerce has **no** native warehouse entity, so warehouses are persisted as
+real WC orders tagged `_dpc_record = "warehouse"` (order meta holds the fields).
+This mirrors quotations and survives serverless cold-starts — there is **no
+local database**. Physical quantities live on the product as
+`_dpc_wh_stock` (a JSON map `{ "WH-123": 15 }`).
 
 | Route | Lists | Creates | Edits | Deletes |
 | --- | --- | --- | --- | --- |
 | `/warehouses` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
+| `/warehouses/:id/stock` | `GET` | `POST` (Add Stock) | — | — |
+| `/warehouses/:id/movements` | `GET` | — | — | — |
+| `/warehouses/:id/transfers` | `GET` | — | — | — |
+| `/transfers` | `GET` | `POST` | `PUT /:id` (status) | `DELETE /:id` |
+| `/inventory/stock` | `GET` | — | — | — |
+| `/inventory/stock/:productId/adjust` | — | `POST` (signed delta) | — | — |
+| `/inventory/movements` | `GET` (`?warehouseId=&productId=`) | — | — | — |
 
 Create body:
 ```json
-{ "name": "Main Branch", "code": "MAIN", "type": "branch",
+{ "name": "Cebu Branch", "code": "CEB", "type": "selling", "sync": true,
   "manager": "Juan", "phone": "0917...", "address": "123 Rizal Ave",
   "capacity": 200, "default": true, "status": "active", "notes": "" }
 ```
+- `type`: `selling | storage | service | damaged`.
+- `sync`: push this warehouse's stock to WooCommerce (only meaningful for `selling`).
 - `code` is unique (case-insensitive); duplicates → `409 CONFLICT`.
-- `type`: `main | branch | storage | service`.
 - Setting `default: true` clears the flag on the other warehouses.
-- Response: `{ "id": "WH-0001", ... }`; create returns `201`.
+- Response id format: `{ "id": "WH-<orderId>" }`; create returns `201`.
 
-> Prod note: on read-only filesystems (serverless) the table degrades to
-> in-memory. Point `warehouse-store` at Vercel KV/Postgres when a durable
-> production store is wanted.
+**Default WooCommerce (selling) warehouse.** The first `GET /warehouses` (or
+`GET /inventory/stock`) auto-creates a warehouse named `WooCommerce`
+(`code: WOO`, `type: selling`, `sync: true`, `default: true`) and **hydrates**
+each managed product's `_dpc_wh_stock` entry from its live WooCommerce
+`stock_quantity` — once, tracked by `_dpc_wh_hydrated`. After hydration,
+Add / Deduct / Transfer edits are authoritative.
+
+**Add Stock** — `POST /warehouses/:id/stock`:
+```json
+{ "productId": "123", "quantity": 5, "costPrice": 15000,
+  "supplier": "Distro", "reference": "PO-1024", "notes": "" }
+```
+Appends a `stock_in` movement and increases that warehouse's quantity.
+
+**Adjust / Deduct** — `POST /inventory/stock/:productId/adjust`:
+```json
+{ "warehouseId": "WH-123", "delta": -2, "reference": "RMA-9", "note": "damaged" }
+```
+`delta` is signed; going negative → `400 BAD_REQUEST` with the available count.
+
+**Transfers** — `POST /transfers` `{ fromWarehouseId, toWarehouseId, productId,
+quantity, notes? }`. Statuses flow `draft → pending/approved → completed` (or
+`cancelled`). Only `completed` moves stock (source −qty, destination +qty, two
+`transfer_out`/`transfer_in` movements); a completed transfer can't be reopened.
+Same-warehouse and over-availability → `400`.
+
+> WooCommerce sellable stock is **recomputed** from every `selling` + `sync` +
+> `active` warehouse after each change (`woocommerce.setStock`) — it is never
+> edited by hand. Warehouses are the physical source of truth.
 
 > Verified against the live store: brands come from a brand plugin
 > (`products/brands`), so they CRUD exactly like categories. The **Catalog** tab
@@ -323,7 +358,12 @@ Creates a draft quote, computes subtotal/total server-side → `201` with the qu
 
 ## 6. Known limitations (next steps)
 
-- Quotations live in server memory — will move to Supabase (P3) so they persist.
+- Quotations and warehouses/movements/transfers persist as **tagged WooCommerce
+  orders** (order meta), so they survive cold-starts; the future Postgres ledger
+  supersedes them for internal stock/serials (P1/P5).
+- Multi-warehouse stock lives on product meta (`_dpc_wh_stock`) and WooCommerce
+  sellable stock is derived from `selling` + `sync` warehouses. `reserved` is
+  reported as `0` — no reservation tracking yet.
 - Products/orders are WooCommerce-backed; the future Postgres ledger supersedes
   the WC proxy for internal stock/serials (P1/P5).
 - `cost`/`brand`/etc. are WC custom fields — readable in wp-admin under the

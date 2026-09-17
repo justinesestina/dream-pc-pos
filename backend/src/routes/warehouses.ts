@@ -6,10 +6,14 @@
  *   POST   /api/v1/warehouses                create
  *   PUT    /api/v1/warehouses/:id            edit (incl. type + WooCommerce sync)
  *   DELETE /api/v1/warehouses/:id            delete
- *   GET    /api/v1/warehouses/:id/stock      products held here
+ *   GET    /api/v1/warehouses/:id/stock      products held here (qty + cost/value)
  *   POST   /api/v1/warehouses/:id/stock      Add Stock (increases qty + logs movement)
+ *   PUT    /api/v1/warehouses/:id/stock/:pid inline row edit (absolute qty + unit cost)
  *   GET    /api/v1/warehouses/:id/movements  stock movement log
  *   GET    /api/v1/warehouses/:id/transfers  transfer history touching this warehouse
+ *
+ * Mutations accept an optional `idempotencyKey` so a spam-clicked / retried
+ * request is applied at most once.
  *
  * Persistence: tagged WooCommerce orders / product meta (lib/warehouse-store.ts,
  * lib/inventory-store.ts). No local database — survives Vercel cold-starts.
@@ -28,8 +32,10 @@ import {
 } from "../lib/warehouse-store.js";
 import {
   addStock,
+  ensureSellingWarehouse,
   listMovements,
   listTransfers,
+  setWarehouseStock,
   warehouseStockRows,
   warehouseTotals,
 } from "../lib/inventory-store.js";
@@ -45,10 +51,18 @@ export function warehousesRoutes() {
   const app = new Hono<{ Variables: AppVars }>();
 
   app.get("/", requireAuth, async (c) => {
+    // First listing also creates + seeds the default WooCommerce selling
+    // warehouse, so the storefront stock is visible as a normal warehouse.
+    await ensureSellingWarehouse();
     const [rows, totals] = await Promise.all([listWarehouses(), warehouseTotals()]);
     const enriched = rows.map((w) => {
       const t = totals.get(w.id);
-      return { ...w, totalProducts: t?.totalProducts ?? 0, totalQuantity: t?.totalQuantity ?? 0 };
+      return {
+        ...w,
+        totalProducts: t?.totalProducts ?? 0,
+        totalQuantity: t?.totalQuantity ?? 0,
+        totalValue: t?.totalValue ?? 0,
+      };
     });
     return c.json(ok(enriched, { total: enriched.length }));
   });
@@ -58,7 +72,14 @@ export function warehousesRoutes() {
     if (!row) throw new NotFoundError("Warehouse not found");
     const totals = await warehouseTotals();
     const t = totals.get(row.id);
-    return c.json(ok({ ...row, totalProducts: t?.totalProducts ?? 0, totalQuantity: t?.totalQuantity ?? 0 }));
+    return c.json(
+      ok({
+        ...row,
+        totalProducts: t?.totalProducts ?? 0,
+        totalQuantity: t?.totalQuantity ?? 0,
+        totalValue: t?.totalValue ?? 0,
+      }),
+    );
   });
 
   app.post("/", requireAuth, async (c) => {
@@ -123,8 +144,31 @@ export function warehousesRoutes() {
       reference: body.reference ? String(body.reference) : undefined,
       notes: body.notes ? String(body.notes) : undefined,
       actor: c.get("user").sub,
+      idempotencyKey: body.idempotencyKey ? String(body.idempotencyKey) : undefined,
     });
     return c.json(ok(result), 201);
+  });
+
+  // Inline row editor: set absolute quantity + unit cost for one product here.
+  app.put("/:id/stock/:productId", requireAuth, async (c) => {
+    const warehouseId = c.req.param("id");
+    const warehouse = await getWarehouse(warehouseId);
+    if (!warehouse) throw new NotFoundError("Warehouse not found");
+    const productId = c.req.param("productId");
+    const body = await c.req.json().catch(() => ({}));
+    if (body.quantity === undefined && body.costPrice === undefined) {
+      throw new ApiError(400, "BAD_REQUEST", "quantity or costPrice is required");
+    }
+    const result = await setWarehouseStock({
+      productId,
+      warehouseId,
+      ...(body.quantity !== undefined ? { quantity: Number(body.quantity) } : {}),
+      costPrice: body.costPrice !== undefined ? Number(body.costPrice) : undefined,
+      note: body.note ? String(body.note) : undefined,
+      actor: c.get("user").sub,
+      idempotencyKey: body.idempotencyKey ? String(body.idempotencyKey) : undefined,
+    });
+    return c.json(ok(result));
   });
 
   app.get("/:id/movements", requireAuth, async (c) => {

@@ -32,6 +32,14 @@ const API_BASE =
 let backendPausedUntil = 0;
 let backendPauseReason: string | null = null;
 
+/** Message from the most recent failed request (used for precise toasts). */
+let lastApiError: string | null = null;
+
+/** Human-readable reason the last API call failed, if any. */
+export function getLastApiError(): string | null {
+  return lastApiError;
+}
+
 function pauseBackend(message: string) {
   backendPausedUntil = Date.now() + 60_000;
   backendPauseReason = message;
@@ -73,7 +81,8 @@ async function apiRequest<T>(
   opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
   if (opts.auth !== false && isBackendPaused()) {
-    return { ok: false, error: backendPauseReason ?? "Backend temporarily unavailable." };
+    lastApiError = backendPauseReason ?? "Backend temporarily unavailable.";
+    return { ok: false, error: lastApiError };
   }
 
   const headers: Record<string, string> = {};
@@ -103,17 +112,20 @@ async function apiRequest<T>(
 
     if (!res.ok) {
       const errMsg = json?.error?.message || json?.message || `HTTP ${res.status}`;
+      lastApiError = errMsg;
       return { ok: false, error: errMsg };
     }
 
+    lastApiError = null;
     return { ok: true, data: json?.data as T };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
     console.error("API request failed:", err);
     pauseBackend(`Could not reach backend. Is it running? (${message})`);
+    lastApiError = `Could not reach backend (${message})`;
     return {
       ok: false,
-      error: `Could not reach backend. Is it running? (${message})`,
+      error: lastApiError,
     };
   }
 }
@@ -363,6 +375,23 @@ export interface AddStockInput {
   supplier?: string;
   reference?: string;
   notes?: string;
+  idempotencyKey?: string;
+}
+
+/**
+ * Generate a one-shot key for a mutating action. Reusing it on a retry tells the
+ * backend to apply the change at most once (protects add/deduct/edit/transfers
+ * against spam-clicks and network retries).
+ */
+export function newIdempotencyKey(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through
+  }
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export async function addWarehouseStock(
@@ -401,7 +430,9 @@ export interface CreateTransferInput {
   notes?: string;
 }
 
-export async function createBackendTransfer(input: CreateTransferInput): Promise<StockTransfer | null> {
+export async function createBackendTransfer(
+  input: CreateTransferInput,
+): Promise<StockTransfer | null> {
   const res = await apiRequest<StockTransfer>("/api/v1/transfers", "POST", input);
   return res.ok ? res.data || null : null;
 }
@@ -409,8 +440,31 @@ export async function createBackendTransfer(input: CreateTransferInput): Promise
 export async function updateBackendTransferStatus(
   id: string,
   status: TransferStatus,
+  idempotencyKey?: string,
 ): Promise<StockTransfer | null> {
-  const res = await apiRequest<StockTransfer>(`/api/v1/transfers/${id}`, "PUT", { status });
+  const body = idempotencyKey ? { status, idempotencyKey } : { status };
+  const res = await apiRequest<StockTransfer>(`/api/v1/transfers/${id}`, "PUT", body);
+  return res.ok ? res.data || null : null;
+}
+
+export interface SetWarehouseStockInput {
+  quantity?: number;
+  costPrice?: number;
+  note?: string;
+  idempotencyKey?: string;
+}
+
+/** Inline row edit: set a product's absolute quantity / unit cost in a warehouse. */
+export async function setWarehouseStock(
+  warehouseId: string,
+  productId: string,
+  input: SetWarehouseStockInput,
+): Promise<{ movement?: StockMovement; row: WarehouseStockRow } | null> {
+  const res = await apiRequest<{ movement?: StockMovement; row: WarehouseStockRow }>(
+    `/api/v1/warehouses/${warehouseId}/stock/${productId}`,
+    "PUT",
+    input,
+  );
   return res.ok ? res.data || null : null;
 }
 
@@ -438,7 +492,13 @@ export async function fetchBackendInventoryMovements(params?: {
 
 export async function adjustBackendStock(
   productId: string,
-  input: { warehouseId: string; delta: number; reference?: string; note?: string },
+  input: {
+    warehouseId: string;
+    delta: number;
+    reference?: string;
+    note?: string;
+    idempotencyKey?: string;
+  },
 ): Promise<StockMovement | null> {
   const res = await apiRequest<StockMovement>(
     `/api/v1/inventory/stock/${productId}/adjust`,
