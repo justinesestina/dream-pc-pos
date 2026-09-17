@@ -60,6 +60,24 @@ export interface Category {
   archived: boolean;
   createdAt: string;
   key?: string;
+  count?: number;
+}
+
+/** Custom warehouse record — WooCommerce has no native warehouse entity, so
+ *  this lives in a backend-managed store (backend/data/warehouses.json). */
+export interface Warehouse {
+  id: string;
+  name: string;
+  code: string;
+  type: "main" | "branch" | "storage" | "service";
+  address?: string;
+  phone?: string;
+  manager?: string;
+  capacity?: number;
+  notes?: string;
+  default: boolean;
+  status: "active" | "inactive";
+  createdAt: string;
 }
 
 export interface ProductSpecs {
@@ -213,7 +231,8 @@ export interface Order {
 
 /* --------------------------------------------------------------- quotes */
 
-export type QuoteStatus = "draft" | "sent" | "pending" | "approved" | "rejected" | "expired" | "converted";
+export type QuoteStatus =
+  "draft" | "sent" | "pending" | "approved" | "rejected" | "expired" | "converted";
 
 export interface QuoteItem {
   productId: string;
@@ -441,7 +460,8 @@ export interface Supplier {
   notes?: string;
 }
 
-export type PurchaseStatus = "draft" | "submitted" | "confirmed" | "partial" | "received" | "cancelled";
+export type PurchaseStatus =
+  "draft" | "submitted" | "confirmed" | "partial" | "received" | "cancelled";
 
 export interface PurchaseLine {
   productId: string;
@@ -490,7 +510,8 @@ export interface GoodsReceipt {
   notes?: string;
 }
 
-export type ReturnStatus = "requested" | "inspection" | "approved" | "rejected" | "refunded" | "replaced";
+export type ReturnStatus =
+  "requested" | "inspection" | "approved" | "rejected" | "refunded" | "replaced";
 export type ReturnResolution = "refund" | "replacement" | "repair" | "none";
 
 export interface ReturnRequest {

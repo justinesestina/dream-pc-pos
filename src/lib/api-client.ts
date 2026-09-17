@@ -8,6 +8,7 @@ import type {
   CatalogTerm,
   AttributeMeta,
   AttributeTerm,
+  Warehouse,
 } from "./types";
 
 /**
@@ -307,6 +308,35 @@ export async function deleteBackendAttributeTerm(
   termId: string,
 ): Promise<boolean> {
   const res = await apiRequest(`/api/v1/attributes/${attributeId}/terms/${termId}`, "DELETE");
+  return res.ok;
+}
+
+// ---------------------------------------------------------------------------
+// Warehouses (custom table — see backend lib/warehouse-store.ts)
+// ---------------------------------------------------------------------------
+
+export async function fetchBackendWarehouses(): Promise<Warehouse[]> {
+  const res = await apiRequest<Warehouse[]>("/api/v1/warehouses");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendWarehouse(
+  warehouse: Partial<Warehouse>,
+): Promise<Warehouse | null> {
+  const res = await apiRequest<Warehouse>("/api/v1/warehouses", "POST", warehouse);
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateBackendWarehouse(
+  id: string,
+  warehouse: Partial<Warehouse>,
+): Promise<Warehouse | null> {
+  const res = await apiRequest<Warehouse>(`/api/v1/warehouses/${id}`, "PUT", warehouse);
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteBackendWarehouse(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/warehouses/${id}`, "DELETE");
   return res.ok;
 }
 

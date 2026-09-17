@@ -209,6 +209,32 @@ Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`
 (attributes add `type`: `text | color | select | button`; categories add
 `parentId`; create returns `201`).
 
+### 4.5 Warehouses (custom table)
+
+WooCommerce has **no** native warehouse entity, so warehouses live in a
+backend-managed table at `backend/data/warehouses.json` (see
+`backend/src/lib/warehouse-store.ts`). API stays under `/api/v1` like the rest
+(auth required):
+
+| Route | Lists | Creates | Edits | Deletes |
+| --- | --- | --- | --- | --- |
+| `/warehouses` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
+
+Create body:
+```json
+{ "name": "Main Branch", "code": "MAIN", "type": "branch",
+  "manager": "Juan", "phone": "0917...", "address": "123 Rizal Ave",
+  "capacity": 200, "default": true, "status": "active", "notes": "" }
+```
+- `code` is unique (case-insensitive); duplicates → `409 CONFLICT`.
+- `type`: `main | branch | storage | service`.
+- Setting `default: true` clears the flag on the other warehouses.
+- Response: `{ "id": "WH-0001", ... }`; create returns `201`.
+
+> Prod note: on read-only filesystems (serverless) the table degrades to
+> in-memory. Point `warehouse-store` at Vercel KV/Postgres when a durable
+> production store is wanted.
+
 > Verified against the live store: brands come from a brand plugin
 > (`products/brands`), so they CRUD exactly like categories. The **Catalog** tab
 > in the tester exercises all of these.

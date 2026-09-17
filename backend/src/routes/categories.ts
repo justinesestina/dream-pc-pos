@@ -15,7 +15,7 @@ import type { Category } from "../types/dto.js";
 function toCategoryDto(raw: WcTaxonomy): Category {
   const image = raw.image;
   const imageUrl = typeof image === "string" ? image : image?.src || undefined;
-  
+
   return {
     id: String(raw.id),
     name: raw.name,
@@ -26,6 +26,7 @@ function toCategoryDto(raw: WcTaxonomy): Category {
     image: imageUrl,
     archived: false,
     createdAt: new Date().toISOString(),
+    count: raw.count ?? 0,
   };
 }
 
@@ -48,7 +49,7 @@ export function categoriesRoutes() {
     const body = await c.req.json().catch(() => ({}));
     const name = String(body.name ?? "").trim();
     if (!name) throw new ApiError(400, "BAD_REQUEST", "name is required");
-    
+
     const created = await woocommerce.createTaxonomy("products/categories", {
       name,
       slug: body.slug ? String(body.slug) : undefined,
@@ -64,7 +65,7 @@ export function categoriesRoutes() {
     const id = Number(c.req.param("id"));
     const body = await c.req.json().catch(() => ({}));
     if (!Number.isFinite(id)) throw new ApiError(400, "BAD_REQUEST", "invalid id");
-    
+
     const updated = await woocommerce.updateTaxonomy(`products/categories/${id}`, {
       name: body.name ? String(body.name) : undefined,
       slug: body.slug !== undefined ? String(body.slug) : undefined,
