@@ -1,4 +1,14 @@
-import type { User, Product, Order, Quote, Category, Customer } from "./types";
+import type {
+  User,
+  Product,
+  Order,
+  Quote,
+  Category,
+  Customer,
+  CatalogTerm,
+  AttributeMeta,
+  AttributeTerm,
+} from "./types";
 
 /**
  * DPC POS — Frontend API client for the backend service.
@@ -77,8 +87,8 @@ async function apiRequest<T>(
       body: body ? JSON.stringify(body) : null,
       redirect: "follow", // Follow redirects
     });
-    
-    let json: any = null;
+
+    let json: { data?: T; error?: { message?: string }; message?: string } | null = null;
     try {
       json = await res.json();
     } catch {
@@ -90,7 +100,7 @@ async function apiRequest<T>(
       return { ok: false, error: errMsg };
     }
 
-    return { ok: true, data: json?.data };
+    return { ok: true, data: json?.data as T };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
     console.error("API request failed:", err);
@@ -114,18 +124,23 @@ export interface LoginResult {
 }
 
 export async function loginToBackend(username: string, appPassword: string): Promise<LoginResult> {
-  const res = await apiRequest<{ token: string; user: User }>("/api/v1/auth/login", "POST", {
-    username,
-    appPassword,
-  }, { auth: false, contentType: "text" });
-  
+  const res = await apiRequest<{ token: string; user: User }>(
+    "/api/v1/auth/login",
+    "POST",
+    {
+      username,
+      appPassword,
+    },
+    { auth: false, contentType: "text" },
+  );
+
   if (res.ok && res.data) {
     localStorage.setItem("dpc-nexus-auth-token", res.data.token);
     localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username, appPassword }));
     localStorage.setItem("dpc-nexus-user", JSON.stringify(res.data.user));
     return { ok: true, user: res.data.user, token: res.data.token };
   }
-  
+
   return { ok: false, error: res.error || "Login failed" };
 }
 
@@ -140,23 +155,33 @@ export async function fetchBackendProducts(): Promise<Product[]> {
 
 export async function canReachBackend(): Promise<boolean> {
   if (isBackendPaused()) return false;
-  const res = await apiRequest<{ status: string }>("/api/v1/health", "GET", undefined, { auth: false });
+  const res = await apiRequest<{ status: string }>("/api/v1/health", "GET", undefined, {
+    auth: false,
+  });
   return res.ok;
 }
 
 export async function createBackendProduct(product: Partial<Product>): Promise<Product | null> {
   const res = await apiRequest<Product>("/api/v1/products", "POST", product);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
-export async function updateBackendProduct(id: string, product: Partial<Product>): Promise<Product | null> {
+export async function updateBackendProduct(
+  id: string,
+  product: Partial<Product>,
+): Promise<Product | null> {
   const res = await apiRequest<Product>(`/api/v1/products/${id}`, "PUT", product);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
-export async function updateBackendProductStock(id: string, stockQuantity: number): Promise<Product | null> {
-  const res = await apiRequest<Product>(`/api/v1/products/${id}/stock`, "PUT", { stock_quantity: stockQuantity });
-  return res.ok ? (res.data || null) : null;
+export async function updateBackendProductStock(
+  id: string,
+  stockQuantity: number,
+): Promise<Product | null> {
+  const res = await apiRequest<Product>(`/api/v1/products/${id}/stock`, "PUT", {
+    stock_quantity: stockQuantity,
+  });
+  return res.ok ? res.data || null : null;
 }
 
 export async function deleteBackendProduct(id: string): Promise<boolean> {
@@ -171,16 +196,117 @@ export async function fetchBackendCategories(): Promise<Category[]> {
 
 export async function createBackendCategory(category: Partial<Category>): Promise<Category | null> {
   const res = await apiRequest<Category>("/api/v1/categories", "POST", category);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
-export async function updateBackendCategory(id: string, category: Partial<Category>): Promise<Category | null> {
+export async function updateBackendCategory(
+  id: string,
+  category: Partial<Category>,
+): Promise<Category | null> {
   const res = await apiRequest<Category>(`/api/v1/categories/${id}`, "PUT", category);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
 export async function deleteBackendCategory(id: string): Promise<boolean> {
   const res = await apiRequest(`/api/v1/categories/${id}`, "DELETE");
+  return res.ok;
+}
+
+// ---------------------------------------------------------------------------
+// Taxonomy CRUD (brands / tags / attributes / terms — WooCommerce backed)
+// ---------------------------------------------------------------------------
+
+function taxonomyCrud(kind: "brands" | "tags", base: string) {
+  const fetchList = async (): Promise<CatalogTerm[]> => {
+    const res = await apiRequest<CatalogTerm[]>(base);
+    return res.ok && res.data ? res.data : [];
+  };
+  const create = async (term: Partial<CatalogTerm>): Promise<CatalogTerm | null> => {
+    const res = await apiRequest<CatalogTerm>(base, "POST", term);
+    return res.ok ? res.data || null : null;
+  };
+  const update = async (id: string, term: Partial<CatalogTerm>): Promise<CatalogTerm | null> => {
+    const res = await apiRequest<CatalogTerm>(`${base}/${id}`, "PUT", term);
+    return res.ok ? res.data || null : null;
+  };
+  const remove = async (id: string): Promise<boolean> => {
+    const res = await apiRequest(`${base}/${id}`, "DELETE");
+    return res.ok;
+  };
+  return { kind, fetchList, create, update, remove };
+}
+
+export const brandsApi = taxonomyCrud("brands", "/api/v1/brands");
+export const tagsApi = taxonomyCrud("tags", "/api/v1/tags");
+
+export async function fetchBackendAttributes(): Promise<AttributeMeta[]> {
+  const res = await apiRequest<AttributeMeta[]>("/api/v1/attributes");
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendAttribute(
+  attribute: Partial<AttributeMeta>,
+): Promise<AttributeMeta | null> {
+  const res = await apiRequest<AttributeMeta>("/api/v1/attributes", "POST", {
+    name: attribute.name,
+    slug: attribute.slug,
+    type: attribute.type,
+  });
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateBackendAttribute(
+  id: string,
+  attribute: Partial<AttributeMeta>,
+): Promise<AttributeMeta | null> {
+  const res = await apiRequest<AttributeMeta>(`/api/v1/attributes/${id}`, "PUT", {
+    name: attribute.name,
+  });
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteBackendAttribute(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/attributes/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function fetchBackendAttributeTerms(attributeId: string): Promise<AttributeTerm[]> {
+  const res = await apiRequest<AttributeTerm[]>(`/api/v1/attributes/${attributeId}/terms`);
+  return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendAttributeTerm(
+  attributeId: string,
+  term: Partial<AttributeTerm>,
+): Promise<AttributeTerm | null> {
+  const res = await apiRequest<AttributeTerm>(`/api/v1/attributes/${attributeId}/terms`, "POST", {
+    name: term.name,
+    slug: term.slug,
+  });
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateBackendAttributeTerm(
+  attributeId: string,
+  termId: string,
+  term: Partial<AttributeTerm>,
+): Promise<AttributeTerm | null> {
+  const res = await apiRequest<AttributeTerm>(
+    `/api/v1/attributes/${attributeId}/terms/${termId}`,
+    "PUT",
+    {
+      name: term.name,
+      slug: term.slug,
+    },
+  );
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteBackendAttributeTerm(
+  attributeId: string,
+  termId: string,
+): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/attributes/${attributeId}/terms/${termId}`, "DELETE");
   return res.ok;
 }
 
@@ -196,12 +322,15 @@ export async function fetchBackendOrders(): Promise<Order[]> {
 
 export async function createBackendOrder(order: Partial<Order>): Promise<Order | null> {
   const res = await apiRequest<Order>("/api/v1/orders", "POST", order);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
-export async function updateBackendOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
+export async function updateBackendOrderStatus(
+  id: string,
+  status: Order["status"],
+): Promise<Order | null> {
   const res = await apiRequest<Order>(`/api/v1/orders/${id}`, "PUT", { status });
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
 export async function fetchBackendQuotes(): Promise<Quote[]> {
@@ -211,14 +340,13 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
 
 export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>("/api/v1/quotes", "POST", quote);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
 
 export async function updateBackendQuote(id: string, quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>(`/api/v1/quotes/${id}`, "PUT", quote);
-  return res.ok ? (res.data || null) : null;
+  return res.ok ? res.data || null : null;
 }
-
 
 // ---------------------------------------------------------------------------
 // Media upload
@@ -261,15 +389,15 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
 
   const wpCreds = getWpCredentials();
   if (wpCreds) {
-    body['username'] = wpCreds.username;
-    body['appPassword'] = wpCreds.appPassword;
+    body["username"] = wpCreds.username;
+    body["appPassword"] = wpCreds.appPassword;
   }
 
   const res = await apiRequest<{ url: string; mediaId: string }>("/api/v1/media", "POST", body);
-  
+
   if (res.ok && res.data) {
     return { ok: true, url: res.data.url, mediaId: res.data.mediaId };
   }
-  
+
   return { ok: false, error: res.error || "Upload failed" };
 }

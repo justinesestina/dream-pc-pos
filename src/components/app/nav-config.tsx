@@ -74,13 +74,21 @@ export const navGroups: NavGroup[] = [
         children: [
           { label: "All Products", to: "/products", cap: "products" },
           { label: "Add Product", to: "/products", search: { new: "1" }, cap: "products" },
-          { label: "Brands", soon: true, cap: "products" },
+          { label: "Brands", to: "/brands", cap: "products" },
           { label: "Categories", to: "/products", cap: "products" },
-          { label: "Tags", soon: true, cap: "products" },
-          { label: "Attributes", soon: true, cap: "products" },
+          { label: "Tags", to: "/tags", cap: "products" },
+          { label: "Attributes", to: "/attributes", cap: "products" },
         ],
       },
-      { label: "Warehouses", icon: Warehouse, soon: true, cap: "inventory" },
+      {
+        label: "Warehouses",
+        icon: Warehouse,
+        cap: "inventory",
+        children: [
+          { label: "Add Warehouse", soon: true, cap: "inventory" },
+          { label: "Manage Warehouses", soon: true, cap: "inventory" },
+        ],
+      },
       { label: "Stock Transfer", icon: ArrowLeftRight, soon: true, cap: "inventory" },
       {
         label: "Purchase Orders",

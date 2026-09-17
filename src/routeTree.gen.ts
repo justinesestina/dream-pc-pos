@@ -19,6 +19,8 @@ import { Route as AppPosRouteImport } from './routes/_app.pos'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppSerialsRouteImport } from './routes/_app.serials'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes.index'
+import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
 import { Route as AppBuildsBuildIdRouteImport } from './routes/_app.builds.$buildId'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
@@ -45,6 +47,7 @@ import { Route as AppShiftsIndexRouteImport } from './routes/_app.shifts.index'
 import { Route as AppShiftsShiftIdRouteImport } from './routes/_app.shifts.$shiftId'
 import { Route as AppSuppliersIndexRouteImport } from './routes/_app.suppliers.index'
 import { Route as AppSuppliersSupplierIdRouteImport } from './routes/_app.suppliers.$supplierId'
+import { Route as AppTagsIndexRouteImport } from './routes/_app.tags.index'
 import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
 import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
 import { Route as AppWarrantyClaimsClaimIdRouteImport } from './routes/_app.warranty.claims.$claimId'
@@ -96,6 +99,16 @@ const AppSerialsRoute = AppSerialsRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAttributesIndexRoute = AppAttributesIndexRouteImport.update({
+  id: '/attributes/',
+  path: '/attributes/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBrandsIndexRoute = AppBrandsIndexRouteImport.update({
+  id: '/brands/',
+  path: '/brands/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBuildsIndexRoute = AppBuildsIndexRouteImport.update({
@@ -228,6 +241,11 @@ const AppSuppliersSupplierIdRoute = AppSuppliersSupplierIdRouteImport.update({
   path: '/suppliers/$supplierId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTagsIndexRoute = AppTagsIndexRouteImport.update({
+  id: '/tags/',
+  path: '/tags/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppWarrantyIndexRoute = AppWarrantyIndexRouteImport.update({
   id: '/warranty/',
   path: '/warranty/',
@@ -269,6 +287,8 @@ export interface FileRoutesByFullPath {
   '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
   '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
+  '/attributes/': typeof AppAttributesIndexRoute
+  '/brands/': typeof AppBrandsIndexRoute
   '/builds/': typeof AppBuildsIndexRoute
   '/customers/': typeof AppCustomersIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
@@ -282,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/services/': typeof AppServicesIndexRoute
   '/shifts/': typeof AppShiftsIndexRoute
   '/suppliers/': typeof AppSuppliersIndexRoute
+  '/tags/': typeof AppTagsIndexRoute
   '/warranty/': typeof AppWarrantyIndexRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -309,6 +330,8 @@ export interface FileRoutesByTo {
   '/shifts/$shiftId': typeof AppShiftsShiftIdRoute
   '/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
+  '/attributes': typeof AppAttributesIndexRoute
+  '/brands': typeof AppBrandsIndexRoute
   '/builds': typeof AppBuildsIndexRoute
   '/customers': typeof AppCustomersIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
@@ -322,6 +345,7 @@ export interface FileRoutesByTo {
   '/services': typeof AppServicesIndexRoute
   '/shifts': typeof AppShiftsIndexRoute
   '/suppliers': typeof AppSuppliersIndexRoute
+  '/tags': typeof AppTagsIndexRoute
   '/warranty': typeof AppWarrantyIndexRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -351,6 +375,8 @@ export interface FileRoutesById {
   '/_app/shifts/$shiftId': typeof AppShiftsShiftIdRoute
   '/_app/suppliers/$supplierId': typeof AppSuppliersSupplierIdRoute
   '/_app/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
+  '/_app/attributes/': typeof AppAttributesIndexRoute
+  '/_app/brands/': typeof AppBrandsIndexRoute
   '/_app/builds/': typeof AppBuildsIndexRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
@@ -364,6 +390,7 @@ export interface FileRoutesById {
   '/_app/services/': typeof AppServicesIndexRoute
   '/_app/shifts/': typeof AppShiftsIndexRoute
   '/_app/suppliers/': typeof AppSuppliersIndexRoute
+  '/_app/tags/': typeof AppTagsIndexRoute
   '/_app/warranty/': typeof AppWarrantyIndexRoute
   '/_app/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -393,6 +420,8 @@ export interface FileRouteTypes {
     | '/shifts/$shiftId'
     | '/suppliers/$supplierId'
     | '/warranty/$warrantyId'
+    | '/attributes/'
+    | '/brands/'
     | '/builds/'
     | '/customers/'
     | '/inventory/'
@@ -406,6 +435,7 @@ export interface FileRouteTypes {
     | '/services/'
     | '/shifts/'
     | '/suppliers/'
+    | '/tags/'
     | '/warranty/'
     | '/warranty/claims/$claimId'
   fileRoutesByTo: FileRoutesByTo
@@ -433,6 +463,8 @@ export interface FileRouteTypes {
     | '/shifts/$shiftId'
     | '/suppliers/$supplierId'
     | '/warranty/$warrantyId'
+    | '/attributes'
+    | '/brands'
     | '/builds'
     | '/customers'
     | '/inventory'
@@ -446,6 +478,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/shifts'
     | '/suppliers'
+    | '/tags'
     | '/warranty'
     | '/warranty/claims/$claimId'
   id:
@@ -474,6 +507,8 @@ export interface FileRouteTypes {
     | '/_app/shifts/$shiftId'
     | '/_app/suppliers/$supplierId'
     | '/_app/warranty/$warrantyId'
+    | '/_app/attributes/'
+    | '/_app/brands/'
     | '/_app/builds/'
     | '/_app/customers/'
     | '/_app/inventory/'
@@ -487,6 +522,7 @@ export interface FileRouteTypes {
     | '/_app/services/'
     | '/_app/shifts/'
     | '/_app/suppliers/'
+    | '/_app/tags/'
     | '/_app/warranty/'
     | '/_app/warranty/claims/$claimId'
   fileRoutesById: FileRoutesById
@@ -566,6 +602,20 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/attributes/': {
+      id: '/_app/attributes/'
+      path: '/attributes'
+      fullPath: '/attributes/'
+      preLoaderRoute: typeof AppAttributesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/brands/': {
+      id: '/_app/brands/'
+      path: '/brands'
+      fullPath: '/brands/'
+      preLoaderRoute: typeof AppBrandsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/builds/': {
@@ -750,6 +800,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuppliersSupplierIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/tags/': {
+      id: '/_app/tags/'
+      path: '/tags'
+      fullPath: '/tags/'
+      preLoaderRoute: typeof AppTagsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/warranty/': {
       id: '/_app/warranty/'
       path: '/warranty'
@@ -797,6 +854,8 @@ interface AppRouteChildren {
   AppShiftsShiftIdRoute: typeof AppShiftsShiftIdRoute
   AppSuppliersSupplierIdRoute: typeof AppSuppliersSupplierIdRoute
   AppWarrantyWarrantyIdRoute: typeof AppWarrantyWarrantyIdRoute
+  AppAttributesIndexRoute: typeof AppAttributesIndexRoute
+  AppBrandsIndexRoute: typeof AppBrandsIndexRoute
   AppBuildsIndexRoute: typeof AppBuildsIndexRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
@@ -810,6 +869,7 @@ interface AppRouteChildren {
   AppServicesIndexRoute: typeof AppServicesIndexRoute
   AppShiftsIndexRoute: typeof AppShiftsIndexRoute
   AppSuppliersIndexRoute: typeof AppSuppliersIndexRoute
+  AppTagsIndexRoute: typeof AppTagsIndexRoute
   AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
   AppWarrantyClaimsClaimIdRoute: typeof AppWarrantyClaimsClaimIdRoute
 }
@@ -837,6 +897,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppShiftsShiftIdRoute: AppShiftsShiftIdRoute,
   AppSuppliersSupplierIdRoute: AppSuppliersSupplierIdRoute,
   AppWarrantyWarrantyIdRoute: AppWarrantyWarrantyIdRoute,
+  AppAttributesIndexRoute: AppAttributesIndexRoute,
+  AppBrandsIndexRoute: AppBrandsIndexRoute,
   AppBuildsIndexRoute: AppBuildsIndexRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
@@ -850,6 +912,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppServicesIndexRoute: AppServicesIndexRoute,
   AppShiftsIndexRoute: AppShiftsIndexRoute,
   AppSuppliersIndexRoute: AppSuppliersIndexRoute,
+  AppTagsIndexRoute: AppTagsIndexRoute,
   AppWarrantyIndexRoute: AppWarrantyIndexRoute,
   AppWarrantyClaimsClaimIdRoute: AppWarrantyClaimsClaimIdRoute,
 }

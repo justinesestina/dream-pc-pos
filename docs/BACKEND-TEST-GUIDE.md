@@ -202,7 +202,7 @@ All four are full CRUD straight into WooCommerce and share the same shape
 | `/categories` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
 | `/brands` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
 | `/tags` | `GET` | `POST` | `PUT /:id` | `DELETE /:id` |
-| `/attributes` | `GET` | `POST` | — | — |
+| `/attributes` | `GET` | `POST` | `PUT /:id` (name) | `DELETE /:id` |
 | `/attributes/:id/terms` | `GET` | `POST` | `PUT /:id/terms/:termId` | `DELETE /:id/terms/:termId` |
 
 Item shape: `{ "id": "46", "name": "Akko", "slug": "akko", "count": 3 }`

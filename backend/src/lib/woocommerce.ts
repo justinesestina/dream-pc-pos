@@ -16,9 +16,9 @@ async function wcFetch(route: WcEndpoint, init?: RequestInit): Promise<unknown> 
     throw new ApiError(503, "WOOCOMMERCE_NOT_CONFIGURED", "WooCommerce is not configured");
   }
   const url = `${config.wp.url}/wp-json/wc/v3/${route}`;
-  const credentials = Buffer.from(
-    `${config.wp.consumerKey}:${config.wp.consumerSecret}`,
-  ).toString("base64");
+  const credentials = Buffer.from(`${config.wp.consumerKey}:${config.wp.consumerSecret}`).toString(
+    "base64",
+  );
 
   let res: Response;
   try {
@@ -31,7 +31,11 @@ async function wcFetch(route: WcEndpoint, init?: RequestInit): Promise<unknown> 
       },
     });
   } catch (cause) {
-    throw new ApiError(502, "WOOCOMMERCE_UNREACHABLE", `Cannot reach WooCommerce: ${String(cause)}`);
+    throw new ApiError(
+      502,
+      "WOOCOMMERCE_UNREACHABLE",
+      `Cannot reach WooCommerce: ${String(cause)}`,
+    );
   }
 
   const body: unknown = await res.json().catch(() => null);
@@ -180,7 +184,10 @@ export const woocommerce = {
 
   /** Update existing WC product by id. */
   async updateProduct(id: string | number, body: Record<string, unknown>): Promise<WcProduct> {
-    return (await wcFetch(`products/${id}`, { method: "PUT", body: JSON.stringify(body) })) as WcProduct;
+    return (await wcFetch(`products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })) as WcProduct;
   },
 
   /** Permanently delete a product (could error if WC refuses due to orders). */
@@ -207,7 +214,10 @@ export const woocommerce = {
 
   /** Update an order (quotes edit meta_data/line_items through this). */
   async updateOrder(id: string | number, body: Record<string, unknown>): Promise<WcOrder> {
-    return (await wcFetch(`orders/${id}`, { method: "PUT", body: JSON.stringify(body) })) as WcOrder;
+    return (await wcFetch(`orders/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })) as WcOrder;
   },
 
   /** Permanently delete an order (quote delete). */
@@ -238,32 +248,63 @@ export const woocommerce = {
   },
 
   async listAttributes(): Promise<WcAttribute[]> {
-    return (await wcFetch("products/attributes?per_page=100&orderby=name&order=asc")) as WcAttribute[];
+    return (await wcFetch(
+      "products/attributes?per_page=100&orderby=name&order=asc",
+    )) as WcAttribute[];
   },
 
   async createAttribute(body: Record<string, unknown>): Promise<WcAttribute> {
-    return (await wcFetch("products/attributes", { method: "POST", body: JSON.stringify(body) })) as WcAttribute;
+    return (await wcFetch("products/attributes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as WcAttribute;
+  },
+
+  async updateAttribute(
+    attributeId: string | number,
+    body: Record<string, unknown>,
+  ): Promise<WcAttribute> {
+    return (await wcFetch(`products/attributes/${attributeId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    })) as WcAttribute;
+  },
+
+  async deleteAttribute(attributeId: string | number): Promise<WcAttribute> {
+    return (await wcFetch(`products/attributes/${attributeId}?force=true`, {
+      method: "DELETE",
+    })) as WcAttribute;
   },
 
   async attributeTerms(attributeId: string | number): Promise<WcTaxonomy[]> {
     return (await wcFetch(`products/attributes/${attributeId}/terms?per_page=100`)) as WcTaxonomy[];
   },
 
-  async createAttributeTerm(attributeId: string | number, body: Record<string, unknown>): Promise<WcTaxonomy> {
+  async createAttributeTerm(
+    attributeId: string | number,
+    body: Record<string, unknown>,
+  ): Promise<WcTaxonomy> {
     return (await wcFetch(`products/attributes/${attributeId}/terms`, {
       method: "POST",
       body: JSON.stringify(body),
     })) as WcTaxonomy;
   },
 
-  async setAttributeTerm(attributeId: string | number, termId: string | number, body: Record<string, unknown>): Promise<WcTaxonomy> {
+  async setAttributeTerm(
+    attributeId: string | number,
+    termId: string | number,
+    body: Record<string, unknown>,
+  ): Promise<WcTaxonomy> {
     return (await wcFetch(`products/attributes/${attributeId}/terms/${termId}`, {
       method: "PUT",
       body: JSON.stringify(body),
     })) as WcTaxonomy;
   },
 
-  async deleteAttributeTerm(attributeId: string | number, termId: string | number): Promise<WcTaxonomy> {
+  async deleteAttributeTerm(
+    attributeId: string | number,
+    termId: string | number,
+  ): Promise<WcTaxonomy> {
     return (await wcFetch(`products/attributes/${attributeId}/terms/${termId}?force=true`, {
       method: "DELETE",
     })) as WcTaxonomy;
