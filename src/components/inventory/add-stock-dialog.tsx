@@ -296,10 +296,16 @@ export function AddStockDialog({
               className={cn(errors.quantity && invalidClass)}
             />
             <FieldError message={errors.quantity} />
-            {deducting && productId && targetId && !errors.quantity && (
+            {productId && targetId && !errors.quantity && (
               <p className="text-xs text-muted-foreground">
-                Available in this warehouse:{" "}
+                {deducting ? "Available in this warehouse: " : "Currently in this warehouse: "}
                 <span className="mono text-foreground">{num(available)}</span>
+                {!deducting && quantity.trim() && Number(quantity) > 0 && (
+                  <>
+                    {" "}
+                    → <span className="mono text-success">{num(available + Number(quantity))}</span>
+                  </>
+                )}
               </p>
             )}
           </div>

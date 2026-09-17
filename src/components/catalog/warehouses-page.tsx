@@ -269,10 +269,21 @@ export function WarehousesPage({ openNew }: { openNew?: boolean }) {
     },
     {
       key: "products",
-      header: "Products",
+      header: "In Stock",
       align: "right",
-      cell: (w) => <span className="mono tabular-nums">{num(w.totalProducts ?? 0)}</span>,
+      cell: (w) => (
+        <span className="mono tabular-nums text-foreground">{num(w.totalProducts ?? 0)}</span>
+      ),
       sortValue: (w) => w.totalProducts ?? 0,
+    },
+    {
+      key: "outOfStock",
+      header: "Out of Stock",
+      align: "right",
+      cell: (w) => (
+        <span className="mono tabular-nums text-muted-foreground">{num(w.outOfStock ?? 0)}</span>
+      ),
+      sortValue: (w) => w.outOfStock ?? 0,
     },
     {
       key: "quantity",

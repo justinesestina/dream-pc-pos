@@ -803,19 +803,23 @@ async function hydrateSellingWarehouse(warehouse: Warehouse): Promise<boolean> {
   return remaining === 0;
 }
 
-/** Warehouse list totals (Total Products / Total Quantity / Total Value). */
+/** Warehouse list totals (Total Products / Out of Stock / Total Quantity / Total Value). */
 export async function warehouseTotals(): Promise<
-  Map<string, { totalProducts: number; totalQuantity: number; totalValue: number }>
+  Map<
+    string,
+    { totalProducts: number; outOfStock: number; totalQuantity: number; totalValue: number }
+  >
 > {
   const rows = await listProductStock();
   const totals = new Map<
     string,
-    { totalProducts: number; totalQuantity: number; totalValue: number }
+    { totalProducts: number; outOfStock: number; totalQuantity: number; totalValue: number }
   >();
   for (const row of rows) {
     for (const w of row.warehouses) {
       const entry = totals.get(w.warehouseId) ?? {
         totalProducts: 0,
+        outOfStock: 0,
         totalQuantity: 0,
         totalValue: 0,
       };
@@ -825,7 +829,10 @@ export async function warehouseTotals(): Promise<
       totals.set(w.warehouseId, entry);
     }
   }
-  for (const entry of totals.values()) entry.totalValue = Number(entry.totalValue.toFixed(2));
+  for (const entry of totals.values()) {
+    entry.outOfStock = Math.max(0, rows.length - entry.totalProducts);
+    entry.totalValue = Number(entry.totalValue.toFixed(2));
+  }
   return totals;
 }
 

@@ -60,6 +60,7 @@ export function warehousesRoutes() {
       return {
         ...w,
         totalProducts: t?.totalProducts ?? 0,
+        outOfStock: t?.outOfStock ?? 0,
         totalQuantity: t?.totalQuantity ?? 0,
         totalValue: t?.totalValue ?? 0,
       };
@@ -76,6 +77,7 @@ export function warehousesRoutes() {
       ok({
         ...row,
         totalProducts: t?.totalProducts ?? 0,
+        outOfStock: t?.outOfStock ?? 0,
         totalQuantity: t?.totalQuantity ?? 0,
         totalValue: t?.totalValue ?? 0,
       }),
