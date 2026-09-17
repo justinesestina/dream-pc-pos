@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOps } from "@/lib/ops-store";
+import { useStore } from "@/lib/store";
 import type { Supplier } from "@/lib/ops-types";
 import type { Product } from "@/lib/types";
 
@@ -27,6 +28,7 @@ export function SupplierFormDialog({
   availableProducts: Product[];
 }) {
   const { createSupplier, updateSupplier } = useOps();
+  const { updateProduct } = useStore();
   const isEdit = Boolean(supplier);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
@@ -61,7 +63,7 @@ export function SupplierFormDialog({
     );
   }, [availableProducts, productQuery]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!name.trim() || !contact.trim()) {
       toast.error("Supplier name and contact are required.");
       return;
@@ -86,11 +88,27 @@ export function SupplierFormDialog({
       productIds,
       notes: notes.trim() || undefined,
     };
+    const savedSupplier = isEdit && supplier
+      ? await updateSupplier(supplier.id, payload)
+      : await createSupplier(payload);
+    if (!savedSupplier) {
+      toast.error("Could not save supplier. Check the backend connection.");
+      return;
+    }
+
+    for (const product of availableProducts) {
+      const wasAssigned = product.supplier === (supplier?.name ?? "");
+      const shouldBeAssigned = productIds.includes(product.id);
+      if (shouldBeAssigned && product.supplier !== savedSupplier.name) {
+        updateProduct(product.id, { supplier: savedSupplier.name });
+      } else if (isEdit && wasAssigned && !shouldBeAssigned) {
+        updateProduct(product.id, { supplier: "—" });
+      }
+    }
+
     if (isEdit && supplier) {
-      updateSupplier(supplier.id, payload);
       toast.success(`${payload.name} updated.`);
     } else {
-      createSupplier(payload);
       toast.success(`${payload.name} added to the directory.`);
     }
     onOpenChange(false);
@@ -173,7 +191,7 @@ export function SupplierFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit}>{isEdit ? "Save changes" : "Add supplier"}</Button>
+          <Button onClick={() => void submit()}>{isEdit ? "Save changes" : "Add supplier"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

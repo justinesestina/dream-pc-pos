@@ -34,6 +34,11 @@ import { ASSEMBLY_STAGES } from "./ops-types";
 import { onBuildStatus } from "./build-sync";
 import { stageForStatus } from "./build-state";
 import type { PaymentMethod } from "./types";
+import {
+  createBackendSupplier,
+  fetchBackendSuppliers,
+  updateBackendSupplier,
+} from "./api-client";
 
 const STORAGE_KEY = "dpc-nexus-ops-v1";
 
@@ -59,7 +64,7 @@ interface OpsSnapshot {
 function seed(): OpsSnapshot {
   return {
     schemaVersion: SCHEMA_VERSION,
-    suppliers: structuredClone(seedData.suppliers),
+    suppliers: [],
     purchaseOrders: structuredClone(seedData.purchaseOrders),
     receipts: structuredClone(seedData.goodsReceipts),
     returns: structuredClone(seedData.returnRequests),
@@ -112,8 +117,8 @@ interface OpsValue extends OpsSnapshot {
   openShift: Shift | undefined;
   /* purchasing */
   setPoStatus: (id: string, status: PurchaseStatus) => void;
-  createSupplier: (data: Omit<Supplier, "id" | "rating" | "status">) => Supplier;
-  updateSupplier: (id: string, patch: Partial<Supplier>) => void;
+  createSupplier: (data: Omit<Supplier, "id" | "rating" | "status">) => Promise<Supplier | null>;
+  updateSupplier: (id: string, patch: Partial<Supplier>) => Promise<Supplier | null>;
   setSupplierProducts: (supplierId: string, productIds: string[]) => void;
   createPurchaseOrder: (data: {
     supplierId: string;
@@ -179,7 +184,8 @@ export function OpsProvider({ children, actor = "System" }: { children: ReactNod
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<OpsSnapshot>;
         if (parsed.schemaVersion === SCHEMA_VERSION) {
-          setState((prev) => ({ ...prev, ...parsed }));
+          const { suppliers: _localSuppliers, ...localOps } = parsed;
+          setState((prev) => ({ ...prev, ...localOps, suppliers: prev.suppliers }));
         } else {
           localStorage.removeItem(STORAGE_KEY);
         }
@@ -192,10 +198,18 @@ export function OpsProvider({ children, actor = "System" }: { children: ReactNod
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
+    void fetchBackendSuppliers().then((suppliers) => {
+      if (suppliers) setState((current) => ({ ...current, suppliers }));
+    });
+  }, [hydrated]);
+
+  useEffect(() => {
     if (skip.current) return;
     const timeoutId = setTimeout(() => {
       try {
-        const serialized = JSON.stringify(state);
+        const { suppliers: _remoteSuppliers, ...localOps } = state;
+        const serialized = JSON.stringify(localOps);
         // Only write if data is reasonable size (< 5MB)
         if (serialized.length < 5 * 1024 * 1024) {
           localStorage.setItem(STORAGE_KEY, serialized);
@@ -253,22 +267,20 @@ export function OpsProvider({ children, actor = "System" }: { children: ReactNod
           ),
         })),
 
-      createSupplier: (data) => {
-        const supplier: Supplier = {
-          ...data,
-          id: `sup-${Math.random().toString(36).slice(2, 9)}`,
-          rating: 0,
-          status: "active",
-        };
-        patch((s) => ({ ...s, suppliers: [supplier, ...s.suppliers] }));
+      createSupplier: async (data) => {
+        const supplier = await createBackendSupplier(data);
+        if (supplier) patch((s) => ({ ...s, suppliers: [supplier, ...s.suppliers] }));
         return supplier;
       },
 
-      updateSupplier: (id, p) =>
-        patch((s) => ({
+      updateSupplier: async (id, p) => {
+        const supplier = await updateBackendSupplier(id, p);
+        if (supplier) patch((s) => ({
           ...s,
-          suppliers: s.suppliers.map((sp) => (sp.id === id ? { ...sp, ...p } : sp)),
-        })),
+          suppliers: s.suppliers.map((sp) => (sp.id === id ? supplier : sp)),
+        }));
+        return supplier;
+      },
 
       setSupplierProducts: (supplierId, productIds) =>
         patch((s) => ({

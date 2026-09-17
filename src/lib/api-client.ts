@@ -15,6 +15,7 @@ import type {
   TransferStatus,
   ProductStockInfo,
 } from "./types";
+import type { Supplier } from "./ops-types";
 
 /**
  * DPC POS — Frontend API client for the backend service.
@@ -361,6 +362,27 @@ export async function updateBackendWarehouse(
 export async function deleteBackendWarehouse(id: string): Promise<boolean> {
   const res = await apiRequest(`/api/v1/warehouses/${id}`, "DELETE");
   return res.ok;
+}
+
+// Suppliers (WooCommerce-backed records with direct product assignments)
+export async function fetchBackendSuppliers(): Promise<Supplier[] | null> {
+  const res = await apiRequest<Supplier[]>("/api/v1/suppliers");
+  return res.ok && res.data ? res.data : res.ok ? [] : null;
+}
+
+export async function createBackendSupplier(
+  supplier: Omit<Supplier, "id" | "rating" | "status">,
+): Promise<Supplier | null> {
+  const res = await apiRequest<Supplier>("/api/v1/suppliers", "POST", supplier);
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateBackendSupplier(
+  id: string,
+  patch: Partial<Supplier>,
+): Promise<Supplier | null> {
+  const res = await apiRequest<Supplier>(`/api/v1/suppliers/${id}`, "PUT", patch);
+  return res.ok ? res.data || null : null;
 }
 
 export async function fetchWarehouseStock(id: string): Promise<WarehouseStockRow[]> {
