@@ -27,8 +27,34 @@ export function customersRoutes() {
   });
 
   app.post("/", requireAuth, async (c) => {
-    // TODO(P2): create local customer.
-    return c.json(ok(await c.req.json().catch(() => ({}))), 201);
+    const body = await c.req.json().catch(() => ({}));
+    const name = String(body?.name ?? "").trim();
+    const email = String(body?.email ?? "").trim();
+    if (!name || !email) {
+      return c.json({ error: { code: "BAD_REQUEST", message: "name and email are required" } }, 400);
+    }
+
+    const [firstName, ...lastParts] = name.split(/\s+/);
+    const lastName = lastParts.join(" ");
+    const phone = String(body?.phone ?? "").trim();
+    const address = String(body?.address ?? "").trim();
+    const created = await woocommerce.createCustomer({
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      billing: { phone, address_1: address },
+    });
+    const customer: Customer = {
+      id: String(created.id),
+      name: `${created.first_name} ${created.last_name}`.trim() || created.email,
+      email: created.email,
+      phone: created.billing?.phone ?? phone,
+      type: body?.type === "business" ? "business" : "individual",
+      address,
+      since: created.date_created,
+      status: "active",
+    };
+    return c.json(ok(customer), 201);
   });
 
   return app;

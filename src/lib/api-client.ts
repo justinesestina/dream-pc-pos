@@ -345,6 +345,13 @@ export async function fetchBackendCustomers(): Promise<Customer[]> {
   return res.ok && res.data ? res.data : [];
 }
 
+export async function createBackendCustomer(
+  customer: Omit<Customer, "id" | "since" | "status">,
+): Promise<Customer | null> {
+  const res = await apiRequest<Customer>("/api/v1/customers", "POST", customer);
+  return res.ok ? res.data || null : null;
+}
+
 export async function fetchBackendOrders(): Promise<Order[]> {
   const res = await apiRequest<Order[]>("/api/v1/orders");
   return res.ok && res.data ? res.data : [];

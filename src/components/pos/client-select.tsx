@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, Search, UserPlus, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,8 +14,9 @@ import {
 import { EmptyState } from "@/components/nexus/primitives";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { createBackendCustomer } from "@/lib/api-client";
 import { CLIENT_TYPES, clientTypeInfo, type ClientTypeInfo } from "@/lib/client-types";
-import type { ClientType } from "@/lib/types";
+import type { ClientType, Customer } from "@/lib/types";
 
 /** A client attached to a sale. Populated by the Clients feature once available. */
 export interface ClientRecord {
@@ -36,9 +38,19 @@ function ClientSelectModal({
 }) {
   const store = useStore();
   const [query, setQuery] = useState("");
-  // The actual client directory comes from the Clients feature. Until that exists,
-  // this list stays empty and the modal shows its empty state.
-  const [clients] = useState<ClientRecord[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const clients = useMemo<ClientRecord[]>(() => {
+    if (type.id !== "walk-in") return [];
+    return store.customers.map((customer: Customer) => ({
+      id: customer.id,
+      name: customer.name,
+      code: customer.id,
+      contact: customer.email || customer.phone,
+      details: customer.phone,
+    }));
+  }, [store.customers, type.id]);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -50,6 +62,34 @@ function ClientSelectModal({
         (c.contact?.toLowerCase().includes(q) ?? false),
     );
   }, [clients, query]);
+
+  const addCustomer = async () => {
+    const name = form.name.trim();
+    const email = form.email.trim();
+    if (!name || !email) {
+      toast.error("Name and email are required.");
+      return;
+    }
+    setSaving(true);
+    const customer = await createBackendCustomer({
+      name,
+      email,
+      phone: form.phone.trim(),
+      type: "individual",
+      address: "",
+    });
+    setSaving(false);
+    if (!customer) {
+      toast.error("Could not create customer in WooCommerce.");
+      return;
+    }
+    await store.syncWithBackend();
+    store.setCartCustomer(customer.id);
+    setForm({ name: "", email: "", phone: "" });
+    setAdding(false);
+    onOpenChange(false);
+    toast.success(`${customer.name} added to WooCommerce and selected.`);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,25 +104,37 @@ function ClientSelectModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${type.label.toLowerCase()} clients…`}
-            className="h-9 pl-8 text-[13px]"
-            autoFocus
-          />
-        </div>
+        {adding ? (
+          <div className="space-y-3">
+            <Input placeholder="Full name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus />
+            <Input type="email" placeholder="Email address" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            <Input placeholder="Phone (optional)" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAdding(false)} disabled={saving}>Back</Button>
+              <Button onClick={() => void addCustomer()} disabled={saving}>{saving ? "Saving…" : "Add customer"}</Button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Search ${type.label.toLowerCase()} clients…`}
+                className="h-9 pl-8 text-[13px]"
+                autoFocus
+              />
+            </div>
 
-        {list.length === 0 ? (
+            {list.length === 0 ? (
           <EmptyState
             icon={type.icon}
-            title="No clients yet"
-            description={`${type.label} clients will be listed here for selection once added.`}
+            title={query ? "No matching customers" : "No customers yet"}
+            description={query ? "Try another name, email, phone, or customer ID." : "Add a customer to WooCommerce to select them for this sale."}
             className="py-10"
           />
-        ) : (
+            ) : (
           <ul
             className="max-h-72 divide-y divide-border overflow-y-auto rounded-md border border-border"
             data-lenis-prevent
@@ -118,13 +170,19 @@ function ClientSelectModal({
               </li>
             ))}
           </ul>
+            )}
+
+            <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+              <UserPlus className="size-3.5" /> Add customer
+            </Button>
+          </>
         )}
 
-        <DialogFooter>
+        {!adding && <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-        </DialogFooter>
+        </DialogFooter>}
       </DialogContent>
     </Dialog>
   );

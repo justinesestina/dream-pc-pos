@@ -177,6 +177,13 @@ export const woocommerce = {
     return (await wcFetch(`customers?per_page=100${params}`)) as WcCustomer[];
   },
 
+  async createCustomer(body: Record<string, unknown>): Promise<WcCustomer> {
+    return (await wcFetch("customers", {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as WcCustomer;
+  },
+
   /** Create/update a product synchronously with the storefront catalog. */
   async createProduct(body: Record<string, unknown>): Promise<WcProduct> {
     return (await wcFetch("products", { method: "POST", body: JSON.stringify(body) })) as WcProduct;
