@@ -29,8 +29,13 @@ import {
   getAuthToken,
   createBackendProduct,
   updateBackendProduct,
+  updateBackendProductStock,
+  createBackendCategory,
+  updateBackendCategory,
   createBackendOrder,
+  updateBackendOrderStatus,
   createBackendQuote,
+  updateBackendQuote,
   canReachBackend,
 } from "./api-client";
 import { VAT_RATE } from "./format";
@@ -259,11 +264,18 @@ interface StoreValue extends Snapshot {
     patch: Partial<Product>,
     opts?: { onHand?: number; reorderPoint?: number },
   ) => { ok: boolean; error?: string };
+  updateProductStock: (productId: string, stockQuantity: number) => { ok: boolean; error?: string };
   archiveProduct: (productId: string) => void;
   reactivateProduct: (productId: string) => void;
   deleteProduct: (productId: string) => void;
-  createCategory: (name: string) => { ok: boolean; error?: string; category?: Category };
-  updateCategory: (categoryId: string, patch: Partial<Pick<Category, "name">>) => { ok: boolean; error?: string };
+  createCategory: (
+    name: string,
+    extra?: Partial<Pick<Category, "slug" | "parentId" | "description" | "display" | "image">>,
+  ) => { ok: boolean; error?: string; category?: Category };
+  updateCategory: (
+    categoryId: string,
+    patch: Partial<Pick<Category, "name" | "slug" | "parentId" | "description" | "display" | "image">>,
+  ) => { ok: boolean; error?: string };
   archiveCategory: (categoryId: string) => void;
   reactivateCategory: (categoryId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -360,6 +372,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function initializeStore() {
       try {
+        // Always try to restore user session from localStorage first
+        let savedUser: User | null = null;
+        try {
+          const userRaw = localStorage.getItem("dpc-nexus-user");
+          if (userRaw) {
+            savedUser = JSON.parse(userRaw) as User;
+          }
+        } catch {
+          // Ignore user parse errors
+        }
+
         // Check if WooCommerce credentials exist
         let hasWooCommerceCredentials = false;
         try {
@@ -373,17 +396,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (hasWooCommerceCredentials) {
           // Don't load from localStorage - we'll fetch fresh WooCommerce data
           console.log("WooCommerce credentials found, will fetch fresh data");
-          setState((prev) => ({ ...emptyState(), user: prev.user })); // Preserve user session
+          setState((prev) => ({ ...emptyState(), user: savedUser ?? null })); // Restore user session
         } else {
           // Load from localStorage for non-WooCommerce users
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Partial<Snapshot>;
             if (parsed.schemaVersion === SCHEMA_VERSION) {
-              setState((prev) => ({ ...prev, ...parsed }));
+              setState((prev) => ({ ...prev, ...parsed, user: savedUser ?? parsed.user ?? null })); // Prefer saved user
             } else {
               localStorage.removeItem(STORAGE_KEY);
             }
+          } else {
+            setState((prev) => ({ ...prev, user: savedUser ?? null })); // Restore user if no localStorage data
           }
         }
       } catch {
@@ -427,6 +452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             customers: result.customers.length > 0 ? result.customers : prev.customers,
             orders: result.orders.length > 0 ? result.orders : prev.orders,
             inventory: inventoryFromProducts(result.products, prev.inventory),
+            user: prev.user, // Preserve the user session
           }));
           console.log("WooCommerce data loaded successfully");
         }
@@ -554,13 +580,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             error: "Incorrect password for this role. Use the demo password shown below.",
           };
         }
+        try {
+          localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
+        } catch {
+          // Ignore localStorage errors
+        }
         patch((s) => ({ ...s, user: u }));
         return { ok: true };
       },
-      signInWithUser: (u) => patch((s) => ({ ...s, user: u })),
+      signInWithUser: (u) => {
+        try {
+          localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
+        } catch {
+          // Ignore localStorage errors
+        }
+        patch((s) => ({ ...s, user: u }));
+      },
       signOut: () => {
         localStorage.removeItem("dpc-nexus-auth-token");
         localStorage.removeItem("dpc-nexus-wp-credentials");
+        localStorage.removeItem("dpc-nexus-user");
         patch((s) => ({ ...s, user: null }));
       },
       
@@ -863,6 +902,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sku,
           productType: data.productType ?? (data.isService ? "service" : "product"),
           archived: false,
+          stock_quantity: null,
         };
         const onHand = Math.max(0, Math.floor(opts.onHand ?? 0));
         const reorderPoint = Math.max(0, Math.floor(opts.reorderPoint ?? 4));
@@ -897,6 +937,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                         remoteProduct.stock_quantity !== undefined
                           ? Number(remoteProduct.stock_quantity)
                           : i.onHand,
+                      stock_quantity:
+                        remoteProduct.stock_quantity !== undefined
+                          ? remoteProduct.stock_quantity
+                          : null,
                     }
                   : i,
               ),
@@ -921,7 +965,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const syncedProduct: Product = {
           ...existing,
           ...next,
-          stock_quantity: opts.onHand ?? existing.stock_quantity,
+          stock_quantity: opts.onHand !== undefined ? (opts.onHand ?? null) : existing.stock_quantity,
           manage_stock: opts.onHand !== undefined ? true : existing.manage_stock,
         };
         patch((s) => {
@@ -977,6 +1021,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
 
+      updateProductStock: (productId, stockQuantity) => {
+        const existing = productById(productId);
+        if (!existing) return { ok: false, error: "Product not found." };
+        const newStock = Math.max(0, Math.floor(stockQuantity));
+        patch((s) => {
+          const currentStock = invFor(productId)?.onHand ?? 0;
+          const stockDiff = newStock - currentStock;
+          return {
+            ...s,
+            products: s.products.map((p) => (p.id === productId ? { ...p, stock_quantity: newStock } : p)),
+            inventory: s.inventory.map((i) =>
+              i.productId === productId ? { ...i, onHand: newStock } : i,
+            ),
+            movements: [
+              ...s.movements,
+              {
+                id: `mv-${Math.random().toString(36).slice(2, 9)}`,
+                productId,
+                type: "adjusted" as const,
+                qty: stockDiff,
+                at: new Date().toISOString(),
+                actor: s.user?.name ?? "Demo User",
+                note: "Stock level edited inline",
+              },
+            ],
+            auditLogs: log(s, `updated stock for ${productId} to ${newStock}`, productId),
+          };
+        });
+        updateBackendProductStock(productId, newStock)
+          .then((remoteProduct) => {
+            if (!remoteProduct) return;
+            patch((s) => ({
+              ...s,
+              products: s.products.map((p) => (p.id === productId ? { ...p, ...remoteProduct } : p)),
+              inventory: s.inventory.map((i) =>
+                i.productId === productId &&
+                remoteProduct.stock_quantity !== null &&
+                remoteProduct.stock_quantity !== undefined
+                  ? { ...i, onHand: Number(remoteProduct.stock_quantity) }
+                  : i,
+              ),
+            }));
+          })
+          .catch((e) => console.error("Failed to update product stock in backend", e));
+        return { ok: true };
+      },
+
       archiveProduct: (productId) =>
         patch((s) => ({
           ...s,
@@ -999,7 +1090,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `deleted product ${productId}`, productId),
         })),
 
-      createCategory: (name) => {
+      createCategory: (name, extra) => {
         const trimmed = name.trim();
         if (!trimmed) return { ok: false, error: "Category name is required." };
         if (state.categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
@@ -1010,12 +1101,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           name: trimmed,
           archived: false,
           createdAt: new Date().toISOString(),
+          ...extra,
         };
         patch((s) => ({
           ...s,
           categories: [...s.categories, category],
           auditLogs: log(s, `created category ${category.name}`, category.id),
         }));
+
+        // Fire-and-forget background sync — replaces the local id with WooCommerce's once it lands.
+        createBackendCategory({ name: trimmed, ...extra })
+          .then((remote) => {
+            if (!remote) return;
+            patch((s) => ({
+              ...s,
+              categories: s.categories.map((c) => (c.id === category.id ? { ...c, ...remote, id: remote.id } : c)),
+            }));
+          })
+          .catch((e) => console.error("Failed to create category in backend", e));
+
         return { ok: true, category };
       },
 
@@ -1029,9 +1133,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         patch((s) => ({
           ...s,
-          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, name } : c)),
+          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, ...patchData, name } : c)),
           auditLogs: log(s, `renamed category ${existing.name} to ${name}`, categoryId),
         }));
+
+        // Fire-and-forget background sync
+        updateBackendCategory(categoryId, { ...patchData, name })
+          .then((remote) => {
+            if (!remote) return;
+            patch((s) => ({
+              ...s,
+              categories: s.categories.map((c) => (c.id === categoryId ? { ...c, ...remote } : c)),
+            }));
+          })
+          .catch((e) => console.error("Failed to update category in backend", e));
+
         return { ok: true };
       },
 
@@ -1049,7 +1165,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           auditLogs: log(s, `reactivated category ${categoryId}`, categoryId),
         })),
 
-      updateOrderStatus: (orderId, status) =>
+      updateOrderStatus: (orderId, status) => {
         patch((s) => ({
           ...s,
           orders: s.orders.map((o) =>
@@ -1072,9 +1188,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : o,
           ),
           auditLogs: log(s, `set order ${orderId} to ${status}`, orderId),
-        })),
+        }));
 
-      createQuote: ({ customerId, items, discountType = "amount", discountPercentage, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
+        // Fire-and-forget background sync
+        updateBackendOrderStatus(orderId, status).catch((e) =>
+          console.error("Failed to update order status in backend", e),
+        );
+      },
+
+      createQuote: ({ customerId, items, discountType = "amount", discountPercentage = 0, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
         const lines = items.map((i) => {
           const p = productById(i.productId);
           return {
@@ -1123,7 +1245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return quote;
       },
 
-      setQuoteStatus: (quoteId, status) =>
+      setQuoteStatus: (quoteId, status) => {
         patch((s) => ({
           ...s,
           quotes: s.quotes.map((q) => (q.id === quoteId ? { ...q, status } : q)),
@@ -1137,7 +1259,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   kind: "quote",
                 })
               : s.notifications,
-        })),
+        }));
+
+        // Fire-and-forget background sync
+        const updatedQuote = state.quotes.find((q) => q.id === quoteId);
+        if (updatedQuote) {
+          updateBackendQuote(quoteId, { status }).catch(e => console.error("Failed to update quote status in backend", e));
+        }
+      },
 
       updateQuote: (quoteId, edits) => {
         const existing = state.quotes.find((q) => q.id === quoteId);
@@ -1148,8 +1277,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           at: new Date().toISOString(),
           items: existing.items,
           subtotal: existing.subtotal,
-          discountType: existing.discountType,
-          discountPercentage: existing.discountPercentage,
+          discountType: existing.discountType || "amount",
+          discountPercentage: existing.discountPercentage || 0,
           discount: existing.discount,
           serviceTotal: existing.serviceTotal,
           shippingFee: existing.shippingFee ?? 0,
@@ -1159,8 +1288,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           originalRequest: existing.originalRequest,
         };
         const items = edits.items ?? existing.items;
-        const discountType = edits.discountType ?? existing.discountType;
-        const discountPercentage = edits.discountPercentage ?? existing.discountPercentage;
+        const discountType = edits.discountType ?? (existing.discountType || "amount");
+        const discountPercentage = edits.discountPercentage !== undefined ? edits.discountPercentage : existing.discountPercentage || 0;
         const discount = edits.discount ?? existing.discount;
         const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
         const shippingFee = edits.shippingFee ?? existing.shippingFee ?? 0;
@@ -1202,6 +1331,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ),
           auditLogs: log(s, `updated quote ${quoteId} to v${nextVersion}`, quoteId),
         }));
+
+        // Fire-and-forget background sync
+        const updatedQuote = state.quotes.find((q) => q.id === quoteId);
+        if (updatedQuote) {
+          updateBackendQuote(quoteId, {
+            ...updatedQuote,
+            discountPercentage: updatedQuote.discountPercentage || 0,
+          }).catch(e => console.error("Failed to update quote in backend", e));
+        }
       },
 
       duplicateQuote: (quoteId) => {
@@ -1219,6 +1357,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sentAt: undefined,
           orderId: undefined,
           preparedBy: state.user?.name ?? "Demo User",
+          discountPercentage: existing.discountPercentage || 0,
         };
 
         patch((s) => ({
@@ -1231,7 +1370,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return duplicate;
       },
 
-      sendQuote: (quoteId, msg) =>
+      sendQuote: (quoteId, msg) => {
         patch((s) => ({
           ...s,
           quotes: s.quotes.map((q) =>
@@ -1252,7 +1391,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             priority: "normal",
             kind: "quote",
           }),
-        })),
+        }));
+
+        // Fire-and-forget background sync
+        const sentQuote = state.quotes.find((q) => q.id === quoteId);
+        if (sentQuote) {
+          updateBackendQuote(quoteId, sentQuote).catch(e => console.error("Failed to update quote in backend", e));
+        }
+      },
 
       convertQuoteToOrder: (quoteId, downpayment) => {
         const quote = state.quotes.find((q) => q.id === quoteId);
@@ -1500,6 +1646,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           customerName: build.customerName,
           status: "draft",
           items: lines,
+          discountType: "amount",
+          discountPercentage: 0,
           discount: 0,
           serviceTotal,
           shippingFee: 0,

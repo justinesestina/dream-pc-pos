@@ -1,9 +1,17 @@
 {
   "buildCommand": "npm run build",
-  "env": {
-    "NITRO_PRESET": "vercel",
-    "NITRO_PRERENDER": "false"
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
   },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

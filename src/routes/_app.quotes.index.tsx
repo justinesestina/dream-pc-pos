@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, EmptyState, Mono } from "@/components/nexus/primitives";
@@ -37,7 +37,7 @@ const QUOTE_STATUSES: QuoteStatus[] = [
 ];
 
 function QuotesIndexPage() {
-  const { quotes } = useStore();
+  const { quotes, createQuote } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
@@ -45,6 +45,7 @@ function QuotesIndexPage() {
   const [expiringOnly, setExpiringOnly] = useState(false);
   const [editorId, setEditorId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   const editorQuote = quotes.find((qt) => qt.id === editorId);
 
@@ -138,7 +139,27 @@ function QuotesIndexPage() {
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <PageHeader title="Quotes" description="Quotations, validity windows and conversion to orders." />
+      <PageHeader 
+        title="Quotes" 
+        description="Quotations, validity windows and conversion to orders."
+        actions={
+          <Button size="sm" onClick={() => {
+            setIsCreatingNew(true);
+            const newQuote = createQuote({
+              customerId: null,
+              items: [],
+              discount: 0,
+              serviceTotal: 0,
+              shippingFee: 0,
+              expiresInDays: 14,
+            });
+            setEditorId(newQuote.id);
+            setEditorOpen(true);
+          }}>
+            <Plus className="size-4 mr-2" /> New Quote
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open quotes" numericValue={stats.open} format={(n) => Math.round(n).toString()} accent="info" />

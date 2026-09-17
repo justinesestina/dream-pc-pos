@@ -9,7 +9,9 @@ import type { User, Product, Order, Quote, Category, Customer } from "./types";
 /** Base URL of the backend API. Defaults to localhost:8787 in dev. */
 const API_BASE =
   (import.meta.env?.["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/+$/, "") ||
-  "http://localhost:8787";
+  (typeof window !== "undefined" && window.location.hostname === "dpcmain.dreampcbuild.com"
+    ? "https://backend-shard55.vercel.app"
+    : "http://localhost:8787");
 
 let backendPausedUntil = 0;
 let backendPauseReason: string | null = null;
@@ -72,7 +74,8 @@ async function apiRequest<T>(
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : null,
+      redirect: "follow", // Follow redirects
     });
     
     let json: any = null;
@@ -90,6 +93,7 @@ async function apiRequest<T>(
     return { ok: true, data: json?.data };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
+    console.error("API request failed:", err);
     pauseBackend(`Could not reach backend. Is it running? (${message})`);
     return {
       ok: false,
@@ -118,10 +122,11 @@ export async function loginToBackend(username: string, appPassword: string): Pro
   if (res.ok && res.data) {
     localStorage.setItem("dpc-nexus-auth-token", res.data.token);
     localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username, appPassword }));
+    localStorage.setItem("dpc-nexus-user", JSON.stringify(res.data.user));
     return { ok: true, user: res.data.user, token: res.data.token };
   }
   
-  return { ok: false, error: res.error };
+  return { ok: false, error: res.error || "Login failed" };
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +154,11 @@ export async function updateBackendProduct(id: string, product: Partial<Product>
   return res.ok ? (res.data || null) : null;
 }
 
+export async function updateBackendProductStock(id: string, stockQuantity: number): Promise<Product | null> {
+  const res = await apiRequest<Product>(`/api/v1/products/${id}/stock`, "PUT", { stock_quantity: stockQuantity });
+  return res.ok ? (res.data || null) : null;
+}
+
 export async function deleteBackendProduct(id: string): Promise<boolean> {
   const res = await apiRequest(`/api/v1/products/${id}`, "DELETE");
   return res.ok;
@@ -157,6 +167,21 @@ export async function deleteBackendProduct(id: string): Promise<boolean> {
 export async function fetchBackendCategories(): Promise<Category[]> {
   const res = await apiRequest<Category[]>("/api/v1/categories");
   return res.ok && res.data ? res.data : [];
+}
+
+export async function createBackendCategory(category: Partial<Category>): Promise<Category | null> {
+  const res = await apiRequest<Category>("/api/v1/categories", "POST", category);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendCategory(id: string, category: Partial<Category>): Promise<Category | null> {
+  const res = await apiRequest<Category>(`/api/v1/categories/${id}`, "PUT", category);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function deleteBackendCategory(id: string): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/categories/${id}`, "DELETE");
+  return res.ok;
 }
 
 export async function fetchBackendCustomers(): Promise<Customer[]> {
@@ -174,6 +199,11 @@ export async function createBackendOrder(order: Partial<Order>): Promise<Order |
   return res.ok ? (res.data || null) : null;
 }
 
+export async function updateBackendOrderStatus(id: string, status: Order["status"]): Promise<Order | null> {
+  const res = await apiRequest<Order>(`/api/v1/orders/${id}`, "PUT", { status });
+  return res.ok ? (res.data || null) : null;
+}
+
 export async function fetchBackendQuotes(): Promise<Quote[]> {
   const res = await apiRequest<Quote[]>("/api/v1/quotes");
   return res.ok && res.data ? res.data : [];
@@ -181,6 +211,11 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
 
 export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>("/api/v1/quotes", "POST", quote);
+  return res.ok ? (res.data || null) : null;
+}
+
+export async function updateBackendQuote(id: string, quote: Partial<Quote>): Promise<Quote | null> {
+  const res = await apiRequest<Quote>(`/api/v1/quotes/${id}`, "PUT", quote);
   return res.ok ? (res.data || null) : null;
 }
 
@@ -226,8 +261,8 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
 
   const wpCreds = getWpCredentials();
   if (wpCreds) {
-    body.username = wpCreds.username;
-    body.appPassword = wpCreds.appPassword;
+    body['username'] = wpCreds.username;
+    body['appPassword'] = wpCreds.appPassword;
   }
 
   const res = await apiRequest<{ url: string; mediaId: string }>("/api/v1/media", "POST", body);
@@ -236,5 +271,5 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
     return { ok: true, url: res.data.url, mediaId: res.data.mediaId };
   }
   
-  return { ok: false, error: res.error };
+  return { ok: false, error: res.error || "Upload failed" };
 }

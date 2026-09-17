@@ -10,6 +10,7 @@
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 import { config, wpConfigured, mediaConfigured } from "./config.js";
 import { ApiError, ok } from "./lib/errors.js";
 import { authRoutes } from "./routes/auth.js";
@@ -37,18 +38,41 @@ import { notificationsRoutes } from "./routes/notifications.js";
 
 export const app = new Hono();
 
+// Add logging for debugging
+app.use("*", logger());
+
 app.use(
   "*",
   cors({
-    origin: (origin) => origin || "*",
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowHeaders: ["Authorization", "Content-Type"],
+    origin: "*", // Allow all origins for now to fix CORS
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
     exposeHeaders: ["Content-Length"],
+    credentials: true,
     maxAge: 86400,
   }),
 );
 
-app.options("*", (c) => c.body(null, 204));
+// Handle OPTIONS requests explicitly for CORS preflight
+app.options("*", (c) => {
+  return c.body(null, 204);
+});
+
+// Root route to prevent 404 errors
+app.get("/", (c) => {
+  return c.json({
+    status: "ok",
+    message: "DPC Nexus API Backend",
+    version: "1.0.0",
+    endpoints: {
+      health: "/api/v1/health",
+      auth: "/api/v1/auth/login",
+      products: "/api/v1/products",
+      quotes: "/api/v1/quotes",
+      orders: "/api/v1/orders",
+    },
+  });
+});
 
 app.get("/api/v1/health", (c) => {
   return c.json({

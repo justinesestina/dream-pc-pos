@@ -7,10 +7,13 @@ import { Toolbar, SearchInput, FilterSelect, Segmented, ResultCount } from "@/co
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Check } from "lucide-react";
 import { useStore, useSimulatedLoad } from "@/lib/store";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { CategoryFormDialog } from "@/components/products/category-form-dialog";
 import { money, num } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Category, Product } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/products/")({
@@ -37,8 +40,70 @@ function stockStatus(onHand: number, reorderPoint: number): "in_stock" | "low_st
   return "in_stock";
 }
 
+/**
+ * Always-on inline numeric editor: input + save icon stay mounted in every
+ * row state, so the cell's width never changes and the table never reflows.
+ * The save icon only lights up (and becomes clickable) once the value differs
+ * from what's saved.
+ */
+function InlineNumberField({
+  value,
+  onSave,
+  step = 1,
+  width = "w-20",
+}: {
+  value: number;
+  onSave: (next: number) => void;
+  step?: number;
+  width?: string;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const parsed = Number(draft);
+  const dirty = draft.trim() !== "" && Number.isFinite(parsed) && parsed >= 0 && parsed !== value;
+
+  const save = () => {
+    if (!dirty) return;
+    onSave(parsed);
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <Input
+        type="number"
+        min="0"
+        step={step}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          else if (e.key === "Escape") setDraft(String(value));
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={cn("h-7 text-xs text-right", width)}
+      />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7 shrink-0"
+        disabled={!dirty}
+        onClick={(e) => {
+          e.stopPropagation();
+          save();
+        }}
+      >
+        <Check className={cn("size-3.5", dirty ? "text-green-500" : "text-muted-foreground/30")} />
+      </Button>
+    </div>
+  );
+}
+
 function ProductsIndexPage() {
-  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct } = useStore();
+  const { products, categories, invFor, categoryNameOf, archiveCategory, reactivateCategory, reactivateProduct, updateProduct, updateProductStock } = useStore();
   const loading = useSimulatedLoad();
   const navigate = useNavigate();
   const { openNew } = Route.useSearch();
@@ -145,41 +210,98 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => <span className="mono tabular-nums">{money(p.price)}</span>,
+      cell: (p) => (
+        <InlineNumberField
+          value={p.price}
+          step={0.01}
+          width="w-24"
+          onSave={(next) => updateProduct(p.id, { price: next })}
+        />
+      ),
       sortValue: (p) => p.price,
-      align: "right",
+      align: "center",
+      className: "min-w-[10rem]",
     },
     {
       key: "margin",
       header: "Cost / Margin",
       cell: (p) => {
         const margin = p.price > 0 ? ((p.price - p.cost) / p.price) * 100 : 0;
+        const applyMargin = (m: number) => {
+          // Margin is on selling price: margin = (price - cost) / price.
+          // Editing the margin % re-derives the price from the cost.
+          const clamped = Math.max(0, Math.min(m, 99.9));
+          if (p.cost > 0 && clamped <= 99.8) {
+            const price = clamped <= 0 ? p.cost : p.cost / (1 - clamped / 100);
+            updateProduct(p.id, { price: Math.round(price * 100) / 100 });
+          }
+        };
         return (
-          <div className="text-right">
-            <p className="mono text-xs tabular-nums text-muted-foreground">{money(p.cost)}</p>
-            <p className="mono text-[11px] tabular-nums text-subtle">{margin.toFixed(1)}%</p>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1">
+              <span className="mono text-[11px] text-subtle">₱</span>
+              <InlineNumberField
+                value={p.cost}
+                step={0.01}
+                width="w-24"
+                onSave={(next) => updateProduct(p.id, { cost: next })}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="mono text-[11px] text-subtle">%</span>
+              <InlineNumberField
+                value={Math.round(margin * 10) / 10}
+                step={0.1}
+                width="w-24"
+                onSave={applyMargin}
+              />
+            </div>
           </div>
         );
       },
       sortValue: (p) => (p.price > 0 ? (p.price - p.cost) / p.price : 0),
-      align: "right",
+      align: "center",
+      className: "min-w-[11rem]",
     },
     {
-      key: "onhand",
-      header: "On hand",
+      key: "status",
+      header: "Status",
       cell: (p) => {
         const inv = invFor(p.id);
-        const onHand = inv?.onHand ?? 0;
-        const status = stockStatus(onHand, inv?.reorderPoint ?? 0);
+        const status = stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
         return (
-          <div className="flex items-center justify-end gap-2">
-            <span className="mono tabular-nums">{onHand === Infinity ? "∞" : num(onHand)}</span>
-            {status !== "in_stock" && <StatusBadge status={status} />}
+          <div className="flex justify-center">
+            <StatusBadge status={status} />
           </div>
         );
       },
+      sortValue: (p) => {
+        const inv = invFor(p.id);
+        return stockStatus(inv?.onHand ?? 0, inv?.reorderPoint ?? 0);
+      },
+      align: "center",
+      className: "w-28",
+    },
+    {
+      key: "stock",
+      header: "Stock",
+      cell: (p) => {
+        const inv = invFor(p.id);
+        const onHand = inv?.onHand ?? 0;
+        if (onHand === Infinity) {
+          return <div className="mono text-right tabular-nums">∞</div>;
+        }
+        return (
+          <InlineNumberField
+            value={onHand}
+            width="w-20"
+            onSave={(next) => updateProductStock(p.id, next)}
+          />
+        );
+      },
       sortValue: (p) => invFor(p.id)?.onHand ?? 0,
-      align: "right",
+      align: "center",
+      className: "min-w-[10rem]",
     },
     {
       key: "location",
@@ -246,7 +368,7 @@ function ProductsIndexPage() {
     {
       key: "price",
       header: "Price",
-      cell: (p) => <span className="mono tabular-nums">{money(p.price)}</span>,
+      cell: (p) => <div className="mono text-right tabular-nums text-muted-foreground">{money(p.price)}</div>,
       sortValue: (p) => p.price,
       align: "right",
     },
@@ -419,7 +541,7 @@ function ProductsIndexPage() {
                               setCatDialog({ open: true, category: c });
                             }}
                           >
-                            Rename
+                            Edit
                           </Button>
                           <Button
                             variant="ghost"

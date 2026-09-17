@@ -10,7 +10,7 @@ export interface Column<T> {
   cell: (row: T) => ReactNode;
   sortValue?: (row: T) => string | number;
   className?: string;
-  align?: "left" | "right";
+  align?: "left" | "center" | "right";
 }
 
 export function DataTable<T extends { id: string }>({
@@ -74,7 +74,7 @@ export function DataTable<T extends { id: string }>({
                     scope="col"
                     className={cn(
                       "label-tech px-4 py-2.5 font-normal whitespace-nowrap",
-                      c.align === "right" && "text-right",
+                      c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "",
                       c.className,
                     )}
                   >
@@ -134,7 +134,7 @@ export function DataTable<T extends { id: string }>({
                     className={cn(
                       "px-4 align-middle",
                       dense ? "py-2" : "py-2.5",
-                      c.align === "right" && "text-right",
+                      c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "",
                       c.className,
                     )}
                   >
