@@ -32,6 +32,7 @@ import { Route as AppOrdersIndexRouteImport } from './routes/_app.orders.index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app.orders.$orderId'
 import { Route as AppProductsIndexRouteImport } from './routes/_app.products.index'
 import { Route as AppProductsProductIdRouteImport } from './routes/_app.products.$productId'
+import { Route as AppProjectsIndexRouteImport } from './routes/_app.projects.index'
 import { Route as AppPurchasingIndexRouteImport } from './routes/_app.purchasing.index'
 import { Route as AppPurchasingPoIdRouteImport } from './routes/_app.purchasing.$poId'
 import { Route as AppQuotesIndexRouteImport } from './routes/_app.quotes.index'
@@ -168,6 +169,11 @@ const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
 const AppProductsProductIdRoute = AppProductsProductIdRouteImport.update({
   id: '/products/$productId',
   path: '/products/$productId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProjectsIndexRoute = AppProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPurchasingIndexRoute = AppPurchasingIndexRouteImport.update({
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/inventory/': typeof AppInventoryIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
   '/products/': typeof AppProductsIndexRoute
+  '/projects/': typeof AppProjectsIndexRoute
   '/purchasing/': typeof AppPurchasingIndexRoute
   '/quotes/': typeof AppQuotesIndexRoute
   '/receiving/': typeof AppReceivingIndexRoute
@@ -368,6 +375,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof AppInventoryIndexRoute
   '/orders': typeof AppOrdersIndexRoute
   '/products': typeof AppProductsIndexRoute
+  '/projects': typeof AppProjectsIndexRoute
   '/purchasing': typeof AppPurchasingIndexRoute
   '/quotes': typeof AppQuotesIndexRoute
   '/receiving': typeof AppReceivingIndexRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
+  '/_app/projects/': typeof AppProjectsIndexRoute
   '/_app/purchasing/': typeof AppPurchasingIndexRoute
   '/_app/quotes/': typeof AppQuotesIndexRoute
   '/_app/receiving/': typeof AppReceivingIndexRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/inventory/'
     | '/orders/'
     | '/products/'
+    | '/projects/'
     | '/purchasing/'
     | '/quotes/'
     | '/receiving/'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/orders'
     | '/products'
+    | '/projects'
     | '/purchasing'
     | '/quotes'
     | '/receiving'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/_app/inventory/'
     | '/_app/orders/'
     | '/_app/products/'
+    | '/_app/projects/'
     | '/_app/purchasing/'
     | '/_app/quotes/'
     | '/_app/receiving/'
@@ -742,6 +754,13 @@ declare module '@tanstack/react-router' {
       path: '/products/$productId'
       fullPath: '/products/$productId'
       preLoaderRoute: typeof AppProductsProductIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/projects/': {
+      id: '/_app/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AppProjectsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/purchasing/': {
@@ -940,6 +959,7 @@ interface AppRouteChildren {
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
+  AppProjectsIndexRoute: typeof AppProjectsIndexRoute
   AppPurchasingIndexRoute: typeof AppPurchasingIndexRoute
   AppQuotesIndexRoute: typeof AppQuotesIndexRoute
   AppReceivingIndexRoute: typeof AppReceivingIndexRoute
@@ -987,6 +1007,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
+  AppProjectsIndexRoute: AppProjectsIndexRoute,
   AppPurchasingIndexRoute: AppPurchasingIndexRoute,
   AppQuotesIndexRoute: AppQuotesIndexRoute,
   AppReceivingIndexRoute: AppReceivingIndexRoute,

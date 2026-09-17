@@ -58,11 +58,13 @@ function SoonTag() {
 function Flyout({
   items,
   pathname,
+  search,
   nested,
 }: {
   items: NavItem[];
   pathname: string;
   nested?: boolean;
+  search: Record<string, unknown>;
 }) {
   const body = items.map((child) => {
     if (child.children?.length) {
@@ -71,7 +73,7 @@ function Flyout({
           <DropdownMenuSubTrigger className="gap-2 py-1.5 pr-1 text-[13px]">
             <span className="flex-1 truncate">{child.label}</span>
           </DropdownMenuSubTrigger>
-          <Flyout items={child.children} pathname={pathname} nested />
+          <Flyout items={child.children} pathname={pathname} search={search} nested />
         </DropdownMenuSub>
       );
     }
@@ -83,7 +85,7 @@ function Flyout({
         </DropdownMenuItem>
       );
     }
-    const active = child.to ? isNavActive(child, pathname) : false;
+    const active = child.to ? isNavActive(child, pathname, search) : false;
     return (
       <DropdownMenuItem
         asChild
@@ -115,12 +117,14 @@ function Flyout({
 export function AppSidebar() {
   const store = useStore();
   const collapsed = store.sidebarCollapsed;
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const pathname = location.pathname;
+  const search = location.search as Record<string, unknown>;
   const role = store.user?.role ?? "owner";
   const { isCollapsed, setCollapsed, toggle } = useNavSections();
 
   // Auto-expand the section that contains the active page.
-  const activeSection = navGroups.find((g) => g.items.some((i) => isNavActive(i, pathname)))?.label;
+  const activeSection = navGroups.find((g) => g.items.some((i) => isNavActive(i, pathname, search)))?.label;
   useEffect(() => {
     if (activeSection) setCollapsed(activeSection, false);
   }, [activeSection, setCollapsed]);
@@ -212,7 +216,7 @@ export function AppSidebar() {
                 <div className="overflow-hidden">
                   <ul className="space-y-0.5">
                     {items.map((item) => {
-                      const active = isNavActive(item, pathname);
+                      const active = isNavActive(item, pathname, search);
 
                       if (item.children?.length) {
                         const content = (

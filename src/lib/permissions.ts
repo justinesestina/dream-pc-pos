@@ -138,6 +138,7 @@ const PATH_CAPS: Array<[RegExp, Capability]> = [
   [/^\/suppliers/, "purchasing"],
   [/^\/receiving/, "receiving"],
   [/^\/customers/, "customers"],
+  [/^\/projects/, "settings"],
   [/^\/services/, "services"],
   [/^\/warranty/, "warranty"],
   [/^\/releases/, "releases"],
