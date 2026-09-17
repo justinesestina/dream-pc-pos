@@ -47,7 +47,7 @@ import type { Warehouse, WarehouseType } from "@/lib/types";
 
 const WAREHOUSE_TYPES: WarehouseType[] = ["main", "branch", "storage", "service"];
 
-export function WarehousesPage() {
+export function WarehousesPage({ openNew }: { openNew?: boolean }) {
   const [rows, setRows] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -85,6 +85,23 @@ export function WarehousesPage() {
       })
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+    if (openNew) {
+      setEditing(null);
+      setName("");
+      setCode("");
+      setType("branch");
+      setManager("");
+      setPhone("");
+      setAddress("");
+      setCapacity("");
+      setIsDefault(false);
+      setStatus("active");
+      setNotes("");
+      setDialogOpen(true);
+    }
+  }, [openNew]);
 
   const openAdd = () => {
     setEditing(null);

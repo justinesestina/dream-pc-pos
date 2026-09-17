@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { WarehousesPage } from "@/components/catalog/warehouses-page";
 
 export const Route = createFileRoute("/_app/warehouses/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    openNew: search["new"] === "1" || search["new"] === true,
+  }),
   head: () => ({
     meta: [
       { title: "Warehouses — DPC Nexus" },
@@ -14,5 +17,6 @@ export const Route = createFileRoute("/_app/warehouses/")({
 });
 
 function WarehousesIndexPage() {
-  return <WarehousesPage />;
+  const { openNew } = Route.useSearch();
+  return <WarehousesPage openNew={openNew} />;
 }
