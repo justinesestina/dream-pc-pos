@@ -31,6 +31,8 @@ interface PaletteEntry {
   label: string;
   route: string;
   icon: LucideIcon;
+  /** Not built yet — listed for discoverability but not navigable. */
+  soon?: boolean;
 }
 
 /** Flatten the sidebar nav into searchable entries, keeping group + icon. */
@@ -38,8 +40,12 @@ function collectNav(role: Role): PaletteEntry[] {
   const out: PaletteEntry[] = [];
   const walk = (items: NavItem[], group: string, inherited?: LucideIcon) => {
     for (const item of items) {
-      if (item.soon || !can(role, item.cap)) continue;
+      if (!can(role, item.cap)) continue;
       const icon = item.icon ?? inherited ?? SearchIcon;
+      if (item.soon) {
+        out.push({ group, label: item.label, route: "", icon, soon: true });
+        continue;
+      }
       if (item.to && !item.children?.length) {
         const qs = item.search
           ? `?${new URLSearchParams(item.search as Record<string, string>).toString()}`
@@ -274,10 +280,18 @@ export function CommandPalette({
               <CommandItem
                 key={`${group}:${entry.label}:${entry.route}`}
                 value={`${group} ${entry.label}`}
-                onSelect={() => go(entry.route)}
+                disabled={Boolean(entry.soon)}
+                onSelect={() => {
+                  if (!entry.soon) go(entry.route);
+                }}
               >
                 <entry.icon className="size-4" />
-                {entry.label}
+                <span className="flex-1">{entry.label}</span>
+                {entry.soon && (
+                  <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Soon
+                  </span>
+                )}
               </CommandItem>
             ))}
           </CommandGroup>
