@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Bell, ChevronDown, Command, Menu, Search, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { NexusWordmark } from "@/components/brand/nexus-logo";
 import { navGroups, flattenNav, isNavActive, type NavItem } from "./nav-config";
 import { UserMenu } from "./app-sidebar";
+import { useNavSections } from "./nav-sections";
 import { useStore } from "@/lib/store";
 import { can } from "@/lib/permissions";
 import { relative } from "@/lib/format";
@@ -134,6 +135,13 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { title, detail, rootTo } = useCrumbs();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileNav, setMobileNav] = useState(false);
+  const { isCollapsed, setCollapsed, toggle } = useNavSections();
+
+  // Auto-expand the section that contains the active page.
+  const activeSection = navGroups.find((g) => g.items.some((i) => isNavActive(i, pathname)))?.label;
+  useEffect(() => {
+    if (activeSection) setCollapsed(activeSection, false);
+  }, [activeSection, setCollapsed]);
   const unread = store.notifications.filter((n) => !n.read).length;
   const role = store.user?.role ?? "owner";
 
@@ -154,19 +162,42 @@ export function AppTopbar({ onOpenPalette }: { onOpenPalette: () => void }) {
             {navGroups.map((g) => {
               const items = g.items.filter((i) => can(role, i.cap));
               if (!items.length) return null;
+              const open = !isCollapsed(g.label);
               return (
                 <div key={g.label} className="mb-4">
-                  <p className="label-tech px-2 pb-1.5">{g.label}</p>
-                  <ul className="space-y-0.5">
-                    {items.map((item) => (
-                      <MobileNavItem
-                        key={item.label}
-                        item={item}
-                        pathname={pathname}
-                        onNavigate={() => setMobileNav(false)}
-                      />
-                    ))}
-                  </ul>
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => toggle(g.label)}
+                    className="label-tech flex w-full items-center justify-between gap-1 px-2 pt-0.5 pb-1.5 text-left transition-colors hover:text-foreground"
+                  >
+                    <span>{g.label}</span>
+                    <ChevronDown
+                      className={cn(
+                        "size-3.5 opacity-60 transition-transform duration-200",
+                        open && "rotate-180",
+                      )}
+                    />
+                  </button>
+                  <div
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-300 ease-out",
+                      open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <ul className="space-y-0.5">
+                        {items.map((item) => (
+                          <MobileNavItem
+                            key={item.label}
+                            item={item}
+                            pathname={pathname}
+                            onNavigate={() => setMobileNav(false)}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               );
             })}

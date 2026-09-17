@@ -1,5 +1,13 @@
+import { useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronRight, ChevronsLeft, ChevronsRight, LogOut, Settings } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NexusWordmark } from "@/components/brand/nexus-logo";
 import { navGroups, isNavActive, type NavItem } from "./nav-config";
+import { useNavSections } from "./nav-sections";
 import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
 
@@ -108,6 +117,13 @@ export function AppSidebar() {
   const collapsed = store.sidebarCollapsed;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const role = store.user?.role ?? "owner";
+  const { isCollapsed, setCollapsed, toggle } = useNavSections();
+
+  // Auto-expand the section that contains the active page.
+  const activeSection = navGroups.find((g) => g.items.some((i) => isNavActive(i, pathname)))?.label;
+  useEffect(() => {
+    if (activeSection) setCollapsed(activeSection, false);
+  }, [activeSection, setCollapsed]);
 
   return (
     <aside
@@ -167,113 +183,145 @@ export function AppSidebar() {
         {navGroups.map((group) => {
           const items = group.items.filter((i) => can(role, i.cap));
           if (items.length === 0) return null;
+          const open = collapsed ? true : !isCollapsed(group.label);
           return (
             <div key={group.label} className="mb-4">
-              {!collapsed && <p className="label-tech px-2 pb-1.5">{group.label}</p>}
-              <ul className="space-y-0.5">
-                {items.map((item) => {
-                  const active = isNavActive(item, pathname);
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => toggle(group.label)}
+                className={cn(
+                  "label-tech flex w-full items-center justify-between gap-1 px-2 pt-0.5 pb-1.5 transition-colors hover:text-foreground",
+                  collapsed ? "hidden" : "",
+                )}
+              >
+                <span>{group.label}</span>
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 opacity-60 transition-transform duration-200",
+                    open && "rotate-180",
+                  )}
+                />
+              </button>
+              <div
+                className={cn(
+                  "grid transition-[grid-template-rows] duration-300 ease-out",
+                  open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                )}
+              >
+                <div className="overflow-hidden">
+                  <ul className="space-y-0.5">
+                    {items.map((item) => {
+                      const active = isNavActive(item, pathname);
 
-                  if (item.children?.length) {
-                    const content = (
-                      <>
-                        <ActiveBar active={active} />
-                        {item.icon && <item.icon className="size-4 shrink-0" />}
-                        {!collapsed && (
-                          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
-                        )}
-                        {!collapsed && <ChevronRight className="size-3.5 shrink-0 opacity-60" />}
-                      </>
-                    );
-                    return (
-                      <li key={item.label}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            {item.to ? (
-                              <Link
-                                to={item.to}
-                                search={item.search as never}
-                                aria-current={active ? "page" : undefined}
-                                className={rowCls(active, collapsed)}
-                              >
-                                {content}
-                              </Link>
-                            ) : (
-                              <button
-                                type="button"
-                                aria-haspopup="menu"
-                                aria-current={active ? "page" : undefined}
-                                className={cn(rowCls(active, collapsed), "w-full")}
-                              >
-                                {content}
-                              </button>
-                            )}
-                          </DropdownMenuTrigger>
-                          <Flyout items={item.children} pathname={pathname} />
-                        </DropdownMenu>
-                      </li>
-                    );
-                  }
-
-                  if (item.soon) {
-                    const row = (
-                      <div
-                        aria-disabled
-                        className={cn(
-                          rowCls(active, collapsed),
-                          "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
-                        )}
-                      >
-                        <ActiveBar active={false} />
-                        {item.icon && <item.icon className="size-4 shrink-0" />}
-                        {!collapsed && (
+                      if (item.children?.length) {
+                        const content = (
                           <>
-                            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
-                            <SoonTag />
+                            <ActiveBar active={active} />
+                            {item.icon && <item.icon className="size-4 shrink-0" />}
+                            {!collapsed && (
+                              <span className="min-w-0 flex-1 truncate text-left">
+                                {item.label}
+                              </span>
+                            )}
+                            {!collapsed && (
+                              <ChevronRight className="size-3.5 shrink-0 opacity-60" />
+                            )}
                           </>
-                        )}
-                      </div>
-                    );
-                    return (
-                      <li key={item.label}>
-                        {collapsed ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>{row}</TooltipTrigger>
-                            <TooltipContent side="right">{item.label}</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          row
-                        )}
-                      </li>
-                    );
-                  }
+                        );
+                        return (
+                          <li key={item.label}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                {item.to ? (
+                                  <Link
+                                    to={item.to}
+                                    search={item.search as never}
+                                    aria-current={active ? "page" : undefined}
+                                    className={rowCls(active, collapsed)}
+                                  >
+                                    {content}
+                                  </Link>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    aria-haspopup="menu"
+                                    aria-current={active ? "page" : undefined}
+                                    className={cn(rowCls(active, collapsed), "w-full")}
+                                  >
+                                    {content}
+                                  </button>
+                                )}
+                              </DropdownMenuTrigger>
+                              <Flyout items={item.children} pathname={pathname} />
+                            </DropdownMenu>
+                          </li>
+                        );
+                      }
 
-                  const link = (
-                    <Link
-                      to={item.to ?? ""}
-                      search={item.search as never}
-                      className={rowCls(active, collapsed)}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <ActiveBar active={active} />
-                      {item.icon && <item.icon className="size-4 shrink-0" />}
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  );
-                  return (
-                    <li key={item.to ?? item.label}>
-                      {collapsed ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>{link}</TooltipTrigger>
-                          <TooltipContent side="right">{item.label}</TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        link
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+                      if (item.soon) {
+                        const row = (
+                          <div
+                            aria-disabled
+                            className={cn(
+                              rowCls(active, collapsed),
+                              "cursor-default opacity-60 hover:bg-transparent hover:text-muted-foreground",
+                            )}
+                          >
+                            <ActiveBar active={false} />
+                            {item.icon && <item.icon className="size-4 shrink-0" />}
+                            {!collapsed && (
+                              <>
+                                <span className="min-w-0 flex-1 truncate text-left">
+                                  {item.label}
+                                </span>
+                                <SoonTag />
+                              </>
+                            )}
+                          </div>
+                        );
+                        return (
+                          <li key={item.label}>
+                            {collapsed ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>{row}</TooltipTrigger>
+                                <TooltipContent side="right">{item.label}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              row
+                            )}
+                          </li>
+                        );
+                      }
+
+                      const link = (
+                        <Link
+                          to={item.to ?? ""}
+                          search={item.search as never}
+                          className={rowCls(active, collapsed)}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <ActiveBar active={active} />
+                          {item.icon && <item.icon className="size-4 shrink-0" />}
+                          {!collapsed && <span className="truncate">{item.label}</span>}
+                        </Link>
+                      );
+                      return (
+                        <li key={item.to ?? item.label}>
+                          {collapsed ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>{link}</TooltipTrigger>
+                              <TooltipContent side="right">{item.label}</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            link
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
             </div>
           );
         })}
