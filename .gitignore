@@ -21,6 +21,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# WordPress plugin deploy artifacts
+wordpress-plugin/**/*.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

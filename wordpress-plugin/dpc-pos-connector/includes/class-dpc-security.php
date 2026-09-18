@@ -190,7 +190,14 @@ class DPC_POS_Security {
 	 */
 	private static function write_cookie( $name, $value, $expires ) {
 		$secure = apply_filters( 'dpc_pos_cookie_secure', is_ssl() || 'production' === wp_get_environment_type() );
-		$samesite = apply_filters( 'dpc_pos_cookie_samesite', self::get_setting( 'cookie_samesite', 'Lax' ) );
+
+		$configured = self::get_setting( 'cookie_samesite', '' );
+		if ( ! is_string( $configured ) || '' === $configured ) {
+			// When the frontend app is on a different host, the cookie must be
+			// SameSite=None; Secure or the browser will not send it cross-site.
+			$configured = self::is_cross_site() ? 'None' : 'Lax';
+		}
+		$samesite = apply_filters( 'dpc_pos_cookie_samesite', $configured );
 		if ( ! in_array( $samesite, array( 'Lax', 'Strict', 'None' ), true ) ) {
 			$samesite = 'Lax';
 		}
@@ -209,6 +216,17 @@ class DPC_POS_Security {
 				'samesite' => $samesite,
 			)
 		);
+	}
+
+	/**
+	 * True when the configured app origin is on a different host than WordPress.
+	 *
+	 * @return bool
+	 */
+	private static function is_cross_site() {
+		$app_host  = wp_parse_url( (string) DPC_POS_Integrations::app_url(), PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		return $app_host && $site_host && $app_host !== $site_host;
 	}
 
 	/**

@@ -4,7 +4,7 @@ Tags: pos, woocommerce, rbac, sso, api
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: Proprietary
 
 Secure backend/API connector between the DPC POS interface and WordPress + WooCommerce.
@@ -44,6 +44,11 @@ No. It adds a separate credential store for DPC POS users. WordPress Admin SSO
 is a one-time, short-lived handoff that signs the linked WordPress user in.
 
 == Changelog ==
+
+= 0.2.0 =
+* Auto-select `SameSite=None; Secure` for the session cookie when the app
+  origin is on a different host than WordPress.
+* Full documentation (README, API reference, schema guide).
 
 = 0.1.0 =
 * Initial Phase 0 foundation: schema, RBAC, sessions, audit/activity, SSO,
