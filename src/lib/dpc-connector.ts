@@ -183,7 +183,10 @@ async function dpcFetch<T>(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
-    return { ok: false, error: `Could not reach the DPC connector (${message}).` };
+    return {
+      ok: false,
+      error: `Could not reach the DPC connector (${message}). If you're on a dev origin, add it under DPC POS → Application → Additional allowed origins.`,
+    };
   }
 
   let json: unknown = null;
@@ -213,7 +216,9 @@ export async function dpcLogin(username: string, password: string): Promise<DpcL
     return { ok: true, user: dpcUserToUser(res.data.user) };
   }
   const result: DpcLoginResult = { ok: false };
-  if (res.error !== undefined) result.error = res.error;
+  result.error = res.ok
+    ? "The DPC connector returned an unexpected response."
+    : (res.error ?? "DPC connector sign in failed.");
   if (res.status !== undefined) result.status = res.status;
   return result;
 }

@@ -160,6 +160,9 @@ export async function loginToBackend(username: string, appPassword: string): Pro
       }
       return { ok: true, user: dpc.user };
     }
+    // Connector enabled: surface its error instead of silently retrying the
+    // legacy WordPress app-password flow, which would hide CORS/session issues.
+    return { ok: false, error: dpc.error ?? "DPC connector sign in failed." };
   }
 
   const res = await apiRequest<{ token: string; user: User }>(
