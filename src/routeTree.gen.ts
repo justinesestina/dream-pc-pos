@@ -19,6 +19,10 @@ import { Route as AppPosRouteImport } from './routes/_app.pos'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppSerialsRouteImport } from './routes/_app.serials'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppAdminActivityRouteImport } from './routes/_app.admin.activity'
+import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
+import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes.index'
 import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
@@ -104,6 +108,26 @@ const AppSerialsRoute = AppSerialsRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminActivityRoute = AppAdminActivityRouteImport.update({
+  id: '/admin/activity',
+  path: '/admin/activity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
+  id: '/admin/audit',
+  path: '/admin/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAttributesIndexRoute = AppAttributesIndexRouteImport.update({
@@ -304,6 +328,10 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
+  '/admin/activity': typeof AppAdminActivityRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/roles': typeof AppAdminRolesRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -352,6 +380,10 @@ export interface FileRoutesByTo {
   '/reports': typeof AppReportsRoute
   '/serials': typeof AppSerialsRoute
   '/settings': typeof AppSettingsRoute
+  '/admin/activity': typeof AppAdminActivityRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/roles': typeof AppAdminRolesRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -402,6 +434,10 @@ export interface FileRoutesById {
   '/_app/reports': typeof AppReportsRoute
   '/_app/serials': typeof AppSerialsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/admin/activity': typeof AppAdminActivityRoute
+  '/_app/admin/audit': typeof AppAdminAuditRoute
+  '/_app/admin/roles': typeof AppAdminRolesRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -452,6 +488,10 @@ export interface FileRouteTypes {
     | '/reports'
     | '/serials'
     | '/settings'
+    | '/admin/activity'
+    | '/admin/audit'
+    | '/admin/roles'
+    | '/admin/users'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -500,6 +540,10 @@ export interface FileRouteTypes {
     | '/reports'
     | '/serials'
     | '/settings'
+    | '/admin/activity'
+    | '/admin/audit'
+    | '/admin/roles'
+    | '/admin/users'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -549,6 +593,10 @@ export interface FileRouteTypes {
     | '/_app/reports'
     | '/_app/serials'
     | '/_app/settings'
+    | '/_app/admin/activity'
+    | '/_app/admin/audit'
+    | '/_app/admin/roles'
+    | '/_app/admin/users'
     | '/_app/builds/$buildId'
     | '/_app/customers/$customerId'
     | '/_app/inventory/$productId'
@@ -663,6 +711,34 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/activity': {
+      id: '/_app/admin/activity'
+      path: '/admin/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AppAdminActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/audit': {
+      id: '/_app/admin/audit'
+      path: '/admin/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AppAdminAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/roles': {
+      id: '/_app/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AppAdminRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/attributes/': {
@@ -936,6 +1012,10 @@ interface AppRouteChildren {
   AppReportsRoute: typeof AppReportsRoute
   AppSerialsRoute: typeof AppSerialsRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppAdminActivityRoute: typeof AppAdminActivityRoute
+  AppAdminAuditRoute: typeof AppAdminAuditRoute
+  AppAdminRolesRoute: typeof AppAdminRolesRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
@@ -984,6 +1064,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppReportsRoute: AppReportsRoute,
   AppSerialsRoute: AppSerialsRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppAdminActivityRoute: AppAdminActivityRoute,
+  AppAdminAuditRoute: AppAdminAuditRoute,
+  AppAdminRolesRoute: AppAdminRolesRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppInventoryProductIdRoute: AppInventoryProductIdRoute,

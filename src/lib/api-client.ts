@@ -22,6 +22,7 @@ import {
   dpcLogin,
   dpcLogout,
   isDpcConnectorEnabled,
+  type DpcUser,
 } from "./dpc-connector";
 
 /**
@@ -710,4 +711,246 @@ export async function uploadImageToBackend(file: File): Promise<MediaUploadResul
   }
 
   return { ok: false, error: res.error || "Upload failed" };
+}
+
+// ---------------------------------------------------------------------------
+// Administration — users, roles, audit & activity (live connector endpoints)
+// ---------------------------------------------------------------------------
+
+export type AdminUserStatus = "active" | "suspended" | "deactivated";
+
+export type AdminUser = DpcUser;
+
+export interface AdminUserList {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface AdminRolesBundle {
+  items: AdminRole[];
+  modules: Record<string, string>;
+  actions: string[];
+}
+
+export interface AdminRole {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  user_count: number;
+  permissions: string[];
+}
+
+export interface AdminPermission {
+  slug: string;
+  module: string;
+  action: string;
+  description: string;
+}
+
+export interface AdminAuditRow {
+  id: number;
+  user_id: number | null;
+  action: string;
+  module: string;
+  resource: string;
+  record_id: string;
+  old_value: unknown;
+  new_value: unknown;
+  branch_id: number | null;
+  ip: string;
+  user_agent: string;
+  result: string;
+  created_at: string;
+}
+
+export interface AdminActivityRow {
+  id: number;
+  user_id: number | null;
+  module: string;
+  action: string;
+  description: string;
+  record_id: string;
+  branch_id: number | null;
+  created_at: string;
+}
+
+export interface AdminLoginEntry {
+  id: number;
+  username: string;
+  ip: string;
+  user_agent: string;
+  result: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface AdminSessionEntry {
+  id: number;
+  ip: string;
+  user_agent: string;
+  created_at: string;
+  last_seen_at: string;
+  expires_at: string;
+}
+
+function qs(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && String(value).length > 0) search.set(key, String(value));
+  }
+  const s = search.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function fetchAdminUsers(
+  params: {
+    search?: string;
+    status?: AdminUserStatus;
+    role?: string;
+    page?: number;
+    per_page?: number;
+  } = {},
+): Promise<AdminUserList> {
+  const res = await apiRequest<AdminUserList>(`/api/v1/users${qs(params)}`);
+  return res.ok && res.data
+    ? res.data
+    : { items: [], total: 0, page: params.page ?? 1, per_page: params.per_page ?? 50 };
+}
+
+export interface AdminUserInput {
+  username: string;
+  email: string;
+  display_name: string;
+  password?: string;
+  roles?: string[];
+  wordpress_user_id?: number;
+}
+
+export async function createAdminUser(input: AdminUserInput): Promise<AdminUser | null> {
+  const res = await apiRequest<AdminUser>("/api/v1/users", "POST", input);
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateAdminUser(
+  id: number,
+  patch: Partial<Pick<AdminUser, "email" | "display_name">>,
+): Promise<AdminUser | null> {
+  const res = await apiRequest<AdminUser>(`/api/v1/users/${id}`, "PUT", patch);
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteAdminUser(id: number): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/users/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function setAdminUserStatus(
+  id: number,
+  status: AdminUserStatus,
+): Promise<AdminUser | null> {
+  const res = await apiRequest<AdminUser>(`/api/v1/users/${id}/status`, "POST", { status });
+  return res.ok ? res.data || null : null;
+}
+
+export async function setAdminUserPassword(
+  id: number,
+  input: { password?: string; generate?: boolean },
+): Promise<{ ok: boolean; password?: string }> {
+  const res = await apiRequest<{ ok: boolean; password?: string | null }>(
+    `/api/v1/users/${id}/password`,
+    "POST",
+    input,
+  );
+  if (!res.ok) return { ok: false };
+  return { ok: true, password: res.data?.password ?? undefined };
+}
+
+export async function setAdminUserRoles(id: number, roles: string[]): Promise<AdminUser | null> {
+  const res = await apiRequest<AdminUser>(`/api/v1/users/${id}/roles`, "POST", { roles });
+  return res.ok ? res.data || null : null;
+}
+
+export async function fetchAdminUserSessions(id: number): Promise<AdminSessionEntry[]> {
+  const res = await apiRequest<{ items: AdminSessionEntry[] }>(`/api/v1/users/${id}/sessions`);
+  return res.ok && res.data ? res.data.items : [];
+}
+
+export async function fetchAdminUserLoginHistory(id: number): Promise<AdminLoginEntry[]> {
+  const res = await apiRequest<{ items: AdminLoginEntry[] }>(`/api/v1/users/${id}/login-history`);
+  return res.ok && res.data ? res.data.items : [];
+}
+
+export async function fetchAdminRoles(): Promise<AdminRolesBundle> {
+  const res = await apiRequest<AdminRolesBundle>("/api/v1/roles");
+  return res.ok && res.data ? res.data : { items: [], modules: {}, actions: [] };
+}
+
+export async function fetchAdminPermissions(): Promise<{
+  items: AdminPermission[];
+  modules: Record<string, string>;
+  actions: string[];
+}> {
+  const res = await apiRequest<{
+    items: AdminPermission[];
+    modules: Record<string, string>;
+    actions: string[];
+  }>("/api/v1/permissions");
+  return res.ok && res.data ? res.data : { items: [], modules: {}, actions: [] };
+}
+
+export interface AdminRoleInput {
+  name: string;
+  slug?: string;
+  description?: string;
+  permissions?: string[];
+}
+
+export async function createAdminRole(input: AdminRoleInput): Promise<AdminRole | null> {
+  const res = await apiRequest<AdminRole>("/api/v1/roles", "POST", input);
+  return res.ok ? res.data || null : null;
+}
+
+export async function updateAdminRole(
+  id: number,
+  patch: Partial<{ name: string; description: string; permissions: string[] }>,
+): Promise<AdminRole | null> {
+  const res = await apiRequest<AdminRole>(`/api/v1/roles/${id}`, "PUT", patch);
+  return res.ok ? res.data || null : null;
+}
+
+export async function setAdminRolePermissions(
+  id: number,
+  permissions: string[],
+): Promise<AdminRole | null> {
+  const res = await apiRequest<AdminRole>(`/api/v1/roles/${id}/permissions`, "POST", {
+    permissions,
+  });
+  return res.ok ? res.data || null : null;
+}
+
+export async function deleteAdminRole(id: number): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/roles/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function fetchAdminAudit(
+  params: { module?: string; action?: string; page?: number; per_page?: number } = {},
+): Promise<{ items: AdminAuditRow[]; total: number }> {
+  const res = await apiRequest<{ items: AdminAuditRow[]; total: number }>(
+    `/api/v1/audit-logs${qs(params)}`,
+  );
+  return res.ok && res.data ? res.data : { items: [], total: 0 };
+}
+
+export async function fetchAdminActivity(
+  params: { module?: string; user_id?: number; page?: number; per_page?: number } = {},
+): Promise<{ items: AdminActivityRow[]; total: number }> {
+  const res = await apiRequest<{ items: AdminActivityRow[]; total: number }>(
+    `/api/v1/activity-logs${qs(params)}`,
+  );
+  return res.ok && res.data ? res.data : { items: [], total: 0 };
 }

@@ -8,12 +8,12 @@ tables inside the **existing WordPress database** — no separate database is
 required.
 
 - **REST namespace:** `dpc/v1` (under `/wp-json/`)
-- **Current version:** `0.2.0`
+- **Current version:** `0.6.0`
 - **Requires:** WordPress 6.2+, PHP 7.4+
 - **Phase 0 scope:** schema, RBAC, sessions, audit/activity, user management,
-  WordPress Admin SSO, integrations.
-- **Designed in (later phases):** branches, approval workflows, role editing.
-  The tables already exist.
+  role editing, WordPress Admin SSO, integrations.
+- **Designed in (later phases):** branches, approval workflows. The tables
+  already exist.
 
 ---
 
@@ -330,6 +330,21 @@ also writes to `wp_dpc_audit_logs`.
 ---
 
 ## Changelog
+
+### 0.6.0
+
+- **Role editing is now live:** `POST /roles`, `PUT /roles/{id}`,
+  `DELETE /roles/{id}` and `POST /roles/{id}/permissions`, with system-role
+  protections (Owner/Administrator immutable, no deletion while assigned).
+- Role changes write audit records (`role.*`) and activity timeline entries.
+- Activity events recorded for sign-ins and user-management actions so the
+  Activity Logs feed is populated.
+
+### 0.5.0
+
+- Complete WooCommerce API surface on the same `/api/v1/*` contract: products,
+  categories, customers, orders, quotes, suppliers, brands/tags/attributes,
+  warehouses, inventory, transfers, global search and media upload.
 
 ### 0.2.0
 

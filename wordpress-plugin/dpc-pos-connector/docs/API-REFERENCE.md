@@ -288,6 +288,50 @@ user is untouched). Errors: `dpc_self_delete`, `dpc_last_owner`.
 }
 ```
 
+### `POST /roles` — `roles.create`
+
+Creates a custom role. Permissions may be a list of exact `module.action` slugs,
+whole-module rules (`inventory.*`) or `*`.
+
+```json
+{
+  "name": "Purchasing Clerk",
+  "slug": "purchasing_clerk",
+  "description": "Creates purchase orders and approves stock returns.",
+  "permissions": ["purchase_orders.*", "products.read", "inventory.read"]
+}
+```
+
+Response: the created role:
+
+```json
+{ "id": 7, "slug": "purchasing_clerk", "name": "Purchasing Clerk",
+  "is_system": false, "user_count": 0, "permissions": ["inventory.read", "products.read"] }
+```
+
+### `PUT /roles/{id}` — `roles.update`
+
+Updates `name` and/or `description` and optionally replaces `permissions`.
+System roles (`owner`, `administrator`) can only change their description and
+always hold the implicit `*` grants.
+
+```json
+{ "name": "Purchasing Manager", "permissions": ["purchase_orders.*"] }
+```
+
+### `POST /roles/{id}/permissions` — `roles.update`
+
+Replaces the grants of a non-system role with the given rules.
+
+```json
+{ "permissions": ["sales.create", "sales.read", "customers.*"] }
+```
+
+### `DELETE /roles/{id}` — `roles.delete`
+
+Deletes a custom role. System roles and roles still assigned to users are
+rejected (409).
+
 ---
 
 ## Logs

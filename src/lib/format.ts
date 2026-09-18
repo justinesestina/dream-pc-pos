@@ -34,6 +34,15 @@ export function dateTime(iso: string) {
   });
 }
 
+export function dateTimeShort(iso: string) {
+  return new Date(iso).toLocaleString("en-PH", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("en-PH", { hour12: false });
 }
@@ -55,9 +64,7 @@ export function daysUntil(iso: string) {
 }
 
 export function titleCase(s: string) {
-  return s
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function greeting(d = new Date()) {

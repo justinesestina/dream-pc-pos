@@ -195,6 +195,15 @@ class DPC_POS_Users {
 				),
 			)
 		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.created',
+				'description' => sprintf( 'User "%s" created (%s)', $display ? $display : $username, $email ),
+				'record_id'   => $user_id,
+			)
+		);
 
 		return rest_ensure_response( DPC_POS_Auth::user_payload( $user_id ) );
 	}
@@ -290,6 +299,15 @@ class DPC_POS_Users {
 				'new_value' => $data,
 			)
 		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.updated',
+				'description' => sprintf( 'Profile updated for %s (id %d)', $before['display_name'], $user_id ),
+				'record_id'   => $user_id,
+			)
+		);
 
 		return rest_ensure_response( DPC_POS_Auth::user_payload( $user_id ) );
 	}
@@ -341,6 +359,15 @@ class DPC_POS_Users {
 				'record_id' => $user_id,
 				'old_value' => array( 'status' => $row['status'] ),
 				'new_value' => array( 'status' => $status ),
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.status_changed',
+				'description' => sprintf( 'Account %s %s (id %d)', $row['username'], $status, $user_id ),
+				'record_id'   => $user_id,
 			)
 		);
 
@@ -396,6 +423,15 @@ class DPC_POS_Users {
 				'record_id' => $user_id,
 			)
 		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.password_set',
+				'description' => sprintf( 'Password reset for %s (id %d)', $row['username'], $user_id ),
+				'record_id'   => $user_id,
+			)
+		);
 
 		return rest_ensure_response(
 			array(
@@ -422,6 +458,15 @@ class DPC_POS_Users {
 			return $roles;
 		}
 		self::apply_roles( $user_id, $roles, (int) $auth['user']['id'] );
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.roles_updated',
+				'description' => sprintf( 'Roles for user id %d set to: %s', $user_id, implode( ', ', $roles ) ),
+				'record_id'   => $user_id,
+			)
+		);
 		return rest_ensure_response( DPC_POS_Auth::user_payload( $user_id ) );
 	}
 
@@ -463,6 +508,15 @@ class DPC_POS_Users {
 					'username' => $row['username'],
 					'email'    => $row['email'],
 				),
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.deleted',
+				'description' => sprintf( 'User "%s" (id %d) deleted', $row['username'], $user_id ),
+				'record_id'   => $user_id,
 			)
 		);
 

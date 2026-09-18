@@ -232,6 +232,42 @@ class DPC_POS_REST {
 		);
 		register_rest_route(
 			$ns,
+			'/roles',
+			array(
+				'methods'             => 'POST',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Roles', 'create_role' ) ),
+				'permission_callback' => $this->require_permission( 'roles.create' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/roles/(?P<id>\d+)',
+			array(
+				'methods'             => 'PUT',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Roles', 'update_role' ) ),
+				'permission_callback' => $this->require_permission( 'roles.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/roles/(?P<id>\d+)',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Roles', 'delete_role' ) ),
+				'permission_callback' => $this->require_permission( 'roles.delete' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/roles/(?P<id>\d+)/permissions',
+			array(
+				'methods'             => 'POST',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Roles', 'set_role_permissions' ) ),
+				'permission_callback' => $this->require_permission( 'roles.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
 			'/permissions',
 			array(
 				'methods'             => 'GET',

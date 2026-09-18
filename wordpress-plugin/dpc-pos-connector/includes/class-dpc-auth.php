@@ -209,6 +209,15 @@ class DPC_POS_Auth {
 				'record_id' => $user_id,
 			)
 		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => $user_id,
+				'module'      => 'users',
+				'action'      => 'auth.login',
+				'description' => $user['display_name'] . ' signed in',
+				'record_id'   => $user_id,
+			)
+		);
 
 		return rest_ensure_response(
 			array(
