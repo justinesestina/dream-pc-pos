@@ -139,21 +139,34 @@ function Flyout({
 }
 
 /**
- * Sidebar row that owns sub-items. Hybrid interaction: opens on hover or on
- * click, and stays open while the pointer is over the flyout.
+ * Sidebar row that owns sub-items. Hybrid interaction: hovering previews the
+ * flyout, and clicking pins it open so it stays after the pointer leaves.
+ * Exactly one such flyout is shown per sidebar at a time (the sidebar owns the
+ * shared selection state).
  */
 function NavFlyout({
+  id,
   item,
   pathname,
   search,
   collapsed,
+  open,
+  onRequestOpen,
+  onRequestClose,
+  onTogglePin,
+  onDismiss,
 }: {
+  id: string;
   item: NavItem;
   pathname: string;
   search: Record<string, unknown>;
   collapsed: boolean;
+  open: boolean;
+  onRequestOpen: () => void;
+  onRequestClose: () => void;
+  onTogglePin: () => void;
+  onDismiss: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancel = () => {
@@ -164,11 +177,11 @@ function NavFlyout({
   };
   const openNow = () => {
     cancel();
-    setOpen(true);
+    onRequestOpen();
   };
   const closeSoon = () => {
     cancel();
-    timer.current = setTimeout(() => setOpen(false), 140);
+    timer.current = setTimeout(onRequestClose, 140);
   };
   useEffect(() => cancel, []);
 
@@ -178,7 +191,14 @@ function NavFlyout({
       <ActiveBar active={active} />
       {item.icon && <item.icon className="size-4 shrink-0" />}
       {!collapsed && <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>}
-      {!collapsed && <ChevronRight className="size-3.5 shrink-0 opacity-60" />}
+      {!collapsed && (
+        <ChevronRight
+          className={cn(
+            "size-3.5 shrink-0 opacity-60 transition-transform duration-200",
+            open && "rotate-90",
+          )}
+        />
+      )}
     </>
   );
   const handlers = {
@@ -187,14 +207,25 @@ function NavFlyout({
   };
 
   return (
-    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      modal={false}
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onDismiss();
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-haspopup="menu"
+          aria-expanded={open}
           aria-current={active ? "page" : undefined}
           className={cn(rowCls(active, collapsed), "w-full")}
           {...handlers}
+          onClick={(e) => {
+            e.preventDefault();
+            onTogglePin();
+          }}
         >
           {content}
         </button>
@@ -228,6 +259,33 @@ export function AppSidebar() {
   const search = location.search as Record<string, unknown>;
   const role = store.user?.role ?? "owner";
   const { isCollapsed, setCollapsed, toggle } = useNavSections();
+
+  // Single shared flyout selection: hover previews a submenu, clicking pins it
+  // so it stays; only one submenu is ever shown in the sidebar at a time.
+  const [hoveredFlyout, setHoveredFlyout] = useState<string | null>(null);
+  const [pinnedFlyout, setPinnedFlyout] = useState<string | null>(null);
+  const visibleFlyout = hoveredFlyout ?? pinnedFlyout;
+
+  const pinFlyout = (id: string) => {
+    if (pinnedFlyout === id) {
+      setPinnedFlyout(null);
+      setHoveredFlyout((cur) => (cur === id ? null : cur));
+    } else {
+      setPinnedFlyout(id);
+      setHoveredFlyout((cur) => (cur === id ? cur : id));
+    }
+  };
+  const dismissFlyout = (id: string) => {
+    setPinnedFlyout((cur) => (cur === id ? null : cur));
+    setHoveredFlyout((cur) => (cur === id ? null : cur));
+  };
+
+  // Closing the flyout on route change keeps the sidebar tidy after a link is
+  // selected from the pinned submenu.
+  useEffect(() => {
+    setPinnedFlyout(null);
+    setHoveredFlyout(null);
+  }, [pathname, search]);
 
   // Auto-expand the section that contains the active page.
   const activeSection = navGroups.find((g) =>
@@ -327,13 +385,22 @@ export function AppSidebar() {
                       const active = isNavActive(item, pathname, search);
 
                       if (item.children?.length) {
+                        const id = `${group.label}:${item.label}`;
                         return (
                           <li key={item.label}>
                             <NavFlyout
+                              id={id}
                               item={item}
                               pathname={pathname}
                               search={search}
                               collapsed={collapsed}
+                              open={visibleFlyout === id}
+                              onRequestOpen={() => setHoveredFlyout(id)}
+                              onRequestClose={() =>
+                                setHoveredFlyout((cur) => (cur === id ? null : cur))
+                              }
+                              onTogglePin={() => pinFlyout(id)}
+                              onDismiss={() => dismissFlyout(id)}
                             />
                           </li>
                         );
