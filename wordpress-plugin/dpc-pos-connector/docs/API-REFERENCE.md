@@ -445,6 +445,34 @@ Maps WooCommerce `product_cat` terms.
 
 ---
 
+## Sales
+
+WooCommerce-backed reads, all using the same `{ data, meta }` envelope.
+
+### `GET /customers` — `customers.read`
+
+Registered WooCommerce customers mapped to the POS customer shape
+(`id`, `name`, `email`, `phone`, `type`, `address`, `since`, `status`).
+
+### `GET /orders` — `sales.read`
+
+Sales orders only — quotation, supplier, warehouse, movement and transfer
+records are filtered out. Includes line items, totals and the DPC build status
+(`_dpc_status` meta layered over the WooCommerce status).
+
+### `GET /quotes` — `sales.read`
+
+Orders tagged `_dpc_is_quote=yes`, mapped to the POS `Quote` shape (`id` is
+`Q-<orderId>`, plus status, items, totals, version, revisions, expiry).
+
+### `GET /suppliers` — `purchase_orders.read`
+
+Orders tagged `_dpc_record=supplier`, mapped to the POS `Supplier` shape
+(`id` is `SUP-<orderId>`, plus contact, terms, lead time, categories, product
+assignments, rating).
+
+---
+
 ## Permission slugs
 
 Modules: `users`, `roles`, `branches`, `approvals`, `audit`, `activity`,

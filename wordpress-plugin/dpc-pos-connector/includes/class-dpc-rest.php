@@ -326,6 +326,44 @@ class DPC_POS_REST {
 				'permission_callback' => $this->require_permission( 'products.read' ),
 			)
 		);
+
+		// ---- Sales (WooCommerce) -----------------------------------------
+		register_rest_route(
+			$ns,
+			'/customers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_customers' ) ),
+				'permission_callback' => $this->require_permission( 'customers.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/orders',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_orders' ) ),
+				'permission_callback' => $this->require_permission( 'sales.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/quotes',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_quotes' ) ),
+				'permission_callback' => $this->require_permission( 'sales.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/suppliers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_suppliers' ) ),
+				'permission_callback' => $this->require_permission( 'purchase_orders.read' ),
+			)
+		);
 	}
 
 	/**
