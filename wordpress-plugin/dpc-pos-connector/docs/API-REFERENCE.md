@@ -370,8 +370,8 @@ Clears stored fields and secrets for the type.
 
 ## Catalog
 
-Read-only WooCommerce catalog mapped to the POS data shapes. Responses use the
-shared list envelope:
+WooCommerce catalog mapped to the POS data shapes. List responses use the shared
+envelope:
 
 ```json
 { "data": [ /* items */ ], "meta": { "page": 1, "perPage": 20, "total": 42 } }
@@ -414,9 +414,40 @@ private and pending products.
 }
 ```
 
+### `POST /products` — `products.create`
+
+Creates a simple internal WooCommerce product. Accepts the fields above
+(`name` and `price` required, `sku` optional and uniqely enforced). Category is
+matched by `categoryId` or `categoryName`.
+
+```json
+{ "name": "Ryzen 5 7600X", "sku": "CPU-7600X", "price": 199, "brand": "AMD",
+  "categoryId": "34", "cost": 175, "warrantyMonths": 36,
+  "specs": { "Socket": "AM5" }, "imageUrl": "https://…/cpu.png" }
+```
+
+Returns the mapped product as `{ "data": { … } }`.
+
 ### `GET /products/{id}` — `products.read`
 
 Single product as `{ "data": { … } }`; `404` when it does not exist.
+
+### `PUT /products/{id}` — `products.update`
+
+Partial update of the same fields. `categoryId: ""` clears the category.
+
+### `DELETE /products/{id}` — `products.delete`
+
+Trashes the WooCommerce product. Returns `{ "data": { "id": "…", "deleted": true } }`.
+
+### `PUT /products/{id}/stock` — `products.update`
+
+```json
+{ "stockQuantity": 12, "stockStatus": "instock" }
+```
+
+Updates WooCommerce stock directly (route exists for the catalog action; for
+warehouse-aware stock use the inventory endpoints below).
 
 ### `GET /categories` — `products.read`
 
@@ -443,16 +474,48 @@ Maps WooCommerce `product_cat` terms.
 }
 ```
 
+### `POST` / `GET /categories/{id}` / `PUT` / `DELETE` — `products.*`
+
+Create (`name` required, optional `parentId`, `description`, `display`,
+`imageUrl`), read, update and trash WooCommerce categories.
+
+---
+
+## Brands, tags & attributes
+
+Backed by WooCommerce taxonomies (`product_brand` for brands, `product_tag`
+for tags) and `wc_get_attribute_taxonomies()` for attributes.
+
+| Endpoint                              | Permissions (read/create/update/delete) |
+| ------------------------------------- | --------------------------------------- |
+| `/brands` + `/brands/{id}`            | `products.read` / `.create` / `.update` / `.delete` |
+| `/tags` + `/tags/{id}`                | `products.read` / `.create` / `.update` / `.delete` |
+| `/attributes` + `/attributes/{id}`    | `products.read` / `.create` / `.update` / `.delete` |
+| `/attributes/{id}/terms` + `/…/{termId}` | `products.read` / `.create` / `.update` / `.delete` |
+
+Brand object: `{ id, name, slug }`. Attribute object: `{ id, name, slug,
+type }` with `type` one of `text`, `color`, `select`, `button`. Terms:
+`{ id, name, slug }`.
+
 ---
 
 ## Sales
 
-WooCommerce-backed reads, all using the same `{ data, meta }` envelope.
+WooCommerce-backed reads, all using the `{ data, meta }` envelope.
 
 ### `GET /customers` — `customers.read`
 
 Registered WooCommerce customers mapped to the POS customer shape
 (`id`, `name`, `email`, `phone`, `type`, `address`, `since`, `status`).
+
+### `POST /customers` — `customers.create`
+
+```json
+{ "name": "Juan Dela Cruz", "email": "j@example.com", "phone": "+63…", "address": "…" }
+```
+
+Creates a WooCommerce customer. A `dpc_conflict` (409) is returned when the
+email already exists.
 
 ### `GET /orders` — `sales.read`
 
@@ -460,16 +523,143 @@ Sales orders only — quotation, supplier, warehouse, movement and transfer
 records are filtered out. Includes line items, totals and the DPC build status
 (`_dpc_status` meta layered over the WooCommerce status).
 
+### `POST /orders` — `sales.create`
+
+```json
+{ "items": [{ "productId": "123", "qty": 2 }],
+  "customerName": "Juan Dela Cruz", "email": "j@example.com",
+  "notes": "…", "paymentMethod": "bacs", "setPaid": true }
+```
+
+Creates a WooCommerce order. `setPaid` runs `payment_complete()`.
+
+### `PUT /orders/{id}` — `sales.update`
+
+```json
+{ "status": "assembly" }
+```
+
+Status is one of `pending`, `paid`, `processing`, `assembly`, `testing`,
+`ready`, `completed`, `cancelled`, `refunded` (mapped onto WooCommerce states,
+with the DPC status stored in `_dpc_status`).
+
 ### `GET /quotes` — `sales.read`
 
 Orders tagged `_dpc_is_quote=yes`, mapped to the POS `Quote` shape (`id` is
 `Q-<orderId>`, plus status, items, totals, version, revisions, expiry).
+
+### `POST /quotes` — `sales.create`
+
+```json
+{ "items": [{ "productId": "123", "name": "…", "qty": 1, "unitPrice": 199 }],
+  "discount": 0, "serviceTotal": 50, "shippingFee": 0, "tax": 0,
+  "customerName": "…", "notes": "…" }
+```
+
+Starts as `draft`, version `1`, expires in 14 days.
+
+### `PUT /quotes/{id}` / `DELETE /quotes/{id}` — `sales.update` / `sales.delete`
+
+Updating the `items` bumps the version and appends a revision (history kept to
+20). `DELETE` hard-deletes the underlying record and returns
+`{ "data": { "id": "Q-…", "deleted": true } }`.
 
 ### `GET /suppliers` — `purchase_orders.read`
 
 Orders tagged `_dpc_record=supplier`, mapped to the POS `Supplier` shape
 (`id` is `SUP-<orderId>`, plus contact, terms, lead time, categories, product
 assignments, rating).
+
+### `GET /suppliers/{id}` / `POST` / `PUT` / `DELETE` — `purchase_orders.*`
+
+```json
+{ "name": "Tech Distributor", "contact": "Ana", "email": "…", "phone": "…",
+  "terms": "Net 30", "leadTimeDays": 7, "categories": ["GPUs"],
+  "productIds": ["123"], "status": "active", "rating": 4.5 }
+```
+
+`PUT` merges over the current record (`productIds` replaces the set). `DELETE`
+returns `{ "data": { "id": "SUP-…", "deleted": true } }`.
+
+---
+
+## Warehouses, inventory & transfers
+
+Internal records are tagged WooCommerce orders (warehouses `WH-…`, movements
+`MV-…`, transfers `TR-…`); per-warehouse quantities live in product meta. The
+default WooCommerce selling warehouse (`WOO`) is seeded automatically on first
+read. All list responses use the `{ data, meta }` envelope.
+
+| Endpoint | Method | Permission |
+| -------- | ------ | ---------- |
+| `/warehouses` | GET / POST | `inventory.read` / `inventory.create` |
+| `/warehouses/{id}` | GET / PUT / DELETE | `inventory.read` / `.update` / `.delete` |
+| `/warehouses/{id}/stock` | GET / POST | `inventory.read` / `inventory.update` |
+| `/warehouses/{id}/stock/{productId}` | PUT | `inventory.update` |
+| `/warehouses/{id}/movements` | GET | `inventory.read` |
+| `/warehouses/{id}/transfers` | GET | `inventory.read` |
+| `/inventory/stock` | GET | `inventory.read` |
+| `/inventory/stock/{productId}` | GET | `inventory.read` |
+| `/inventory/movements` | GET | `inventory.read` |
+| `/inventory/stock/{productId}/adjust` | POST | `inventory.update` |
+| `/transfers` | GET / POST | `inventory.read` / `inventory.create` |
+| `/transfers/{id}` | GET / PUT | `inventory.read` / `inventory.update` |
+
+Warehouse shape: `{ id, name, location, isDefault, isSelling, status,
+createdAt }`. Stock rows keep `{ productId, name, sku, quantity, skuCost,
+totalValue, cost }`. Movements: `{ id, type, productId, quantity, fromWh,
+toWh, reason, date }`. Transfers: `{ id, fromWarehouseId, toWarehouseId,
+items[{productId, qty, sku}], status, createdAt, date }`.
+
+### `POST /inventory/stock/{productId}/adjust`
+
+```json
+{ "warehouseId": "WH-…", "quantity": -2, "reason": "Damaged" }
+```
+
+Adjusts stock by `quantity` (positive or negative) with a `dpc_not_found` /
+`dpc_bad_request` guard when the quantity would make applied stock negative.
+
+### `POST /transfers`
+
+```json
+{ "fromWarehouseId": "WH-A", "toWarehouseId": "WH-B",
+  "items": [{ "productId": "123", "qty": 2 }] }
+```
+
+Transfers start `pending`; `PUT` with `status: "completed"` applies stock to
+both sides (idempotent — completing twice is a no-op).
+
+---
+
+## Search
+
+### `GET /search?q=…` — `products.read`
+
+Runs the command-palette search across navigation pages, products (name, SKU,
+brand, attributes), orders and quotes. Returns up to 16 deduplicated results:
+
+```json
+{ "data": [
+  { "id": "product-123", "type": "products", "label": "Ryzen 5 7600X",
+    "subtitle": "CPU-7600X | AMD", "route": "/products/123",
+    "imageUrl": "https://…" }
+], "meta": { "page": 1, "perPage": 1, "total": 1 } }
+```
+
+---
+
+## Media
+
+### `POST /media` — any authenticated session
+
+```json
+{ "filename": "cpu.png", "data": "iVBORw0KGgo…" }
+```
+
+Decodes the base64 image (`data:` URLs accepted), uploads it to the WordPress
+media library and returns `{ "data": { "mediaId": "123", "url": "https://…" } }`.
+Max 10 MB; `png`, `jpg`/`jpeg`, `webp` and `gif` only.
 
 ---
 

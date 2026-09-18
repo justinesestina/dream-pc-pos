@@ -4,7 +4,7 @@ Tags: pos, woocommerce, rbac, sso, api
 Requires at least: 6.2
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: Proprietary
 
 Secure backend/API connector between the DPC POS interface and WordPress + WooCommerce.
@@ -44,6 +44,23 @@ No. It adds a separate credential store for DPC POS users. WordPress Admin SSO
 is a one-time, short-lived handoff that signs the linked WordPress user in.
 
 == Changelog ==
+
+= 0.5.0 =
+* Complete the commerce API surface so every `/api/v1/*` call the POS frontend
+  makes is served by the connector:
+  * Product and category writes: `POST/PUT/DELETE dpc/v1/products`,
+    `PUT dpc/v1/products/{id}/stock`, category create/update/delete.
+  * Customers, orders and quotes: create customer, create/update order, create/
+    update/delete quote.
+  * Suppliers: get/create/update/delete.
+  * Warehouses, inventory and transfers: warehouses CRUD + per-warehouse stock,
+    `GET dpc/v1/inventory/stock`, movements, stock adjust, transfers CRUD.
+  * Brands, tags and attributes (with attribute terms).
+  * Global search (`GET dpc/v1/search`) and base64 image upload
+    (`POST dpc/v1/media`).
+* Internal records (warehouses, movements, transfers, suppliers) continue to
+  store via tagged WooCommerce orders; per-warehouse quantities live in product
+  meta with a default selling warehouse seeded automatically.
 
 = 0.4.0 =
 * Serve customers, orders, quotations and suppliers from WooCommerce:

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * REST API bootstrap: route registration, authentication/permission middleware
  * and credentialed CORS for the DPC POS frontend.
@@ -303,27 +303,218 @@ class DPC_POS_REST {
 			$ns,
 			'/products',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_products' ) ),
-				'permission_callback' => $this->require_permission( 'products.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_products' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'create_product' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
 			)
 		);
 		register_rest_route(
 			$ns,
 			'/products/(?P<id>\d+)',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'get_product' ) ),
-				'permission_callback' => $this->require_permission( 'products.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'get_product' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'update_product' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'delete_product' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/products/(?P<id>\d+)/stock',
+			array(
+				'methods'             => array( 'PUT', 'PATCH' ),
+				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'update_product_stock' ) ),
+				'permission_callback' => $this->require_permission( 'products.update' ),
 			)
 		);
 		register_rest_route(
 			$ns,
 			'/categories',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_categories' ) ),
-				'permission_callback' => $this->require_permission( 'products.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_categories' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'create_category' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/categories/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'get_category' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'update_category' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'delete_category' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
+			)
+		);
+
+		// ---- Brands / tags / attributes (WooCommerce taxonomy) ------------
+		register_rest_route(
+			$ns,
+			'/brands',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'list_brands' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'create_brand' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/brands/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'get_brand' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'update_brand' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'delete_brand' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/tags',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'list_tags' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'create_tag' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/tags/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'update_tag' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'delete_tag' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/attributes',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'list_attributes' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'create_attribute' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/attributes/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'update_attribute' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'delete_attribute' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/attributes/(?P<id>\d+)/terms',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'list_attribute_terms' ) ),
+					'permission_callback' => $this->require_permission( 'products.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'create_attribute_term' ) ),
+					'permission_callback' => $this->require_permission( 'products.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/attributes/(?P<id>\d+)/terms/(?P<termId>\d+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'update_attribute_term' ) ),
+					'permission_callback' => $this->require_permission( 'products.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Taxonomy', 'delete_attribute_term' ) ),
+					'permission_callback' => $this->require_permission( 'products.delete' ),
+				),
 			)
 		);
 
@@ -332,36 +523,289 @@ class DPC_POS_REST {
 			$ns,
 			'/customers',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_customers' ) ),
-				'permission_callback' => $this->require_permission( 'customers.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_customers' ) ),
+					'permission_callback' => $this->require_permission( 'customers.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'create_customer' ) ),
+					'permission_callback' => $this->require_permission( 'customers.create' ),
+				),
 			)
 		);
 		register_rest_route(
 			$ns,
 			'/orders',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_orders' ) ),
-				'permission_callback' => $this->require_permission( 'sales.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_orders' ) ),
+					'permission_callback' => $this->require_permission( 'sales.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'create_order' ) ),
+					'permission_callback' => $this->require_permission( 'sales.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/orders/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'update_order' ) ),
+					'permission_callback' => $this->require_permission( 'sales.update' ),
+				),
 			)
 		);
 		register_rest_route(
 			$ns,
 			'/quotes',
 			array(
-				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_quotes' ) ),
-				'permission_callback' => $this->require_permission( 'sales.read' ),
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_quotes' ) ),
+					'permission_callback' => $this->require_permission( 'sales.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'create_quote' ) ),
+					'permission_callback' => $this->require_permission( 'sales.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/quotes/(?P<id>[A-Za-z0-9-]+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'update_quote' ) ),
+					'permission_callback' => $this->require_permission( 'sales.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'delete_quote' ) ),
+					'permission_callback' => $this->require_permission( 'sales.delete' ),
+				),
 			)
 		);
 		register_rest_route(
 			$ns,
 			'/suppliers',
 			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_suppliers' ) ),
+					'permission_callback' => $this->require_permission( 'purchase_orders.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'create_supplier' ) ),
+					'permission_callback' => $this->require_permission( 'purchase_orders.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/suppliers/(?P<id>[A-Za-z0-9-]+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'get_supplier' ) ),
+					'permission_callback' => $this->require_permission( 'purchase_orders.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'update_supplier' ) ),
+					'permission_callback' => $this->require_permission( 'purchase_orders.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'delete_supplier' ) ),
+					'permission_callback' => $this->require_permission( 'purchase_orders.delete' ),
+				),
+			)
+		);
+
+		// ---- Warehouses / inventory / transfers ---------------------------
+		register_rest_route(
+			$ns,
+			'/warehouses',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'list_warehouses_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'create_warehouse_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/warehouses/(?P<id>[A-Za-z0-9-]+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'get_warehouse_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'update_warehouse_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'delete_warehouse_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/warehouses/(?P<id>[A-Za-z0-9-]+)/stock',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'warehouse_stock_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.read' ),
+				),
+				array(
+					'methods'             => array( 'POST', 'PUT' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'add_stock_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.update' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/warehouses/(?P<id>[A-Za-z0-9-]+)/stock/(?P<productId>\d+)',
+			array(
+				'methods'             => array( 'PUT', 'PATCH' ),
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'set_stock_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/warehouses/(?P<id>[A-Za-z0-9-]+)/movements',
+			array(
 				'methods'             => 'GET',
-				'callback'            => $this->with_auth( array( 'DPC_POS_Sales', 'list_suppliers' ) ),
-				'permission_callback' => $this->require_permission( 'purchase_orders.read' ),
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'warehouse_movements_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/warehouses/(?P<id>[A-Za-z0-9-]+)/transfers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'warehouse_transfers_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/inventory/stock',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'inventory_stock_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/inventory/stock/(?P<productId>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'inventory_product_stock_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/inventory/stock/(?P<productId>\d+)/adjust',
+			array(
+				'methods'             => 'POST',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'inventory_adjust_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/inventory/movements',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'inventory_movements_route' ) ),
+				'permission_callback' => $this->require_permission( 'inventory.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/transfers',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'list_transfers_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'create_transfer_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/transfers/(?P<id>[A-Za-z0-9-]+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'get_transfer_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'update_transfer_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Inventory', 'delete_transfer_route' ) ),
+					'permission_callback' => $this->require_permission( 'inventory.delete' ),
+				),
+			)
+		);
+
+		// ---- Global search ------------------------------------------------
+		register_rest_route(
+			$ns,
+			'/search',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Search', 'search' ) ),
+				'permission_callback' => $this->require_permission( 'products.read' ),
+			)
+		);
+
+		// ---- Media --------------------------------------------------------
+		register_rest_route(
+			$ns,
+			'/media',
+			array(
+				'methods'             => 'POST',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Media', 'upload' ) ),
+				'permission_callback' => $this->require_auth(),
 			)
 		);
 	}
