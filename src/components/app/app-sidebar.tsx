@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NexusWordmark } from "@/components/brand/nexus-logo";
 import { navGroups, isNavActive, type NavItem } from "./nav-config";
+import { AdminNavPanel } from "./admin-nav";
 import { useNavSections } from "./nav-sections";
 import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
@@ -193,12 +194,21 @@ function NavFlyout({
           {content}
         </button>
       </DropdownMenuTrigger>
-      <Flyout
-        items={item.children ?? []}
-        pathname={pathname}
-        onPointerEnter={openNow}
-        onPointerLeave={closeSoon}
-      />
+      {item.adminNav ? (
+        <AdminNavPanel
+          items={item.children ?? []}
+          pathname={pathname}
+          onPointerEnter={openNow}
+          onPointerLeave={closeSoon}
+        />
+      ) : (
+        <Flyout
+          items={item.children ?? []}
+          pathname={pathname}
+          onPointerEnter={openNow}
+          onPointerLeave={closeSoon}
+        />
+      )}
     </DropdownMenu>
   );
 }

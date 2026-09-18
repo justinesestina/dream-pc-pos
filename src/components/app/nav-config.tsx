@@ -43,6 +43,8 @@ export interface NavItem {
   /** Navigation target does not exist yet — show as a disabled "Soon" item. */
   soon?: boolean;
   children?: NavItem[];
+  /** Render this subtree with the dedicated recursive Administration navigator. */
+  adminNav?: boolean;
 }
 
 export interface NavGroup {
@@ -253,13 +255,89 @@ export const navGroups: NavGroup[] = [
         label: "Administration",
         icon: ShieldCheck,
         cap: "settings",
+        adminNav: true,
         children: [
-          { label: "User Management", soon: true, cap: "settings" },
-          { label: "Roles & Permissions", soon: true, cap: "settings" },
-          { label: "Branch Management", soon: true, cap: "settings" },
-          { label: "Approval Workflows", soon: true, cap: "settings" },
-          { label: "Audit Logs", soon: true, cap: "settings" },
-          { label: "Activity Logs", soon: true, cap: "settings" },
+          {
+            label: "User Management",
+            cap: "settings",
+            children: [
+              { label: "All Users", soon: true, cap: "settings" },
+              { label: "Add User", soon: true, cap: "settings" },
+              { label: "User Profiles", soon: true, cap: "settings" },
+              { label: "Password Reset", soon: true, cap: "settings" },
+              { label: "Assign Roles", soon: true, cap: "settings" },
+              { label: "Assign Branches", soon: true, cap: "settings" },
+              { label: "Login History", soon: true, cap: "settings" },
+              { label: "User Activity", soon: true, cap: "settings" },
+              { label: "Account Status", soon: true, cap: "settings" },
+            ],
+          },
+          {
+            label: "Roles & Permissions",
+            cap: "settings",
+            children: [
+              { label: "All Roles", soon: true, cap: "settings" },
+              { label: "Add Role", soon: true, cap: "settings" },
+              { label: "Permission Matrix", soon: true, cap: "settings" },
+              { label: "Module Permissions", soon: true, cap: "settings" },
+              { label: "CRUD Permissions", soon: true, cap: "settings" },
+              { label: "Branch Restrictions", soon: true, cap: "settings" },
+              { label: "Role Assignments", soon: true, cap: "settings" },
+            ],
+          },
+          {
+            label: "Branch Management",
+            cap: "settings",
+            children: [
+              { label: "All Branches", soon: true, cap: "settings" },
+              { label: "Add Branch", soon: true, cap: "settings" },
+              { label: "Edit Branch", soon: true, cap: "settings" },
+              { label: "Assign Users", soon: true, cap: "settings" },
+              { label: "Branch Warehouses", soon: true, cap: "settings" },
+              { label: "Branch Sales", soon: true, cap: "settings" },
+              { label: "Branch Expenses", soon: true, cap: "settings" },
+              { label: "Branch Reports", soon: true, cap: "settings" },
+            ],
+          },
+          {
+            label: "Approval Workflows",
+            cap: "settings",
+            children: [
+              { label: "Purchase Orders", soon: true, cap: "settings" },
+              { label: "Expense Requests", soon: true, cap: "settings" },
+              { label: "Stock Transfers", soon: true, cap: "settings" },
+              { label: "Inventory Adjustments", soon: true, cap: "settings" },
+              { label: "Pending Approvals", soon: true, cap: "settings" },
+              { label: "Approved Requests", soon: true, cap: "settings" },
+              { label: "Rejected Requests", soon: true, cap: "settings" },
+            ],
+          },
+          {
+            label: "Audit Logs",
+            cap: "settings",
+            children: [
+              { label: "Login Logs", soon: true, cap: "settings" },
+              { label: "User Changes", soon: true, cap: "settings" },
+              { label: "Permission Changes", soon: true, cap: "settings" },
+              { label: "Product Changes", soon: true, cap: "settings" },
+              { label: "Inventory Changes", soon: true, cap: "settings" },
+              { label: "Financial Changes", soon: true, cap: "settings" },
+              { label: "Security Events", soon: true, cap: "settings" },
+            ],
+          },
+          {
+            label: "Activity Logs",
+            cap: "settings",
+            children: [
+              { label: "Sales Activities", soon: true, cap: "settings" },
+              { label: "Inventory Activities", soon: true, cap: "settings" },
+              { label: "CRM Activities", soon: true, cap: "settings" },
+              { label: "Accounts Activities", soon: true, cap: "settings" },
+              { label: "Project Activities", soon: true, cap: "settings" },
+              { label: "System Activities", soon: true, cap: "settings" },
+              { label: "Notifications Feed", soon: true, cap: "settings" },
+            ],
+          },
         ],
       },
     ],
