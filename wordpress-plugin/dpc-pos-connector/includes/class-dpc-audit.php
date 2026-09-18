@@ -34,7 +34,11 @@ class DPC_POS_Audit {
 	 */
 	public static function record( array $args ) {
 		global $wpdb;
-		$table = DPC_POS_RBAC::table( 'audit_logs' );
+		$table  = DPC_POS_RBAC::table( 'audit_logs' );
+		$result = (string) ( $args['result'] ?? 'success' );
+		if ( ! in_array( $result, array( 'success', 'failure' ), true ) ) {
+			$result = 'success';
+		}
 		$wpdb->insert(
 			$table,
 			array(
@@ -48,7 +52,7 @@ class DPC_POS_Audit {
 				'branch_id'  => isset( $args['branch_id'] ) && $args['branch_id'] ? (int) $args['branch_id'] : null,
 				'ip'         => DPC_POS_Security::client_ip(),
 				'user_agent' => DPC_POS_Security::user_agent(),
-				'result'     => in_array( ( $args['result'] ?? 'success' ), array( 'success', 'failure' ), true ) ? $args['result'] : 'success',
+				'result'     => $result,
 			),
 			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
 		);
