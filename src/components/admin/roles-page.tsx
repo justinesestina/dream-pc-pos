@@ -655,7 +655,7 @@ function MatrixTab({
   const immutable = role.slug === "owner" || role.slug === "administrator";
 
   const save = async () => {
-    if (busy || immutable) return;
+    if (busy) return;
     const updated = await updateAdminRole(role.id, {
       name: name.trim() || role.name,
       description: description.trim(),
@@ -672,7 +672,13 @@ function MatrixTab({
     <div className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-3">
         <RolePicker roles={bundle.items} value={String(role.id)} onChange={onPick} />
-        {immutable && <StatusBadge status="system" label="Protected system role" tone="info" />}
+        {immutable && (
+          <StatusBadge
+            status="system"
+            label="System role — editable, cannot be deleted"
+            tone="info"
+          />
+        )}
         <PermissionSummary granted={granted} allSlugs={registry.map((p) => p.slug)} />
       </div>
 
@@ -680,12 +686,7 @@ function MatrixTab({
         <div className="mb-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="grid gap-1.5">
             <Label htmlFor="m-name">Display name</Label>
-            <Input
-              id="m-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={immutable}
-            />
+            <Input id="m-name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="m-desc">Description</Label>
@@ -702,10 +703,9 @@ function MatrixTab({
           registry={registry}
           granted={granted}
           onChange={setGranted}
-          readOnly={immutable}
         />
         <div className="mt-3">
-          <Button size="sm" onClick={save} disabled={busy || immutable}>
+          <Button size="sm" onClick={save} disabled={busy}>
             {busy ? "Saving…" : "Save role"}
           </Button>
         </div>
@@ -762,7 +762,7 @@ function ModulesTab({
   };
 
   const save = async () => {
-    if (busy || immutable) return;
+    if (busy) return;
     const updated = await setAdminRolePermissions(role.id, Array.from(granted));
     if (!updated) {
       toast.error("Could not save permissions", { description: getLastApiError() ?? undefined });
@@ -775,7 +775,13 @@ function ModulesTab({
     <div className="space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-3">
         <RolePicker roles={bundle.items} value={String(role.id)} onChange={onPick} />
-        {immutable && <StatusBadge status="system" label="Protected system role" tone="info" />}
+        {immutable && (
+          <StatusBadge
+            status="system"
+            label="System role — editable, cannot be deleted"
+            tone="info"
+          />
+        )}
         <PermissionSummary granted={granted} allSlugs={allSlugs} />
       </div>
 
@@ -795,7 +801,6 @@ function ModulesTab({
                 <Checkbox
                   aria-label={`${module}.*`}
                   checked={moduleFull(module)}
-                  disabled={immutable}
                   onCheckedChange={(v) => toggleModule(module, Boolean(v))}
                 />
                 <span className="flex-1 text-[13px] font-medium text-foreground">{label}</span>
@@ -835,7 +840,7 @@ function ModulesTab({
         })}
       </div>
 
-      <Button size="sm" onClick={save} disabled={busy || immutable}>
+      <Button size="sm" onClick={save} disabled={busy}>
         {busy ? "Saving…" : "Save module permissions"}
       </Button>
     </div>

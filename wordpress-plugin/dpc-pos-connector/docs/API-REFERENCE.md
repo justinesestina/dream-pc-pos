@@ -311,9 +311,12 @@ Response: the created role:
 
 ### `PUT /roles/{id}` — `roles.update`
 
-Updates `name` and/or `description` and optionally replaces `permissions`.
-System roles (`owner`, `administrator`) can only change their description and
-always hold the implicit `*` grants.
+Updates `name`, `description` and/or replaces `permissions`. Slugs are
+immutable. All roles including system roles (`owner`, `administrator`) can be
+renamed and granted custom permissions. `administrator` always keeps
+`users.manage` and `roles.manage` so account and role administration cannot be
+locked out; the `owner` role still resolves to full access regardless of stored
+grants.
 
 ```json
 { "name": "Purchasing Manager", "permissions": ["purchase_orders.*"] }
@@ -321,7 +324,8 @@ always hold the implicit `*` grants.
 
 ### `POST /roles/{id}/permissions` — `roles.update`
 
-Replaces the grants of a non-system role with the given rules.
+Replaces the grants of a role with the given rules (system roles included;
+`administrator` keeps `users.manage` + `roles.manage`).
 
 ```json
 { "permissions": ["sales.create", "sales.read", "customers.*"] }

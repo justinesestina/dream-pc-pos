@@ -17,11 +17,14 @@ import type {
 } from "./types";
 import type { Supplier } from "./ops-types";
 import {
+  clearLoggedOutFlag,
   dpcCurrentUser,
   dpcDataRequest,
   dpcLogin,
   dpcLogout,
+  hasLoggedOutFlag,
   isDpcConnectorEnabled,
+  setLoggedOutFlag,
   type DpcUser,
 } from "./dpc-connector";
 
@@ -196,6 +199,7 @@ export async function loginToBackend(username: string, appPassword: string): Pro
   );
 
   if (res.ok && res.data) {
+    clearLoggedOutFlag();
     localStorage.setItem("dpc-nexus-auth-token", res.data.token);
     localStorage.setItem("dpc-nexus-wp-credentials", JSON.stringify({ username, appPassword }));
     localStorage.setItem("dpc-nexus-user", JSON.stringify(res.data.user));
@@ -211,6 +215,9 @@ export async function loginToBackend(username: string, appPassword: string): Pro
  */
 export async function restoreDpcSession(): Promise<User | null> {
   if (!isDpcConnectorEnabled()) return null;
+  // After an explicit logout, never auto-restore the session (the revoke may
+  // still be in flight, and the cookie is only declared gone once it lands).
+  if (hasLoggedOutFlag()) return null;
   return dpcCurrentUser();
 }
 
@@ -219,6 +226,7 @@ export async function restoreDpcSession(): Promise<User | null> {
  * locally cached auth artifacts.
  */
 export async function logoutBackend(): Promise<void> {
+  setLoggedOutFlag();
   if (isDpcConnectorEnabled()) {
     await dpcLogout();
   }

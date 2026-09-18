@@ -8,7 +8,7 @@ tables inside the **existing WordPress database** — no separate database is
 required.
 
 - **REST namespace:** `dpc/v1` (under `/wp-json/`)
-- **Current version:** `0.6.0`
+- **Current version:** `0.6.1`
 - **Requires:** WordPress 6.2+, PHP 7.4+
 - **Phase 0 scope:** schema, RBAC, sessions, audit/activity, user management,
   role editing, WordPress Admin SSO, integrations.
@@ -330,6 +330,16 @@ also writes to `wp_dpc_audit_logs`.
 ---
 
 ## Changelog
+
+### 0.6.1
+
+- **System roles can now be edited:** `PUT /roles/{id}` and
+  `POST /roles/{id}/permissions` accept `owner` and `administrator` grants and
+  names. `administrator` always keeps `users.manage` + `roles.manage` so account
+  and role administration cannot be locked out. Both roles still cannot be
+  deleted. The `owner` role keeps full access regardless of stored grants.
+- Role reads now return the stored permission rows for all roles, so the Roles
+  matrix in the app reflects current grants.
 
 ### 0.6.0
 

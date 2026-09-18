@@ -547,15 +547,35 @@ function AddUserForm({
 
   const submit = async () => {
     if (busy) return;
-    if (!form.username.trim() || !form.email.trim()) {
+    const username = form.username.trim();
+    const email = form.email.trim();
+    const displayName = form.display_name.trim() || username;
+    if (!username || !email) {
       toast.error("Username and email are required.");
       return;
     }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      toast.error("Invalid username", {
+        description: "Only letters, numbers, dots, dashes and underscores are allowed.",
+      });
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast.error("Invalid email address.");
+      return;
+    }
+    const password = form.generate || !form.password ? undefined : form.password;
+    if (password && password.length < 10) {
+      toast.error("Password too short", {
+        description: "Passwords must be at least 10 characters.",
+      });
+      return;
+    }
     const created = await createAdminUser({
-      username: form.username.trim(),
-      display_name: form.display_name.trim() || form.username.trim(),
-      email: form.email.trim(),
-      password: form.generate || !form.password ? undefined : form.password,
+      username,
+      display_name: displayName,
+      email,
+      password,
       roles: chosen,
     });
     if (!created) {

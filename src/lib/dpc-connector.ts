@@ -8,8 +8,9 @@ import type { Role, User } from "./types";
  * backend flow keeps working during the migration.
  *
  * Auth uses an HttpOnly session cookie (sent with `credentials: "include"`) and
- * a CSRF token that is kept in sessionStorage and sent as `X-DPC-CSRF` on every
- * non-GET request. No WordPress application password is ever stored.
+ * a CSRF token that is kept in sessionStorage, mirrored to localStorage, and
+ * sent as `X-DPC-CSRF` on every non-GET request. No WordPress application
+ * password is ever stored.
  */
 
 const RAW_BASE = ((import.meta.env?.["VITE_DPC_API_URL"] as string | undefined) ?? "").trim();
@@ -34,17 +35,35 @@ export function isDpcConnectorEnabled(): boolean {
 
 const CSRF_KEY = "dpc-nexus-csrf";
 
+/**
+ * Stores the CSRF token in sessionStorage and mirrors it to localStorage so it
+ * survives new tabs and browser restarts. The raw token is useless without the
+ * HttpOnly `dpc_session` cookie, so persisting it locally does not weaken the
+ * session; it only prevents "logged in but writes 401" flakiness after a tab
+ * restore clears the per-tab sessionStorage.
+ */
 function setCsrf(token: string): void {
   try {
     sessionStorage.setItem(CSRF_KEY, token);
   } catch {
-    /* storage unavailable — writes will fail CSRF and re-login is required */
+    /* ignore */
+  }
+  try {
+    localStorage.setItem(CSRF_KEY, token);
+  } catch {
+    /* ignore */
   }
 }
 
 function getCsrf(): string | null {
   try {
-    return sessionStorage.getItem(CSRF_KEY);
+    const inTab = sessionStorage.getItem(CSRF_KEY);
+    if (inTab) return inTab;
+  } catch {
+    /* ignore */
+  }
+  try {
+    return localStorage.getItem(CSRF_KEY);
   } catch {
     return null;
   }
@@ -55,6 +74,39 @@ function clearCsrf(): void {
     sessionStorage.removeItem(CSRF_KEY);
   } catch {
     /* ignore */
+  }
+  try {
+    localStorage.removeItem(CSRF_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// Guard that keeps the app from auto-restoring a session right after a logout,
+// while the server-side revoke is still in flight. Cleared by the next login.
+const LOGGED_OUT_KEY = "dpc-nexus-logged-out";
+
+export function setLoggedOutFlag(): void {
+  try {
+    localStorage.setItem(LOGGED_OUT_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearLoggedOutFlag(): void {
+  try {
+    localStorage.removeItem(LOGGED_OUT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasLoggedOutFlag(): boolean {
+  try {
+    return localStorage.getItem(LOGGED_OUT_KEY) === "1";
+  } catch {
+    return false;
   }
 }
 
@@ -212,6 +264,7 @@ async function dpcFetch<T>(
 export async function dpcLogin(username: string, password: string): Promise<DpcLoginResult> {
   const res = await dpcFetch<DpcLoginData>("/auth/login", "POST", { username, password });
   if (res.ok && res.data) {
+    clearLoggedOutFlag();
     setCsrf(res.data.csrf_token);
     return { ok: true, user: dpcUserToUser(res.data.user) };
   }
