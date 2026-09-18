@@ -528,6 +528,35 @@ class DPC_POS_Integrations {
 	 */
 	private function handle_save_integration() {
 		$type = sanitize_key( $_POST['integration_type'] ?? '' );
+
+		// The Application pseudo-integration stores the App URL + allowed origins.
+		if ( 'app' === $type ) {
+			if ( isset( $_POST['url'] ) ) {
+				DPC_POS_Security::set_setting( self::setting_key( 'app', 'url' ), esc_url_raw( wp_unslash( $_POST['url'] ) ) );
+			}
+			if ( isset( $_POST['allowed_origins'] ) ) {
+				$lines   = preg_split( '/\r\n|\r|\n/', (string) wp_unslash( $_POST['allowed_origins'] ) );
+				$origins = array();
+				foreach ( (array) $lines as $line ) {
+					$origin = untrailingslashit( trim( (string) $line ) );
+					if ( '' !== $origin && ! in_array( $origin, $origins, true ) ) {
+						$origins[] = esc_url_raw( $origin );
+					}
+				}
+				DPC_POS_Security::set_setting( 'integration_app_origins', $origins );
+			}
+			DPC_POS_Audit::record(
+				array(
+					'user_id'   => get_current_user_id(),
+					'action'    => 'integration.updated',
+					'module'    => 'integrations',
+					'resource'  => 'integration',
+					'record_id' => 'app',
+				)
+			);
+			return;
+		}
+
 		if ( ! isset( self::definitions()[ $type ] ) ) {
 			return;
 		}
@@ -557,7 +586,11 @@ class DPC_POS_Integrations {
 		global $wpdb;
 		$users_table = DPC_POS_RBAC::table( 'users' );
 		$owners      = $wpdb->get_results( "SELECT id, username, email, display_name, password_hash FROM {$users_table} WHERE status = 'active' ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$app_url     = self::app_url();
+		$app_url       = self::app_url();
+		$extra_origins = DPC_POS_Security::get_setting( 'integration_app_origins', array() );
+		if ( ! is_array( $extra_origins ) ) {
+			$extra_origins = array();
+		}
 		?>
 		<div class="wrap">
 			<h1>DPC POS</h1>
@@ -598,6 +631,9 @@ class DPC_POS_Integrations {
 				<table class="form-table" role="presentation">
 					<tr><th scope="row"><label for="dpc-app-url">App URL</label></th>
 						<td><input name="url" id="dpc-app-url" type="url" class="regular-text" value="<?php echo esc_attr( $app_url ); ?>" /></td></tr>
+					<tr><th scope="row"><label for="dpc-app-origins">Additional allowed origins</label></th>
+						<td><textarea name="allowed_origins" id="dpc-app-origins" rows="3" class="large-text code" placeholder="http://localhost:8080"><?php echo esc_textarea( implode( "\n", $extra_origins ) ); ?></textarea>
+						<p class="description">One origin per line. Allowed to call the API with credentials (CORS + cookies), e.g. a local dev server.</p></td></tr>
 				</table>
 				<?php submit_button( 'Save application' ); ?>
 			</form>

@@ -224,8 +224,17 @@ class DPC_POS_Security {
 	 * @return bool
 	 */
 	private static function is_cross_site() {
-		$app_host  = wp_parse_url( (string) DPC_POS_Integrations::app_url(), PHP_URL_HOST );
 		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		// The actual request origin wins (covers local dev servers that are not
+		// the configured App URL yet).
+		$origin       = get_http_origin();
+		$request_host = $origin ? wp_parse_url( $origin, PHP_URL_HOST ) : '';
+		if ( $request_host && $site_host && $request_host !== $site_host ) {
+			return true;
+		}
+
+		$app_host = wp_parse_url( (string) DPC_POS_Integrations::app_url(), PHP_URL_HOST );
 		return $app_host && $site_host && $app_host !== $site_host;
 	}
 
