@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as ResetRouteImport } from './routes/reset'
 import { Route as AppAssemblyRouteImport } from './routes/_app.assembly'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -22,6 +23,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppAdminActivityRouteImport } from './routes/_app.admin.activity'
 import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
 import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
+import { Route as AppAdministrationBranchesRouteImport } from './routes/_app.administration.branches'
 import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes.index'
 import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
@@ -58,6 +60,8 @@ import { Route as AppWarehousesIndexRouteImport } from './routes/_app.warehouses
 import { Route as AppWarehousesWarehouseIdRouteImport } from './routes/_app.warehouses.$warehouseId'
 import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
 import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
+import { Route as AppAdministrationApprovalsPendingRouteImport } from './routes/_app.administration.approvals.pending'
+import { Route as AppAdministrationApprovalsSettingsRouteImport } from './routes/_app.administration.approvals.settings'
 import { Route as AppAdministrationUsersIndexRouteImport } from './routes/_app.administration.users.index'
 import { Route as AppAdministrationUsersAccountStatusRouteImport } from './routes/_app.administration.users.account-status'
 import { Route as AppAdministrationUsersActivityRouteImport } from './routes/_app.administration.users.activity'
@@ -77,6 +81,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetRoute = ResetRouteImport.update({
+  id: '/reset',
+  path: '/reset',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAssemblyRoute = AppAssemblyRouteImport.update({
@@ -134,6 +143,12 @@ const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdministrationBranchesRoute =
+  AppAdministrationBranchesRouteImport.update({
+    id: '/administration/branches',
+    path: '/administration/branches',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppAttributesIndexRoute = AppAttributesIndexRouteImport.update({
   id: '/attributes/',
   path: '/attributes/',
@@ -315,6 +330,18 @@ const AppWarrantyWarrantyIdRoute = AppWarrantyWarrantyIdRouteImport.update({
   path: '/warranty/$warrantyId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdministrationApprovalsPendingRoute =
+  AppAdministrationApprovalsPendingRouteImport.update({
+    id: '/administration/approvals/pending',
+    path: '/administration/approvals/pending',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationApprovalsSettingsRoute =
+  AppAdministrationApprovalsSettingsRouteImport.update({
+    id: '/administration/approvals/settings',
+    path: '/administration/approvals/settings',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppAdministrationUsersIndexRoute =
   AppAdministrationUsersIndexRouteImport.update({
     id: '/administration/users/',
@@ -384,6 +411,7 @@ const AppAdministrationUsersUserIdProfileRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset': typeof ResetRoute
   '/assembly': typeof AppAssemblyRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
@@ -395,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AppAdminActivityRoute
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
+  '/administration/branches': typeof AppAdministrationBranchesRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -431,6 +460,8 @@ export interface FileRoutesByFullPath {
   '/transfers/': typeof AppTransfersIndexRoute
   '/warehouses/': typeof AppWarehousesIndexRoute
   '/warranty/': typeof AppWarrantyIndexRoute
+  '/administration/approvals/pending': typeof AppAdministrationApprovalsPendingRoute
+  '/administration/approvals/settings': typeof AppAdministrationApprovalsSettingsRoute
   '/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
   '/administration/users/activity': typeof AppAdministrationUsersActivityRoute
   '/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
@@ -445,6 +476,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset': typeof ResetRoute
   '/assembly': typeof AppAssemblyRoute
   '/audit': typeof AppAuditRoute
   '/dashboard': typeof AppDashboardRoute
@@ -456,6 +488,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AppAdminActivityRoute
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
+  '/administration/branches': typeof AppAdministrationBranchesRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -492,6 +525,8 @@ export interface FileRoutesByTo {
   '/transfers': typeof AppTransfersIndexRoute
   '/warehouses': typeof AppWarehousesIndexRoute
   '/warranty': typeof AppWarrantyIndexRoute
+  '/administration/approvals/pending': typeof AppAdministrationApprovalsPendingRoute
+  '/administration/approvals/settings': typeof AppAdministrationApprovalsSettingsRoute
   '/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
   '/administration/users/activity': typeof AppAdministrationUsersActivityRoute
   '/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
@@ -508,6 +543,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/reset': typeof ResetRoute
   '/_app/assembly': typeof AppAssemblyRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -519,6 +555,7 @@ export interface FileRoutesById {
   '/_app/admin/activity': typeof AppAdminActivityRoute
   '/_app/admin/audit': typeof AppAdminAuditRoute
   '/_app/admin/roles': typeof AppAdminRolesRoute
+  '/_app/administration/branches': typeof AppAdministrationBranchesRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -555,6 +592,8 @@ export interface FileRoutesById {
   '/_app/transfers/': typeof AppTransfersIndexRoute
   '/_app/warehouses/': typeof AppWarehousesIndexRoute
   '/_app/warranty/': typeof AppWarrantyIndexRoute
+  '/_app/administration/approvals/pending': typeof AppAdministrationApprovalsPendingRoute
+  '/_app/administration/approvals/settings': typeof AppAdministrationApprovalsSettingsRoute
   '/_app/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
   '/_app/administration/users/activity': typeof AppAdministrationUsersActivityRoute
   '/_app/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
@@ -571,6 +610,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset'
     | '/assembly'
     | '/audit'
     | '/dashboard'
@@ -582,6 +622,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/audit'
     | '/admin/roles'
+    | '/administration/branches'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -618,6 +659,8 @@ export interface FileRouteTypes {
     | '/transfers/'
     | '/warehouses/'
     | '/warranty/'
+    | '/administration/approvals/pending'
+    | '/administration/approvals/settings'
     | '/administration/users/account-status'
     | '/administration/users/activity'
     | '/administration/users/branches'
@@ -632,6 +675,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset'
     | '/assembly'
     | '/audit'
     | '/dashboard'
@@ -643,6 +687,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/audit'
     | '/admin/roles'
+    | '/administration/branches'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -679,6 +724,8 @@ export interface FileRouteTypes {
     | '/transfers'
     | '/warehouses'
     | '/warranty'
+    | '/administration/approvals/pending'
+    | '/administration/approvals/settings'
     | '/administration/users/account-status'
     | '/administration/users/activity'
     | '/administration/users/branches'
@@ -694,6 +741,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/reset'
     | '/_app/assembly'
     | '/_app/audit'
     | '/_app/dashboard'
@@ -705,6 +753,7 @@ export interface FileRouteTypes {
     | '/_app/admin/activity'
     | '/_app/admin/audit'
     | '/_app/admin/roles'
+    | '/_app/administration/branches'
     | '/_app/builds/$buildId'
     | '/_app/customers/$customerId'
     | '/_app/inventory/$productId'
@@ -741,6 +790,8 @@ export interface FileRouteTypes {
     | '/_app/transfers/'
     | '/_app/warehouses/'
     | '/_app/warranty/'
+    | '/_app/administration/approvals/pending'
+    | '/_app/administration/approvals/settings'
     | '/_app/administration/users/account-status'
     | '/_app/administration/users/activity'
     | '/_app/administration/users/branches'
@@ -757,6 +808,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  ResetRoute: typeof ResetRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -773,6 +825,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset': {
+      id: '/reset'
+      path: '/reset'
+      fullPath: '/reset'
+      preLoaderRoute: typeof ResetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/assembly': {
@@ -850,6 +909,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AppAdminRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/branches': {
+      id: '/_app/administration/branches'
+      path: '/administration/branches'
+      fullPath: '/administration/branches'
+      preLoaderRoute: typeof AppAdministrationBranchesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/attributes/': {
@@ -1104,6 +1170,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWarrantyWarrantyIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/administration/approvals/pending': {
+      id: '/_app/administration/approvals/pending'
+      path: '/administration/approvals/pending'
+      fullPath: '/administration/approvals/pending'
+      preLoaderRoute: typeof AppAdministrationApprovalsPendingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/approvals/settings': {
+      id: '/_app/administration/approvals/settings'
+      path: '/administration/approvals/settings'
+      fullPath: '/administration/approvals/settings'
+      preLoaderRoute: typeof AppAdministrationApprovalsSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/administration/users/': {
       id: '/_app/administration/users/'
       path: '/administration/users'
@@ -1196,6 +1276,7 @@ interface AppRouteChildren {
   AppAdminActivityRoute: typeof AppAdminActivityRoute
   AppAdminAuditRoute: typeof AppAdminAuditRoute
   AppAdminRolesRoute: typeof AppAdminRolesRoute
+  AppAdministrationBranchesRoute: typeof AppAdministrationBranchesRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
@@ -1232,6 +1313,8 @@ interface AppRouteChildren {
   AppTransfersIndexRoute: typeof AppTransfersIndexRoute
   AppWarehousesIndexRoute: typeof AppWarehousesIndexRoute
   AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
+  AppAdministrationApprovalsPendingRoute: typeof AppAdministrationApprovalsPendingRoute
+  AppAdministrationApprovalsSettingsRoute: typeof AppAdministrationApprovalsSettingsRoute
   AppAdministrationUsersAccountStatusRoute: typeof AppAdministrationUsersAccountStatusRoute
   AppAdministrationUsersActivityRoute: typeof AppAdministrationUsersActivityRoute
   AppAdministrationUsersBranchesRoute: typeof AppAdministrationUsersBranchesRoute
@@ -1257,6 +1340,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminActivityRoute: AppAdminActivityRoute,
   AppAdminAuditRoute: AppAdminAuditRoute,
   AppAdminRolesRoute: AppAdminRolesRoute,
+  AppAdministrationBranchesRoute: AppAdministrationBranchesRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppInventoryProductIdRoute: AppInventoryProductIdRoute,
@@ -1293,6 +1377,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppTransfersIndexRoute: AppTransfersIndexRoute,
   AppWarehousesIndexRoute: AppWarehousesIndexRoute,
   AppWarrantyIndexRoute: AppWarrantyIndexRoute,
+  AppAdministrationApprovalsPendingRoute:
+    AppAdministrationApprovalsPendingRoute,
+  AppAdministrationApprovalsSettingsRoute:
+    AppAdministrationApprovalsSettingsRoute,
   AppAdministrationUsersAccountStatusRoute:
     AppAdministrationUsersAccountStatusRoute,
   AppAdministrationUsersActivityRoute: AppAdministrationUsersActivityRoute,
@@ -1315,6 +1403,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  ResetRoute: ResetRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

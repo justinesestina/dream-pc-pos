@@ -18,7 +18,7 @@ import { StatCard } from "@/components/nexus/stat-card";
 import { Toolbar, SearchInput, ResultCount } from "@/components/nexus/toolbar";
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { Button } from "@/components/ui/button";
-import { dateTimeShort, relative } from "@/lib/format";
+import { parseServerDate, serverDateTimeShort, serverRelative } from "@/lib/format";
 import {
   fetchAdminActivity,
   fetchAdminUsers,
@@ -150,14 +150,14 @@ export function ActivityLogsPage({
       cell: (r) => (
         <div>
           <p className="text-[12.5px] whitespace-nowrap text-foreground">
-            {dateTimeShort(r.entry.created_at)}
+            {serverDateTimeShort(r.entry.created_at)}
           </p>
           <p className="text-[10.5px] whitespace-nowrap text-subtle">
-            {relative(r.entry.created_at)}
+            {serverRelative(r.entry.created_at)}
           </p>
         </div>
       ),
-      sortValue: (r) => new Date(r.entry.created_at).getTime(),
+      sortValue: (r) => parseServerDate(r.entry.created_at).getTime(),
     },
     {
       key: "actor",

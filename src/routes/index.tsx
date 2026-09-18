@@ -1,9 +1,26 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, Eye, EyeOff, KeyRound, Loader2, User as UserIcon } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  Mail,
+  User as UserIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DreamLogo } from "@/components/brand/nexus-logo";
 import { Reveal } from "@/components/nexus/motion";
 import { useStore } from "@/lib/store";
@@ -36,8 +53,14 @@ function LoginPage() {
   const [wpUser, setWpUser] = useState("");
   const [wpPassword, setWpPassword] = useState("");
   const [showWpPassword, setShowWpPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPending, setForgotPending] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   const dpcEnabled = isDpcConnectorEnabled();
   const wpConfigured = Boolean(wpSiteUrl()) || dpcEnabled;
@@ -94,7 +117,7 @@ function LoginPage() {
     setError(null);
     setPending(true);
     const { loginToBackend } = await import("@/lib/api-client");
-    const res = await loginToBackend(wpUser, wpPassword);
+    const res = await loginToBackend(wpUser, wpPassword, remember);
     if (!res.ok && res.error?.startsWith("Could not reach backend.")) {
       const direct = await authenticateWordPress(wpUser, wpPassword);
       setPending(false);
@@ -254,6 +277,25 @@ function LoginPage() {
                 </p>
               )}
 
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-[12.5px] text-muted-foreground select-none">
+                  <Checkbox checked={remember} onCheckedChange={(v) => setRemember(Boolean(v))} />
+                  Keep me signed in
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotOpen(true);
+                    setForgotEmail("");
+                    setForgotSent(false);
+                    setForgotError(null);
+                  }}
+                  className="cursor-pointer text-[12.5px] font-medium text-info transition-colors hover:text-info/80"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
               <Button
                 type="submit"
                 className="mt-6 h-11 w-full text-[13.5px] font-semibold shadow-sm"
@@ -264,6 +306,92 @@ function LoginPage() {
               </Button>
             </div>
           </form>
+
+          <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Reset your password</DialogTitle>
+                <DialogDescription>
+                  Enter your account email (or username) and we will email you a reset link valid
+                  for one hour.
+                </DialogDescription>
+              </DialogHeader>
+
+              {forgotSent ? (
+                <div className="space-y-3">
+                  <p className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-[13px] text-success animate-in slide-in-from-top-1">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                    If an account exists for that email, a reset link has been sent. Check your
+                    inbox (and spam folder).
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setForgotOpen(false)}
+                  >
+                    Back to sign in
+                  </Button>
+                </div>
+              ) : (
+                <form
+                  className="space-y-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setForgotError(null);
+                    setForgotPending(true);
+                    void (async () => {
+                      try {
+                        const { dpcForgotPassword } = await import("@/lib/dpc-connector");
+                        const res = await dpcForgotPassword(forgotEmail.trim());
+                        if (!res.ok) {
+                          setForgotError(res.error ?? "Could not request a password reset.");
+                          setForgotPending(false);
+                          return;
+                        }
+                        setForgotPending(false);
+                        setForgotSent(true);
+                      } catch {
+                        setForgotPending(false);
+                        setForgotError("Something went wrong. Try again later.");
+                      }
+                    })();
+                  }}
+                >
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      autoComplete="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="your email or username"
+                      className="mono h-10 bg-background/50 pl-10 text-[13px] shadow-sm"
+                      required
+                    />
+                  </div>
+                  {forgotError && (
+                    <p
+                      role="alert"
+                      className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive"
+                    >
+                      <AlertCircle className="size-4 shrink-0" />
+                      {forgotError}
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="w-full"
+                    disabled={forgotPending || forgotEmail.trim().length === 0}
+                  >
+                    {forgotPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                    Send reset link
+                  </Button>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
         </Reveal>
       </div>
     </div>

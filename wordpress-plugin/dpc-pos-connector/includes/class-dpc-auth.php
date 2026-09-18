@@ -210,7 +210,7 @@ class DPC_POS_Auth {
 			array( 'id' => $user_id )
 		);
 
-		$session = DPC_POS_Security::create_session( $user_id );
+		$session = DPC_POS_Security::create_session( $user_id, (bool) $request->get_param( 'remember' ) );
 		if ( ! $session ) {
 			return self::error( 'dpc_session_failed', 'Could not create a session.', 500 );
 		}
@@ -337,7 +337,10 @@ class DPC_POS_Auth {
 	 */
 	public static function forgot_password( $request ) {
 		$login = sanitize_text_field( (string) $request->get_param( 'username' ) );
-		$user  = self::find_user_by_login( $login );
+		if ( '' === $login ) {
+			$login = sanitize_email( (string) $request->get_param( 'email' ) );
+		}
+		$user = self::find_user_by_login( $login );
 		// Always succeed to avoid account enumeration.
 		if ( $user && 'active' === $user['status'] && is_email( $user['email'] ) ) {
 			$token = bin2hex( random_bytes( 24 ) );
@@ -348,20 +351,34 @@ class DPC_POS_Auth {
 					'exp'  => time() + 3600,
 				)
 			);
-			$base = apply_filters( 'dpc_pos_app_url', home_url( '/' ) );
+			$base = DPC_POS_Integrations::app_url();
+			if ( $base ) {
+				$base = rtrim( $base, '/' ) . '/reset';
+			} else {
+				$base = home_url( '/' );
+			}
 			$link = add_query_arg(
 				array(
-					'dpc_reset' => 1,
-					'uid'       => (int) $user['id'],
-					'token'     => $token,
+					'uid'   => (int) $user['id'],
+					'token' => $token,
 				),
 				$base
 			);
-			wp_mail(
+			if ( wp_mail(
 				$user['email'],
 				'DPC POS password reset',
 				"Use this link within one hour to reset your DPC POS password:\n\n{$link}\n"
-			);
+			) ) {
+				DPC_POS_Audit::record(
+					array(
+						'user_id'   => (int) $user['id'],
+						'action'    => 'auth.password_reset_requested',
+						'module'    => 'users',
+						'resource'  => 'user',
+						'record_id' => (int) $user['id'],
+					)
+				);
+			}
 		}
 		return rest_ensure_response( array( 'ok' => true ) );
 	}

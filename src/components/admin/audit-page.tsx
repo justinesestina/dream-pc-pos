@@ -8,7 +8,7 @@ import { Toolbar, SearchInput, FilterSelect, ResultCount } from "@/components/ne
 import { DataTable, type Column } from "@/components/nexus/data-table";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { Button } from "@/components/ui/button";
-import { dateTimeShort } from "@/lib/format";
+import { parseServerDate, serverDateTimeShort } from "@/lib/format";
 import {
   fetchAdminAudit,
   fetchAdminUsers,
@@ -154,10 +154,10 @@ export function AuditLogsPage({
       header: "Time",
       cell: (r) => (
         <span className="text-[12.5px] whitespace-nowrap text-muted-foreground">
-          {dateTimeShort(r.entry.created_at)}
+          {serverDateTimeShort(r.entry.created_at)}
         </span>
       ),
-      sortValue: (r) => new Date(r.entry.created_at).getTime(),
+      sortValue: (r) => parseServerDate(r.entry.created_at).getTime(),
     },
     {
       key: "user",

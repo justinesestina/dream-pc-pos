@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { fetchGlobalLoginHistory, type AdminLoginHistoryRow } from "@/lib/api-client";
-import { dateTime } from "@/lib/format";
+import { serverDateTime } from "@/lib/format";
 import { deviceFromUA } from "./user-bits";
 
 const PER_PAGE = 15;
@@ -153,7 +153,7 @@ export function LoginHistoryPage() {
                     className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-elevated/70"
                   >
                     <td className="mono px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                      {dateTime(row.created_at)}
+                      {serverDateTime(row.created_at)}
                     </td>
                     <td className="px-4 py-2.5">
                       <span className="text-[13px] text-foreground">{row.display_name || "—"}</span>
@@ -219,7 +219,7 @@ export function LoginHistoryPage() {
                 ? detail.display_name || detail.username || "Sign-in attempt"
                 : "Sign-in attempt"}
             </DialogTitle>
-            <DialogDescription>{detail ? dateTime(detail.created_at) : ""}</DialogDescription>
+            <DialogDescription>{detail ? serverDateTime(detail.created_at) : ""}</DialogDescription>
           </DialogHeader>
           {detail && (
             <div className="grid gap-2.5 text-[13px]">

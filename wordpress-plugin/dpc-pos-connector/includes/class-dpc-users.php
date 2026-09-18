@@ -696,6 +696,92 @@ class DPC_POS_Users {
 	}
 
 	/**
+	 * POST /branches — create a branch.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @param array           $auth    Auth context.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_branch( $request, $auth ) {
+		global $wpdb;
+		$table = DPC_POS_RBAC::table( 'branches' );
+
+		$name    = sanitize_text_field( (string) $request->get_param( 'name' ) );
+		$code    = sanitize_text_field( (string) $request->get_param( 'code' ) );
+		$address = sanitize_text_field( (string) $request->get_param( 'address' ) );
+		$status  = (string) $request->get_param( 'status' );
+		if ( ! in_array( $status, array( 'active', 'inactive' ), true ) ) {
+			$status = 'active';
+		}
+
+		if ( '' === $name ) {
+			return DPC_POS_Auth::error( 'dpc_invalid_branch', 'A branch name is required.', 400 );
+		}
+		if ( '' === $code ) {
+			$code = self::next_branch_code();
+		}
+		if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE code = %s", $code ) ) ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			return DPC_POS_Auth::error( 'dpc_branch_code_taken', 'A branch with that code already exists.', 409 );
+		}
+
+		$wpdb->insert(
+			$table,
+			array(
+				'code'    => substr( $code, 0, 50 ),
+				'name'    => substr( $name, 0, 150 ),
+				'address' => substr( $address, 0, 255 ),
+				'status'  => $status,
+			),
+			array( '%s', '%s', '%s', '%s' )
+		);
+		$branch_id = (int) $wpdb->insert_id;
+		if ( ! $branch_id ) {
+			return DPC_POS_Auth::error( 'dpc_create_failed', 'Could not create the branch.', 500 );
+		}
+
+		DPC_POS_Audit::record(
+			array(
+				'user_id'   => (int) $auth['user']['id'],
+				'action'    => 'branch.created',
+				'module'    => 'users',
+				'resource'  => 'branch',
+				'record_id' => $branch_id,
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'branch.created',
+				'description' => 'Created branch "' . $name . '"',
+				'record_id'   => $branch_id,
+			)
+		);
+
+		return rest_ensure_response(
+			array(
+				'id'      => $branch_id,
+				'code'    => $code,
+				'name'    => $name,
+				'address' => $address,
+				'status'  => $status,
+			)
+		);
+	}
+
+	/**
+	 * Next short code for a branch, e.g. BR-002.
+	 *
+	 * @return string
+	 */
+	private static function next_branch_code() {
+		global $wpdb;
+		$table = DPC_POS_RBAC::table( 'branches' );
+		$max   = (int) $wpdb->get_var( "SELECT COALESCE(MAX(id), 0) FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return 'BR-' . str_pad( (string) $max, 3, '0', STR_PAD_LEFT );
+	}
+
+	/**
 	 * POST /users/{id}/branches — replace a user's branch assignments.
 	 *
 	 * @param WP_REST_Request $request REST request.

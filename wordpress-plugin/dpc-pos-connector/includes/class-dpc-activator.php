@@ -18,7 +18,7 @@ class DPC_POS_Activator {
 	/**
 	 * Database schema version. Bump when the schema changes.
 	 */
-	const DB_VERSION = '0.1.0';
+	const DB_VERSION = '0.2.0';
 
 	/**
 	 * Option holding the installed schema version.
@@ -187,6 +187,7 @@ class DPC_POS_Activator {
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			last_seen_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			expires_at datetime NOT NULL,
+			ttl_seconds int(11) NOT NULL DEFAULT 0,
 			revoked_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY token_hash (token_hash),

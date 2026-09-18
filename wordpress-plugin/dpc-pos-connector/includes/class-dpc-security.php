@@ -111,6 +111,19 @@ class DPC_POS_Security {
 	}
 
 	/**
+	 * Session lifetime when "remember me" is selected (30 days).
+	 *
+	 * @return int
+	 */
+	public static function remember_session_ttl() {
+		$days = (int) self::get_setting( 'remember_session_days', 30 );
+		if ( $days < 1 ) {
+			$days = 1;
+		}
+		return $days * 86400;
+	}
+
+	/**
 	 * Maximum consecutive failed attempts before lockout.
 	 *
 	 * @return int
@@ -241,16 +254,17 @@ class DPC_POS_Security {
 	/**
 	 * Creates a session and returns its raw token + CSRF token.
 	 *
-	 * @param int $user_id DPC user id.
+	 * @param int  $user_id  DPC user id.
+	 * @param bool $remember Persist the session for the "remember me" lifetime.
 	 * @return array{token:string,csrf:string,expires_at:int}|null
 	 */
-	public static function create_session( $user_id ) {
+	public static function create_session( $user_id, $remember = false ) {
 		global $wpdb;
 		$table = DPC_POS_RBAC::table( 'sessions' );
 
 		$token      = bin2hex( random_bytes( 32 ) );
 		$csrf       = bin2hex( random_bytes( 32 ) );
-		$ttl        = self::session_ttl();
+		$ttl        = $remember ? self::remember_session_ttl() : self::session_ttl();
 		$expires_ts = time() + $ttl;
 		$expires    = gmdate( 'Y-m-d H:i:s', $expires_ts );
 
@@ -263,8 +277,9 @@ class DPC_POS_Security {
 				'ip'          => self::client_ip(),
 				'user_agent'  => self::user_agent(),
 				'expires_at'  => $expires,
+				'ttl_seconds' => $ttl,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%d' )
 		);
 		if ( ! $inserted ) {
 			return null;
@@ -364,7 +379,11 @@ class DPC_POS_Security {
 		}
 
 		$now      = gmdate( 'Y-m-d H:i:s' );
-		$new_exp  = gmdate( 'Y-m-d H:i:s', time() + self::session_ttl() );
+		$ttl      = (int) $session['ttl_seconds'];
+		if ( $ttl <= 0 ) {
+			$ttl = self::session_ttl();
+		}
+		$new_exp = gmdate( 'Y-m-d H:i:s', time() + $ttl );
 		$wpdb->update(
 			$sessions,
 			array(

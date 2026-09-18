@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getLastApiError, setAdminUserPassword, type AdminUser } from "@/lib/api-client";
-import { dateTimeShort } from "@/lib/format";
+import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData } from "./use-admin-user-data";
 import { RoleBadges, StatusCell, isLocked } from "./user-bits";
 
@@ -139,7 +139,7 @@ export function PasswordResetPage() {
       cell: (r) =>
         r.user.last_login_at ? (
           <span className="mono text-xs text-muted-foreground">
-            {dateTimeShort(r.user.last_login_at)}
+            {serverDateTimeShort(r.user.last_login_at)}
           </span>
         ) : (
           <span className="text-xs text-subtle">Never</span>

@@ -168,11 +168,15 @@ export interface LoginResult {
   error?: string;
 }
 
-export async function loginToBackend(username: string, appPassword: string): Promise<LoginResult> {
+export async function loginToBackend(
+  username: string,
+  appPassword: string,
+  remember = false,
+): Promise<LoginResult> {
   // Prefer the DPC POS connector when configured. On failure we fall through to
   // the legacy backend so existing WordPress users keep working during migration.
   if (isDpcConnectorEnabled()) {
-    const dpc = await dpcLogin(username, appPassword);
+    const dpc = await dpcLogin(username, appPassword, remember);
     if (dpc.ok && dpc.user) {
       try {
         localStorage.setItem("dpc-nexus-user", JSON.stringify(dpc.user));
@@ -917,7 +921,18 @@ export async function fetchAdminUserLoginHistory(id: number): Promise<AdminLogin
 
 export async function fetchAdminBranches(): Promise<AdminBranch[]> {
   const res = await apiRequest<{ items: AdminBranch[] }>("/api/v1/branches");
-  return res.ok && res.data ? res.data.items : [];
+  if (!res.ok) return [];
+  return res.data?.items ?? [];
+}
+
+export async function createAdminBranch(input: {
+  name: string;
+  code?: string;
+  address?: string;
+}): Promise<AdminBranch | null> {
+  const res = await apiRequest<AdminBranch>("/api/v1/branches", "POST", input);
+  if (!res.ok) return null;
+  return res.data ?? null;
 }
 
 export async function setAdminUserBranches(

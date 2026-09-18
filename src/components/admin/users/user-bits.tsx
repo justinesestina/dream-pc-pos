@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/nexus/status-badge";
 import type { AdminUser, AdminUserStatus } from "@/lib/api-client";
+import { parseServerDate } from "@/lib/format";
 
 export function statusLabel(status: string): string {
   return status === "active"
@@ -28,7 +29,7 @@ export function roleTone(slug: string): "danger" | "info" | "neutral" {
 
 /** True while the account is temporarily locked after failed attempts. */
 export function isLocked(u: AdminUser): boolean {
-  return Boolean(u.locked_until && new Date(u.locked_until).getTime() > Date.now());
+  return Boolean(u.locked_until && parseServerDate(u.locked_until).getTime() > Date.now());
 }
 
 export function StatusCell({ status, locked }: { status: string; locked?: boolean }) {

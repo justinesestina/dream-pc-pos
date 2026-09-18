@@ -248,6 +248,15 @@ class DPC_POS_REST {
 		);
 		register_rest_route(
 			$ns,
+			'/branches',
+			array(
+				'methods'             => 'POST',
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'create_branch' ) ),
+				'permission_callback' => $this->require_permission( 'branches.create' ),
+			)
+		);
+		register_rest_route(
+			$ns,
 			'/login-history',
 			array(
 				'methods'             => 'GET',

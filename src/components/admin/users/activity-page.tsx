@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/nexus/status-badge";
 import { fetchAdminActivity, type AdminActivityRow } from "@/lib/api-client";
-import { dateTime, titleCase } from "@/lib/format";
+import { serverDateTime, titleCase } from "@/lib/format";
 
 const PER_PAGE = 15;
 const MODULES = [
@@ -157,7 +157,7 @@ export function ActivityPage() {
                     className="cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-elevated/70"
                   >
                     <td className="mono px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                      {dateTime(row.created_at)}
+                      {serverDateTime(row.created_at)}
                     </td>
                     <td className="px-4 py-2.5">
                       <StatusBadge status="neutral" label={titleCase(row.module)} />
@@ -213,7 +213,7 @@ export function ActivityPage() {
             <DialogTitle>
               {detail ? `${titleCase(detail.module)} · ${detail.action}` : "Event"}
             </DialogTitle>
-            <DialogDescription>{detail ? dateTime(detail.created_at) : ""}</DialogDescription>
+            <DialogDescription>{detail ? serverDateTime(detail.created_at) : ""}</DialogDescription>
           </DialogHeader>
           {detail && (
             <div className="grid gap-2.5 text-[13px]">

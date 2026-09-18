@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Activity,
@@ -34,10 +34,11 @@ import {
   setAdminUserStatus,
   type AdminUser,
 } from "@/lib/api-client";
-import { dateTimeShort } from "@/lib/format";
+import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData, filterUsers } from "./use-admin-user-data";
-import { BranchCell, RoleBadges, StatusCell, isLocked, statusLabel } from "./user-bits";
+import { BranchCell, RoleBadges, StatusCell, isLocked } from "./user-bits";
 import { ConfirmDialog } from "./confirm-dialog";
+import { UserDrawer, type UserDrawerSection } from "./user-drawer";
 
 interface Row {
   id: string;
@@ -45,17 +46,23 @@ interface Row {
 }
 
 export function AllUsersPage() {
-  const navigate = useNavigate();
   const { users, roles, branches, loading, reload } = useAdminUserData();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [drawerUser, setDrawerUser] = useState<AdminUser | null>(null);
+  const [drawerSection, setDrawerSection] = useState<UserDrawerSection>("overview");
   const [confirm, setConfirm] = useState<{
     type: "delete" | "revoke";
     user: AdminUser;
   } | null>(null);
+
+  const openDrawer = (user: AdminUser, section: UserDrawerSection = "overview") => {
+    setDrawerUser(user);
+    setDrawerSection(section);
+  };
 
   const filtered = useMemo(
     () => filterUsers(users, query, statusFilter, roleFilter, branchFilter),
@@ -81,6 +88,17 @@ export function AllUsersPage() {
     toast.success(okMsg);
     reload();
   };
+
+  const toggleStatus = (user: AdminUser) =>
+    runAction(
+      () =>
+        setAdminUserStatus(user.id, user.status !== "active" ? "active" : "suspended").then((u) =>
+          Boolean(u),
+        ),
+      user.status !== "active"
+        ? `${user.display_name} re-activated.`
+        : `${user.display_name} suspended.`,
+    );
 
   const columns: Column<Row>[] = [
     {
@@ -133,7 +151,7 @@ export function AllUsersPage() {
       cell: (r) =>
         r.user.last_login_at ? (
           <span className="mono text-xs text-muted-foreground">
-            {dateTimeShort(r.user.last_login_at)}
+            {serverDateTimeShort(r.user.last_login_at)}
           </span>
         ) : (
           <span className="text-xs text-subtle">Never</span>
@@ -154,74 +172,27 @@ export function AllUsersPage() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="text-[11px]">{r.user.display_name}</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigate({ to: `/administration/users/${r.user.id}/profile` })}
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "overview")}>
               <User className="size-4" /> View profile
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({
-                  to: "/administration/users/password-reset",
-                  search: { id: String(r.user.id) },
-                })
-              }
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "password")}>
               <KeyRound className="size-4" /> Reset password
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({ to: "/administration/users/roles", search: { id: String(r.user.id) } })
-              }
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "roles")}>
               <ShieldCheck className="size-4" /> Assign roles
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({
-                  to: "/administration/users/branches",
-                  search: { id: String(r.user.id) },
-                })
-              }
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "branches")}>
               <Store className="size-4" /> Assign branches
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({
-                  to: "/administration/users/login-history",
-                  search: { user: String(r.user.id) },
-                })
-              }
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "history")}>
               <History className="size-4" /> Login history
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                navigate({
-                  to: "/administration/users/activity",
-                  search: { user: String(r.user.id) },
-                })
-              }
-            >
+            <DropdownMenuItem onClick={() => openDrawer(r.user, "activity")}>
               <Activity className="size-4" /> Activity
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() =>
-                runAction(
-                  () =>
-                    setAdminUserStatus(
-                      r.user.id,
-                      r.user.status !== "active" ? "active" : "suspended",
-                    ).then((u) => Boolean(u)),
-                  r.user.status !== "active"
-                    ? `${r.user.display_name} re-activated.`
-                    : `${r.user.display_name} suspended.`,
-                )
-              }
-            >
+            <DropdownMenuItem onClick={() => void toggleStatus(r.user)}>
               <Flag className="size-4" /> {r.user.status !== "active" ? "Re-activate" : "Suspend"}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setConfirm({ type: "revoke", user: r.user })}>
@@ -276,7 +247,7 @@ export function AllUsersPage() {
         />
         <StatCard
           label="Last sign-in"
-          value={lastLogin ? dateTimeShort(lastLogin) : "—"}
+          value={lastLogin ? serverDateTimeShort(lastLogin) : "—"}
           accent="neutral"
           hint="Most recent login anywhere"
         />
@@ -318,7 +289,7 @@ export function AllUsersPage() {
           rows={rows}
           columns={columns}
           loading={loading}
-          onRowClick={(r) => navigate({ to: `/administration/users/${r.user.id}/profile` })}
+          onRowClick={(r) => openDrawer(r.user)}
           pageSize={12}
           empty={
             <EmptyState
@@ -335,6 +306,20 @@ export function AllUsersPage() {
           }
         />
       </Panel>
+
+      <UserDrawer
+        user={drawerUser}
+        open={drawerUser !== null}
+        section={drawerSection}
+        roles={roles}
+        branches={branches}
+        onOpenChange={(v) => !v && setDrawerUser(null)}
+        onSection={setDrawerSection}
+        onReload={reload}
+        onToggleStatus={(u) => void toggleStatus(u)}
+        onRevokeSessions={(u) => setConfirm({ type: "revoke", user: u })}
+        onDelete={(u) => setConfirm({ type: "delete", user: u })}
+      />
 
       <ConfirmDialog
         open={confirm !== null}

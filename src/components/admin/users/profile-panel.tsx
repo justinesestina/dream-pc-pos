@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KeyValueGrid } from "@/components/nexus/detail";
 import { getLastApiError, updateAdminUser, type AdminUser } from "@/lib/api-client";
-import { dateTime } from "@/lib/format";
+import { serverDateTime } from "@/lib/format";
 import { BranchCell, RoleBadges, StatusCell, isLocked, statusLabel } from "./user-bits";
 import { SectionCard } from "./panels";
 
@@ -105,10 +105,10 @@ export function ProfilePanel({
         <KeyValueGrid
           cols={3}
           items={[
-            { label: "Created", value: dateTime(user.created_at) },
+            { label: "Created", value: serverDateTime(user.created_at) },
             {
               label: "Last login",
-              value: user.last_login_at ? dateTime(user.last_login_at) : "Never",
+              value: user.last_login_at ? serverDateTime(user.last_login_at) : "Never",
             },
             {
               label: "Failed attempts",

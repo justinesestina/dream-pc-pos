@@ -14,7 +14,7 @@ import {
   type AdminUser,
   type AdminUserStatus,
 } from "@/lib/api-client";
-import { dateTimeShort } from "@/lib/format";
+import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData } from "./use-admin-user-data";
 import { StatusCell, isLocked } from "./user-bits";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -126,7 +126,7 @@ export function AccountStatusPage() {
       cell: (r) =>
         r.user.locked_until ? (
           <span className="mono text-xs text-muted-foreground">
-            {dateTimeShort(r.user.locked_until)}
+            {serverDateTimeShort(r.user.locked_until)}
           </span>
         ) : (
           <span className="text-xs text-subtle">—</span>
@@ -139,7 +139,7 @@ export function AccountStatusPage() {
       cell: (r) =>
         r.user.last_login_at ? (
           <span className="mono text-xs text-muted-foreground">
-            {dateTimeShort(r.user.last_login_at)}
+            {serverDateTimeShort(r.user.last_login_at)}
           </span>
         ) : (
           <span className="text-xs text-subtle">Never</span>

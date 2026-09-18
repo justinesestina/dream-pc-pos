@@ -272,8 +272,12 @@ async function dpcFetch<T>(
 }
 
 /** Signs in through the connector. Stores the CSRF token in sessionStorage. */
-export async function dpcLogin(username: string, password: string): Promise<DpcLoginResult> {
-  const res = await dpcFetch<DpcLoginData>("/auth/login", "POST", { username, password });
+export async function dpcLogin(
+  username: string,
+  password: string,
+  remember = false,
+): Promise<DpcLoginResult> {
+  const res = await dpcFetch<DpcLoginData>("/auth/login", "POST", { username, password, remember });
   if (res.ok && res.data) {
     clearLoggedOutFlag();
     setCsrf(res.data.csrf_token);
@@ -285,6 +289,38 @@ export async function dpcLogin(username: string, password: string): Promise<DpcL
     : (res.error ?? "DPC connector sign in failed.");
   if (res.status !== undefined) result.status = res.status;
   return result;
+}
+
+export interface DpcForgotResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Requests a password reset link by username or email. The connector always
+ * answers success regardless of whether the account exists (no enumeration).
+ */
+export async function dpcForgotPassword(login: string): Promise<DpcForgotResult> {
+  const res = await dpcFetch<{ ok: boolean }>("/auth/password/forgot", "POST", {
+    username: login,
+  });
+  if (res.ok) return { ok: true };
+  return { ok: false, error: res.error ?? "Could not request a password reset." };
+}
+
+/** Applies a new password using the emailed reset token. */
+export async function dpcResetPassword(
+  userId: number,
+  token: string,
+  newPassword: string,
+): Promise<DpcForgotResult> {
+  const res = await dpcFetch<{ ok: boolean }>("/auth/password/reset", "POST", {
+    user_id: userId,
+    token,
+    new_password: newPassword,
+  });
+  if (res.ok) return { ok: true };
+  return { ok: false, error: res.error ?? "Could not reset the password." };
 }
 
 /** Returns the current connector user, or null when there is no session. */
