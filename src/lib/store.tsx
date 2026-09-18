@@ -37,7 +37,10 @@ import {
   createBackendQuote,
   updateBackendQuote,
   canReachBackend,
+  restoreDpcSession,
+  logoutBackend,
 } from "./api-client";
+import { isDpcConnectorEnabled } from "./dpc-connector";
 import { VAT_RATE } from "./format";
 import type {
   AppNotification,
@@ -285,7 +288,9 @@ interface StoreValue extends Snapshot {
   ) => { ok: boolean; error?: string; category?: Category };
   updateCategory: (
     categoryId: string,
-    patch: Partial<Pick<Category, "name" | "slug" | "parentId" | "description" | "display" | "image">>,
+    patch: Partial<
+      Pick<Category, "name" | "slug" | "parentId" | "description" | "display" | "image">
+    >,
   ) => { ok: boolean; error?: string };
   archiveCategory: (categoryId: string) => void;
   reactivateCategory: (categoryId: string) => void;
@@ -320,7 +325,10 @@ interface StoreValue extends Snapshot {
   ) => void;
   duplicateQuote: (quoteId: string) => Quote | null;
   sendQuote: (quoteId: string, patch: { subject: string; message: string }) => void;
-  convertQuoteToOrder: (quoteId: string, downpayment?: { amount: number; method: PaymentMethod }) => Order | null;
+  convertQuoteToOrder: (
+    quoteId: string,
+    downpayment?: { amount: number; method: PaymentMethod },
+  ) => Order | null;
   createBuild: (data: {
     customerId: string | null;
     purpose: string;
@@ -394,6 +402,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // Ignore user parse errors
         }
 
+        // When the DPC connector is enabled the HttpOnly session cookie is the
+        // source of truth, so refresh the user from it (or clear a stale one).
+        if (isDpcConnectorEnabled()) {
+          try {
+            const dpcUser = await restoreDpcSession();
+            savedUser = dpcUser;
+            if (dpcUser) {
+              localStorage.setItem("dpc-nexus-user", JSON.stringify(dpcUser));
+            } else {
+              localStorage.removeItem("dpc-nexus-user");
+            }
+          } catch {
+            // Network error — keep any previously saved user for this session
+          }
+        }
+
         // Check if WooCommerce credentials exist
         let hasWooCommerceCredentials = false;
         try {
@@ -453,7 +477,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const result = await fullSyncFromWooCommerce();
           console.log("WooCommerce sync result:", result);
           if (result.products.length === 0) {
-            console.warn("Skipping auto-load: backend returned no products (auth or empty catalog)");
+            console.warn(
+              "Skipping auto-load: backend returned no products (auth or empty catalog)",
+            );
             return;
           }
           setState((prev) => ({
@@ -536,7 +562,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const categoryNameOf = useCallback(
-    (categoryId: string) => state.categories.find((c) => c.id === categoryId)?.name ?? "Uncategorized",
+    (categoryId: string) =>
+      state.categories.find((c) => c.id === categoryId)?.name ?? "Uncategorized",
     [state.categories],
   );
 
@@ -608,12 +635,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         patch((s) => ({ ...s, user: u }));
       },
       signOut: () => {
-        localStorage.removeItem("dpc-nexus-auth-token");
-        localStorage.removeItem("dpc-nexus-wp-credentials");
-        localStorage.removeItem("dpc-nexus-user");
+        void logoutBackend();
         patch((s) => ({ ...s, user: null }));
       },
-      
+
       syncWithBackend: async () => {
         try {
           if (!(await canReachBackend())) return;
@@ -845,10 +870,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
           auditLogs: log(s, `completed order ${id}`, id),
         }));
-        
+
         // Fire-and-forget background sync
-        createBackendOrder(newOrder).catch(e => console.error("Failed to create order in backend", e));
-        
+        createBackendOrder(newOrder).catch((e) =>
+          console.error("Failed to create order in backend", e),
+        );
+
         return newOrder;
       },
 
@@ -987,7 +1014,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const syncedProduct: Product = {
           ...existing,
           ...next,
-          stock_quantity: opts.onHand !== undefined ? (opts.onHand ?? null) : existing.stock_quantity,
+          stock_quantity:
+            opts.onHand !== undefined ? (opts.onHand ?? null) : existing.stock_quantity,
           manage_stock: opts.onHand !== undefined ? true : existing.manage_stock,
         };
         patch((s) => {
@@ -1014,8 +1042,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   i.productId === productId
                     ? {
                         ...i,
-                        onHand: opts.onHand !== undefined ? Math.max(0, Math.floor(opts.onHand)) : i.onHand,
-                        reorderPoint: opts.reorderPoint !== undefined ? Math.max(0, Math.floor(opts.reorderPoint)) : i.reorderPoint,
+                        onHand:
+                          opts.onHand !== undefined
+                            ? Math.max(0, Math.floor(opts.onHand))
+                            : i.onHand,
+                        reorderPoint:
+                          opts.reorderPoint !== undefined
+                            ? Math.max(0, Math.floor(opts.reorderPoint))
+                            : i.reorderPoint,
                       }
                     : i,
                 )
@@ -1029,7 +1063,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (!remoteProduct) return;
             patch((s) => ({
               ...s,
-              products: s.products.map((p) => (p.id === productId ? { ...p, ...remoteProduct } : p)),
+              products: s.products.map((p) =>
+                p.id === productId ? { ...p, ...remoteProduct } : p,
+              ),
               inventory: s.inventory.map((i) =>
                 i.productId === productId &&
                 remoteProduct.stock_quantity !== null &&
@@ -1052,7 +1088,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const stockDiff = newStock - currentStock;
           return {
             ...s,
-            products: s.products.map((p) => (p.id === productId ? { ...p, stock_quantity: newStock } : p)),
+            products: s.products.map((p) =>
+              p.id === productId ? { ...p, stock_quantity: newStock } : p,
+            ),
             inventory: s.inventory.map((i) =>
               i.productId === productId ? { ...i, onHand: newStock } : i,
             ),
@@ -1076,7 +1114,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (!remoteProduct) return;
             patch((s) => ({
               ...s,
-              products: s.products.map((p) => (p.id === productId ? { ...p, ...remoteProduct } : p)),
+              products: s.products.map((p) =>
+                p.id === productId ? { ...p, ...remoteProduct } : p,
+              ),
               inventory: s.inventory.map((i) =>
                 i.productId === productId &&
                 remoteProduct.stock_quantity !== null &&
@@ -1137,7 +1177,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (!remote) return;
             patch((s) => ({
               ...s,
-              categories: s.categories.map((c) => (c.id === category.id ? { ...c, ...remote, id: remote.id } : c)),
+              categories: s.categories.map((c) =>
+                c.id === category.id ? { ...c, ...remote, id: remote.id } : c,
+              ),
             }));
           })
           .catch((e) => console.error("Failed to create category in backend", e));
@@ -1150,12 +1192,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!existing) return { ok: false, error: "Category not found." };
         const name = (patchData.name ?? existing.name).trim();
         if (!name) return { ok: false, error: "Category name is required." };
-        if (state.categories.some((c) => c.id !== categoryId && c.name.toLowerCase() === name.toLowerCase())) {
+        if (
+          state.categories.some(
+            (c) => c.id !== categoryId && c.name.toLowerCase() === name.toLowerCase(),
+          )
+        ) {
           return { ok: false, error: `Category "${name}" already exists.` };
         }
         patch((s) => ({
           ...s,
-          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, ...patchData, name } : c)),
+          categories: s.categories.map((c) =>
+            c.id === categoryId ? { ...c, ...patchData, name } : c,
+          ),
           auditLogs: log(s, `renamed category ${existing.name} to ${name}`, categoryId),
         }));
 
@@ -1183,7 +1231,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       reactivateCategory: (categoryId) =>
         patch((s) => ({
           ...s,
-          categories: s.categories.map((c) => (c.id === categoryId ? { ...c, archived: false } : c)),
+          categories: s.categories.map((c) =>
+            c.id === categoryId ? { ...c, archived: false } : c,
+          ),
           auditLogs: log(s, `reactivated category ${categoryId}`, categoryId),
         })),
 
@@ -1218,7 +1268,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         );
       },
 
-      createQuote: ({ customerId, items, discountType = "amount", discountPercentage = 0, discount, serviceTotal, shippingFee = 0, notes, originalRequest, expiresInDays }) => {
+      createQuote: ({
+        customerId,
+        items,
+        discountType = "amount",
+        discountPercentage = 0,
+        discount,
+        serviceTotal,
+        shippingFee = 0,
+        notes,
+        originalRequest,
+        expiresInDays,
+      }) => {
         const lines = items.map((i) => {
           const p = productById(i.productId);
           return {
@@ -1260,10 +1321,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           counters: { ...s.counters, quote: s.counters.quote + 1 },
           auditLogs: log(s, `created quote ${id}`, id),
         }));
-        
+
         // Fire-and-forget background sync
-        createBackendQuote(quote).catch(e => console.error("Failed to create quote in backend", e));
-        
+        createBackendQuote(quote).catch((e) =>
+          console.error("Failed to create quote in backend", e),
+        );
+
         return quote;
       },
 
@@ -1286,7 +1349,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // Fire-and-forget background sync
         const updatedQuote = state.quotes.find((q) => q.id === quoteId);
         if (updatedQuote) {
-          updateBackendQuote(quoteId, { status }).catch(e => console.error("Failed to update quote status in backend", e));
+          updateBackendQuote(quoteId, { status }).catch((e) =>
+            console.error("Failed to update quote status in backend", e),
+          );
         }
       },
 
@@ -1311,7 +1376,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         const items = edits.items ?? existing.items;
         const discountType = edits.discountType ?? (existing.discountType || "amount");
-        const discountPercentage = edits.discountPercentage !== undefined ? edits.discountPercentage : existing.discountPercentage || 0;
+        const discountPercentage =
+          edits.discountPercentage !== undefined
+            ? edits.discountPercentage
+            : existing.discountPercentage || 0;
         const discount = edits.discount ?? existing.discount;
         const serviceTotal = edits.serviceTotal ?? existing.serviceTotal;
         const shippingFee = edits.shippingFee ?? existing.shippingFee ?? 0;
@@ -1319,7 +1387,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const customerName =
           customerId == null
             ? existing.customerName
-            : customerById(customerId)?.name ?? existing.customerName;
+            : (customerById(customerId)?.name ?? existing.customerName);
         const t = computeTotals(items, discount, serviceTotal, shippingFee);
         const expiresAt =
           edits.expiresInDays !== undefined
@@ -1344,7 +1412,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   tax: t.tax,
                   total: t.total,
                   notes: edits.notes !== undefined ? edits.notes : q.notes,
-                  originalRequest: edits.originalRequest !== undefined ? edits.originalRequest : q.originalRequest,
+                  originalRequest:
+                    edits.originalRequest !== undefined ? edits.originalRequest : q.originalRequest,
                   expiresAt,
                   version: nextVersion,
                   revisions: [...(q.revisions ?? []), revision],
@@ -1360,14 +1429,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           updateBackendQuote(quoteId, {
             ...updatedQuote,
             discountPercentage: updatedQuote.discountPercentage || 0,
-          }).catch(e => console.error("Failed to update quote in backend", e));
+          }).catch((e) => console.error("Failed to update quote in backend", e));
         }
       },
 
       duplicateQuote: (quoteId) => {
         const existing = state.quotes.find((q) => q.id === quoteId);
         if (!existing) return null;
-        
+
         const id = `QT-${state.counters.quote}`;
         const duplicate: Quote = {
           ...existing,
@@ -1388,7 +1457,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           counters: { ...s.counters, quote: s.counters.quote + 1 },
           auditLogs: log(s, `duplicated quote ${quoteId} to ${id}`, id),
         }));
-        
+
         return duplicate;
       },
 
@@ -1418,7 +1487,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // Fire-and-forget background sync
         const sentQuote = state.quotes.find((q) => q.id === quoteId);
         if (sentQuote) {
-          updateBackendQuote(quoteId, sentQuote).catch(e => console.error("Failed to update quote in backend", e));
+          updateBackendQuote(quoteId, sentQuote).catch((e) =>
+            console.error("Failed to update quote in backend", e),
+          );
         }
       },
 
@@ -1470,7 +1541,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   state: "done" as const,
                 }
               : { label: "Awaiting payment", at, state: "active" as const },
-            { label: isPaid ? "Ready for release" : "Balance due", at: isPaid ? at : "", state: isPaid ? "active" : "pending" },
+            {
+              label: isPaid ? "Ready for release" : "Balance due",
+              at: isPaid ? at : "",
+              state: isPaid ? "active" : "pending",
+            },
             { label: "Released", at: "", state: "pending" },
           ],
         };
@@ -1503,7 +1578,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return { ...sn, status: "reserved" as const, orderId: id };
           }),
           counters: { ...s.counters, order: s.counters.order + 1 },
-          auditLogs: log(s, `converted quote ${quoteId} into order ${id}${downpayment ? ` with ₱${amountPaid.toLocaleString()} downpayment` : ""}`, id),
+          auditLogs: log(
+            s,
+            `converted quote ${quoteId} into order ${id}${downpayment ? ` with ₱${amountPaid.toLocaleString()} downpayment` : ""}`,
+            id,
+          ),
           notifications: notify(s, {
             title: downpayment ? "Quote converted with downpayment" : "Quote converted to order",
             body: `${quoteId} → ${id}${downpayment ? ` — ₱${amountPaid.toLocaleString()} received, ₱${balanceDue.toLocaleString()} remaining` : ""}`,
@@ -1866,7 +1945,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           status: "open",
           createdAt: new Date().toISOString(),
           timeline: [
-            { label: `Claim opened — ${reason}`, at: new Date().toISOString(), actor: state.user?.name },
+            {
+              label: `Claim opened — ${reason}`,
+              at: new Date().toISOString(),
+              actor: state.user?.name,
+            },
           ],
         };
         patch((s) => ({
@@ -1892,9 +1975,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return {
             ...s,
             claims: s.claims.map((c) =>
-              c.id === claimId
-                ? { ...c, ...p, timeline: [...c.timeline, event] }
-                : c,
+              c.id === claimId ? { ...c, ...p, timeline: [...c.timeline, event] } : c,
             ),
             auditLogs: log(s, `updated warranty claim ${claimId}`, claimId),
           };

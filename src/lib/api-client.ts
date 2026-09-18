@@ -16,11 +16,14 @@ import type {
   ProductStockInfo,
 } from "./types";
 import type { Supplier } from "./ops-types";
+import { dpcCurrentUser, dpcLogin, dpcLogout, isDpcConnectorEnabled } from "./dpc-connector";
 
 /**
  * DPC POS — Frontend API client for the backend service.
  *
  * Handles authenticated requests to the Hono backend (backend/src/server.ts).
+ * When the DPC connector is enabled (VITE_DPC_API_URL), authentication is
+ * delegated to the dpc-pos-connector WordPress plugin instead.
  */
 
 /** Base URL of the backend API. Defaults to localhost:8787 in dev. */
@@ -143,6 +146,22 @@ export interface LoginResult {
 }
 
 export async function loginToBackend(username: string, appPassword: string): Promise<LoginResult> {
+  // Prefer the DPC POS connector when configured. On failure we fall through to
+  // the legacy backend so existing WordPress users keep working during migration.
+  if (isDpcConnectorEnabled()) {
+    const dpc = await dpcLogin(username, appPassword);
+    if (dpc.ok && dpc.user) {
+      try {
+        localStorage.setItem("dpc-nexus-user", JSON.stringify(dpc.user));
+        localStorage.removeItem("dpc-nexus-auth-token");
+        localStorage.removeItem("dpc-nexus-wp-credentials");
+      } catch {
+        /* storage unavailable; in-memory session still works */
+      }
+      return { ok: true, user: dpc.user };
+    }
+  }
+
   const res = await apiRequest<{ token: string; user: User }>(
     "/api/v1/auth/login",
     "POST",
@@ -161,6 +180,32 @@ export async function loginToBackend(username: string, appPassword: string): Pro
   }
 
   return { ok: false, error: res.error || "Login failed" };
+}
+
+/**
+ * Restores a DPC connector session on boot. Returns null when the connector is
+ * disabled or there is no active session.
+ */
+export async function restoreDpcSession(): Promise<User | null> {
+  if (!isDpcConnectorEnabled()) return null;
+  return dpcCurrentUser();
+}
+
+/**
+ * Signs out: revokes the DPC connector session when enabled, then clears any
+ * locally cached auth artifacts.
+ */
+export async function logoutBackend(): Promise<void> {
+  if (isDpcConnectorEnabled()) {
+    await dpcLogout();
+  }
+  try {
+    localStorage.removeItem("dpc-nexus-auth-token");
+    localStorage.removeItem("dpc-nexus-wp-credentials");
+    localStorage.removeItem("dpc-nexus-user");
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---------------------------------------------------------------------------

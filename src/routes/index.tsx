@@ -9,6 +9,7 @@ import { Reveal } from "@/components/nexus/motion";
 import { useStore } from "@/lib/store";
 import { homeFor } from "@/lib/permissions";
 import { authenticateWordPress, wpSiteUrl } from "@/lib/wp-auth";
+import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,7 +39,8 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const wpConfigured = Boolean(wpSiteUrl());
+  const dpcEnabled = isDpcConnectorEnabled();
+  const wpConfigured = Boolean(wpSiteUrl()) || dpcEnabled;
 
   useEffect(() => {
     if (!store.hydrated) return;
@@ -75,13 +77,17 @@ function LoginPage() {
         setError(direct.error ?? res.error ?? "Sign in failed.");
         return;
       }
-      try {
-        localStorage.setItem(
-          "dpc-nexus-wp-credentials",
-          JSON.stringify({ username: wpUser, appPassword: wpPassword }),
-        );
-      } catch {
-        /* storage may be unavailable; session login can still proceed */
+      if (!dpcEnabled) {
+        // Legacy direct-WordPress fallback: keep the application password so the
+        // backend can proxy requests. Never stored when the DPC connector is on.
+        try {
+          localStorage.setItem(
+            "dpc-nexus-wp-credentials",
+            JSON.stringify({ username: wpUser, appPassword: wpPassword }),
+          );
+        } catch {
+          /* storage may be unavailable; session login can still proceed */
+        }
       }
       store.signInWithUser(direct.user);
       return;
