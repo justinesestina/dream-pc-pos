@@ -16,7 +16,13 @@ import type {
   ProductStockInfo,
 } from "./types";
 import type { Supplier } from "./ops-types";
-import { dpcCurrentUser, dpcLogin, dpcLogout, isDpcConnectorEnabled } from "./dpc-connector";
+import {
+  dpcCurrentUser,
+  dpcDataRequest,
+  dpcLogin,
+  dpcLogout,
+  isDpcConnectorEnabled,
+} from "./dpc-connector";
 
 /**
  * DPC POS — Frontend API client for the backend service.
@@ -84,6 +90,19 @@ async function apiRequest<T>(
   body?: unknown,
   opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
+  // When the DPC connector is configured it is the sole data source: the legacy
+  // backend session no longer exists, so route every `/api/v1` call through the
+  // connector and unwrap its envelope.
+  if (isDpcConnectorEnabled() && path.startsWith("/api/v1/")) {
+    const res = await dpcDataRequest<T>(path.slice("/api/v1".length), method, body);
+    if (res.ok) {
+      lastApiError = null;
+      return { ok: true, data: res.data as T };
+    }
+    lastApiError = res.error ?? "Connector request failed.";
+    return { ok: false, error: lastApiError };
+  }
+
   if (opts.auth !== false && isBackendPaused()) {
     lastApiError = backendPauseReason ?? "Backend temporarily unavailable.";
     return { ok: false, error: lastApiError };

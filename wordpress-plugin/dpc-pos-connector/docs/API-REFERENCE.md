@@ -368,6 +368,83 @@ Clears stored fields and secrets for the type.
 
 ---
 
+## Catalog
+
+Read-only WooCommerce catalog mapped to the POS data shapes. Responses use the
+shared list envelope:
+
+```json
+{ "data": [ /* items */ ], "meta": { "page": 1, "perPage": 20, "total": 42 } }
+```
+
+### `GET /products` — `products.read`
+
+Optional `?search=` filters by product name/SKU. Returns published, draft,
+private and pending products.
+
+```json
+{
+  "data": [
+    {
+      "id": "123",
+      "sku": "CPU-7600X",
+      "name": "Ryzen 5 7600X",
+      "brand": "AMD",
+      "categoryId": "34",
+      "categoryName": "Processors",
+      "productType": "product",
+      "price": 199.0,
+      "salePrice": null,
+      "cost": 0,
+      "serialTracked": false,
+      "warrantyMonths": 36,
+      "location": "",
+      "supplier": "",
+      "specs": { "Socket": "AM5" },
+      "status": "publish",
+      "stock_quantity": 12,
+      "stock_status": "instock",
+      "manage_stock": true,
+      "imageUrl": "https://…",
+      "dateCreated": "2026-01-01T00:00:00+00:00",
+      "dateModified": "2026-01-02T00:00:00+00:00"
+    }
+  ],
+  "meta": { "page": 1, "perPage": 1, "total": 1 }
+}
+```
+
+### `GET /products/{id}` — `products.read`
+
+Single product as `{ "data": { … } }`; `404` when it does not exist.
+
+### `GET /categories` — `products.read`
+
+Maps WooCommerce `product_cat` terms.
+
+```json
+{
+  "data": [
+    {
+      "id": "34",
+      "name": "Processors",
+      "slug": "processors",
+      "parentId": "",
+      "description": "",
+      "display": "default",
+      "image": "",
+      "archived": false,
+      "createdAt": "",
+      "key": "processors",
+      "count": 42
+    }
+  ],
+  "meta": { "page": 1, "perPage": 1, "total": 1 }
+}
+```
+
+---
+
 ## Permission slugs
 
 Modules: `users`, `roles`, `branches`, `approvals`, `audit`, `activity`,

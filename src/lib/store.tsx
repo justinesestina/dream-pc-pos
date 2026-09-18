@@ -466,7 +466,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { getWooCommerceConfig } = await import("./woocommerce-config");
         const config = getWooCommerceConfig();
         console.log("WooCommerce config:", config);
-        if (config && getAuthToken()) {
+        if (config && (getAuthToken() || isDpcConnectorEnabled())) {
           const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
           const connected = await testConnection();
           console.log("WooCommerce connection test:", connected);

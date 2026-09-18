@@ -246,3 +246,45 @@ export async function dpcSsoUrl(): Promise<string | null> {
   const res = await dpcFetch<{ url: string }>("/auth/sso-token", "POST", {});
   return res.ok && res.data ? res.data.url : null;
 }
+
+// ---------------------------------------------------------------------------
+// Data
+// ---------------------------------------------------------------------------
+
+export interface DpcDataResult<T> {
+  ok: boolean;
+  data?: T;
+  error?: string;
+  status?: number;
+}
+
+/**
+ * Authenticated data request against the connector.
+ *
+ * Connector data routes mirror the legacy backend and wrap their payload in the
+ * same `{ data, meta }` envelope, so the envelope is unwrapped here. Pass a path
+ * relative to the namespace (e.g. `/products`, not `/api/v1/products`).
+ */
+export async function dpcDataRequest<T>(
+  path: string,
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
+  body?: unknown,
+): Promise<DpcDataResult<T>> {
+  const res = await dpcFetch<{ data?: T }>(path, method, body);
+  if (!res.ok) {
+    const failed: DpcDataResult<T> = { ok: false };
+    if (res.error !== undefined) failed.error = res.error;
+    if (res.status !== undefined) failed.status = res.status;
+    return failed;
+  }
+
+  const envelope = res.data;
+  const result: DpcDataResult<T> = { ok: true };
+  if (envelope && typeof envelope === "object" && "data" in envelope) {
+    if (envelope.data !== undefined) result.data = envelope.data;
+  } else {
+    result.data = envelope as unknown as T;
+  }
+  if (res.status !== undefined) result.status = res.status;
+  return result;
+}

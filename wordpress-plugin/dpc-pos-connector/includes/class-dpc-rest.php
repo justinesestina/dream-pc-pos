@@ -51,7 +51,7 @@ class DPC_POS_REST {
 			'/auth/login',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Auth', 'login' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Auth', 'login' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -60,7 +60,7 @@ class DPC_POS_REST {
 			'/auth/password/forgot',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Auth', 'forgot_password' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Auth', 'forgot_password' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -69,7 +69,7 @@ class DPC_POS_REST {
 			'/auth/password/reset',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Auth', 'reset_password' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Auth', 'reset_password' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -135,12 +135,12 @@ class DPC_POS_REST {
 			array(
 				array(
 					'methods'             => 'GET',
-					'callback'            => array( 'DPC_POS_Users', 'list_users' ),
+					'callback' => $this->with_auth( array( 'DPC_POS_Users', 'list_users' ) ),
 					'permission_callback' => $this->require_permission( 'users.read' ),
 				),
 				array(
 					'methods'             => 'POST',
-					'callback'            => array( 'DPC_POS_Users', 'create_user' ),
+					'callback' => $this->with_auth( array( 'DPC_POS_Users', 'create_user' ) ),
 					'permission_callback' => $this->require_permission( 'users.create' ),
 				),
 			)
@@ -151,17 +151,17 @@ class DPC_POS_REST {
 			array(
 				array(
 					'methods'             => 'GET',
-					'callback'            => array( 'DPC_POS_Users', 'get_user' ),
+					'callback' => $this->with_auth( array( 'DPC_POS_Users', 'get_user' ) ),
 					'permission_callback' => $this->require_permission( 'users.read' ),
 				),
 				array(
 					'methods'             => array( 'PATCH', 'PUT' ),
-					'callback'            => array( 'DPC_POS_Users', 'update_user' ),
+					'callback' => $this->with_auth( array( 'DPC_POS_Users', 'update_user' ) ),
 					'permission_callback' => $this->require_permission( 'users.update' ),
 				),
 				array(
 					'methods'             => 'DELETE',
-					'callback'            => array( 'DPC_POS_Users', 'delete_user' ),
+					'callback' => $this->with_auth( array( 'DPC_POS_Users', 'delete_user' ) ),
 					'permission_callback' => $this->require_permission( 'users.delete' ),
 				),
 			)
@@ -171,7 +171,7 @@ class DPC_POS_REST {
 			'/users/(?P<id>\d+)/status',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Users', 'set_status' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'set_status' ) ),
 				'permission_callback' => $this->require_permission( 'users.update' ),
 			)
 		);
@@ -180,7 +180,7 @@ class DPC_POS_REST {
 			'/users/(?P<id>\d+)/password',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Users', 'set_password' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'set_password' ) ),
 				'permission_callback' => $this->require_permission( 'users.update' ),
 			)
 		);
@@ -189,7 +189,7 @@ class DPC_POS_REST {
 			'/users/(?P<id>\d+)/roles',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Users', 'set_roles' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'set_roles' ) ),
 				'permission_callback' => $this->require_permission( 'users.update' ),
 			)
 		);
@@ -198,7 +198,7 @@ class DPC_POS_REST {
 			'/users/(?P<id>\d+)/sessions',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( 'DPC_POS_Users', 'sessions' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'sessions' ) ),
 				'permission_callback' => $this->require_permission( 'users.read' ),
 			)
 		);
@@ -207,7 +207,7 @@ class DPC_POS_REST {
 			'/users/(?P<id>\d+)/login-history',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( 'DPC_POS_Users', 'login_history' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'login_history' ) ),
 				'permission_callback' => $this->require_permission( 'users.read' ),
 			)
 		);
@@ -258,7 +258,7 @@ class DPC_POS_REST {
 			'/integrations',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( 'DPC_POS_Integrations', 'status' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Integrations', 'status' ) ),
 				'permission_callback' => $this->require_permission( 'integrations.read' ),
 			)
 		);
@@ -267,7 +267,7 @@ class DPC_POS_REST {
 			'/integrations/(?P<type>[a-z_]+)',
 			array(
 				'methods'             => array( 'POST', 'PUT', 'PATCH' ),
-				'callback'            => array( 'DPC_POS_Integrations', 'save' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Integrations', 'save' ) ),
 				'permission_callback' => $this->require_permission( 'integrations.update' ),
 			)
 		);
@@ -276,7 +276,7 @@ class DPC_POS_REST {
 			'/integrations/(?P<type>[a-z_]+)/test',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Integrations', 'test' ),
+				'callback' => $this->with_auth( array( 'DPC_POS_Integrations', 'test' ) ),
 				'permission_callback' => $this->require_permission( 'integrations.update' ),
 			)
 		);
@@ -285,8 +285,37 @@ class DPC_POS_REST {
 			'/integrations/(?P<type>[a-z_]+)/revoke',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( 'DPC_POS_Integrations', 'revoke' ),
+				'callback'            => $this->with_auth( array( 'DPC_POS_Integrations', 'revoke' ) ),
 				'permission_callback' => $this->require_permission( 'integrations.update' ),
+			)
+		);
+
+		// ---- Catalog (WooCommerce) ---------------------------------------
+		register_rest_route(
+			$ns,
+			'/products',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_products' ) ),
+				'permission_callback' => $this->require_permission( 'products.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/products/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'get_product' ) ),
+				'permission_callback' => $this->require_permission( 'products.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/categories',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Catalog', 'list_categories' ) ),
+				'permission_callback' => $this->require_permission( 'products.read' ),
 			)
 		);
 	}
@@ -368,6 +397,22 @@ class DPC_POS_REST {
 			}
 			$request->set_attribute( 'dpc_auth', $auth );
 			return true;
+		};
+	}
+
+	/**
+	 * Wraps a class-method callback so it also receives the auth context.
+	 *
+	 * WordPress invokes REST callbacks with only the request; the auth context
+	 * is attached to the request as the `dpc_auth` attribute by the permission
+	 * callback. This adapter forwards it as the callback's second argument.
+	 *
+	 * @param callable $callable Target callback that accepts `( $request, $auth )`.
+	 * @return callable
+	 */
+	private function with_auth( $callable ) {
+		return function ( $request ) use ( $callable ) {
+			return call_user_func( $callable, $request, self::auth( $request ) );
 		};
 	}
 
