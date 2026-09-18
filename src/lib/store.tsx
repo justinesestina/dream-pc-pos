@@ -428,9 +428,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           hasWooCommerceCredentials = false;
         }
 
-        if (hasWooCommerceCredentials) {
-          // Don't load from localStorage - we'll fetch fresh WooCommerce data
-          console.log("WooCommerce credentials found, will fetch fresh data");
+        if (isDpcConnectorEnabled() || hasWooCommerceCredentials) {
+          // Remote-backed: don't load from localStorage, fetch fresh data instead.
           setState((prev) => ({ ...emptyState(), user: savedUser ?? null })); // Restore user session
         } else {
           // Load from localStorage for non-WooCommerce users
@@ -462,20 +461,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async function autoLoadWooCommerce() {
       try {
         setLoadingWooCommerce(true);
-        console.log("Attempting to auto-load WooCommerce data...");
         const { getWooCommerceConfig } = await import("./woocommerce-config");
         const config = getWooCommerceConfig();
-        console.log("WooCommerce config:", config);
-        if (config && (getAuthToken() || isDpcConnectorEnabled())) {
+        if (isDpcConnectorEnabled() || (config && getAuthToken())) {
           const { testConnection, fullSyncFromWooCommerce } = await import("./woocommerce-sync");
           const connected = await testConnection();
-          console.log("WooCommerce connection test:", connected);
           if (!connected.connected) {
             console.warn("Skipping auto-load: backend is unavailable");
             return;
           }
           const result = await fullSyncFromWooCommerce();
-          console.log("WooCommerce sync result:", result);
           if (result.products.length === 0) {
             console.warn(
               "Skipping auto-load: backend returned no products (auth or empty catalog)",
