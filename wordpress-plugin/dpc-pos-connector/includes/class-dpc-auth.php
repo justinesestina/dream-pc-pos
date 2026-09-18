@@ -83,6 +83,29 @@ class DPC_POS_Auth {
 			);
 		}
 
+		$branch_ids    = DPC_POS_RBAC::table( 'user_branches' );
+		$branches_tab  = DPC_POS_RBAC::table( 'branches' );
+		$branch_rows   = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT b.id, b.code, b.name, b.address FROM {$branches_tab} b INNER JOIN {$branch_ids} ub ON ub.branch_id = b.id WHERE ub.user_id = %d ORDER BY ub.is_primary DESC, b.name ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$user_id
+			),
+			ARRAY_A
+		);
+		$branches      = array();
+		$primary_br    = null;
+		foreach ( (array) $branch_rows as $b ) {
+			$branches[]  = array(
+				'id'      => (int) $b['id'],
+				'code'    => (string) $b['code'],
+				'name'    => (string) $b['name'],
+				'address' => (string) $b['address'],
+			);
+			if ( null === $primary_br ) {
+				$primary_br = (int) $b['id'];
+			}
+		}
+
 		return array(
 			'id'                  => (int) $row['id'],
 			'username'            => (string) $row['username'],
@@ -95,6 +118,10 @@ class DPC_POS_Auth {
 			'role'                => $roles ? $roles[0] : '',
 			'roles'               => $role_names,
 			'permissions'         => DPC_POS_RBAC::permission_set( $user_id ),
+			'branches'            => $branches,
+			'primary_branch_id'   => $primary_br,
+			'failed_attempts'     => isset( $row['failed_attempts'] ) ? (int) $row['failed_attempts'] : 0,
+			'locked_until'        => ! empty( $row['locked_until'] ) ? $row['locked_until'] : null,
 			'last_login_at'       => $row['last_login_at'],
 			'created_at'          => $row['created_at'],
 			'initials'            => self::initials( (string) $row['display_name'] ),

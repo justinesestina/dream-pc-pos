@@ -144,9 +144,26 @@ class DPC_POS_Audit {
 			$where[]  = 'module = %s';
 			$params[] = $filters['module'];
 		}
+		if ( ! empty( $filters['action'] ) ) {
+			$where[]  = 'action = %s';
+			$params[] = $filters['action'];
+		}
 		if ( ! empty( $filters['user_id'] ) ) {
 			$where[]  = 'user_id = %d';
 			$params[] = (int) $filters['user_id'];
+		}
+		if ( ! empty( $filters['search'] ) ) {
+			$where[]  = '(description LIKE %s OR action LIKE %s)';
+			$params[] = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
+			$params[] = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
+		}
+		if ( ! empty( $filters['from'] ) && strtotime( (string) $filters['from'] ) ) {
+			$where[]  = 'created_at >= %s';
+			$params[] = gmdate( 'Y-m-d H:i:s', strtotime( (string) $filters['from'] ) );
+		}
+		if ( ! empty( $filters['to'] ) && strtotime( (string) $filters['to'] ) ) {
+			$where[]  = 'created_at <= %s';
+			$params[] = gmdate( 'Y-m-d H:i:s', strtotime( (string) $filters['to'] ) + 86399 );
 		}
 		$per_page = min( 200, max( 1, (int) ( $filters['per_page'] ?? 50 ) ) );
 		$page     = max( 1, (int) ( $filters['page'] ?? 1 ) );

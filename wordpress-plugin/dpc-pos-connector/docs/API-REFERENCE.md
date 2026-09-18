@@ -49,6 +49,10 @@ Base URL: `https://YOUR-SITE/wp-json/dpc/v1`
   "role": "owner",
   "roles": [{ "slug": "owner", "name": "Owner" }],
   "permissions": ["*"],
+  "branches": [{ "id": 1, "code": "MAKATI", "name": "Makati Main", "address": "…" }],
+  "primary_branch_id": 1,
+  "failed_attempts": 0,
+  "locked_until": null,
   "last_login_at": "2026-01-01 08:00:00",
   "created_at": "2025-12-01 09:00:00",
   "initials": "SO"
@@ -57,6 +61,9 @@ Base URL: `https://YOUR-SITE/wp-json/dpc/v1`
 
 `permissions` is `["*"]` for Owners; otherwise the concrete `module.action`
 slugs. A `module.manage` grant implies every action in that module.
+`branches` lists the branch assignments; `primary_branch_id` is the default
+branch. `failed_attempts` / `locked_until` reflect the current sign-in lockout
+state (`locked_until` is `null` when not locked).
 
 ---
 
@@ -178,8 +185,12 @@ expires after 60 seconds.
 | `/users/{id}/status`         | POST          | `users.update`  |
 | `/users/{id}/password`       | POST          | `users.update`  |
 | `/users/{id}/roles`          | POST          | `users.update`  |
+| `/users/{id}/branches`       | POST          | `users.update`  |
 | `/users/{id}/sessions`       | GET           | `users.read`    |
+| `/users/{id}/sessions/revoke`| POST          | `users.update`  |
 | `/users/{id}/login-history`  | GET           | `users.read`    |
+| `/branches`                  | GET           | `users.read`    |
+| `/login-history`             | GET           | `audit.read`    |
 
 ### `GET /users`
 
@@ -200,9 +211,15 @@ Query params: `search`, `status` (`active|inactive|suspended|locked`), `role`,
   "password": "optional-strong-password",
   "roles": ["sales"],
   "branch_ids": [1],
+  "primary_branch_id": 1,
+  "status": "active",
   "wordpress_user_id": 5
 }
 ```
+
+`primary_branch_id` (optional) sets the primary branch; when omitted the first
+entry of `branch_ids` is used. `status` (optional) is `active` (default),
+`suspended` or `deactivated`.
 
 Returns the created [`User`](#user-object). Errors: `dpc_invalid_username`,
 `dpc_invalid_email`, `dpc_username_taken`, `dpc_email_taken`,
@@ -240,6 +257,36 @@ generated. Revokes the target's sessions.
 
 Replaces the role set. Owner rules: only an Owner may include/omit `owner`, and
 the last active Owner must keep it.
+
+### `POST /users/{id}/branches`
+
+```json
+{ "branch_ids": [1, 2], "primary_branch_id": 2 }
+```
+
+Replaces the branch access set and the primary branch (`null` falls back to the
+first branch). Audited.
+
+### `POST /users/{id}/sessions/revoke`
+
+Revokes every active session for the account. Audited.
+
+### `GET /branches` — `users.read`
+
+```json
+{ "items": [ { "id": 1, "code": "MAKATI", "name": "Makati Main", "address": "…", "status": "active" } ] }
+```
+
+### `GET /login-history` — `audit.read`
+
+Global sign-in attempts across all accounts, newest first.
+
+Query params: `search`, `result` (`success|failed`), `user_id`, `from`, `to`
+(`YYYY-MM-DD`), `page`, `per_page` (max 200).
+
+```json
+{ "items": [ { "id": 22, "user_id": 5, "username": "jdelacruz", "display_name": "Juan Dela Cruz", "ip": "…", "user_agent": "…", "result": "success", "reason": "", "created_at": "…" } ], "total": 41 }
+```
 
 ### `GET /users/{id}/sessions`
 
@@ -357,7 +404,8 @@ Query params: `module`, `action`, `user_id`, `page`, `per_page`.
 
 ### `GET /activity-logs` — `activity.read`
 
-Query params: `module`, `user_id`, `page`, `per_page`.
+Query params: `module`, `action`, `user_id`, `search`, `from`, `to`
+(`YYYY-MM-DD`), `page`, `per_page`.
 
 ```json
 { "items": [ { "id": 1, "user_id": 1, "module": "users", "action": "…", "description": "…", "record_id": "…", "created_at": "…" } ], "total": 1 }

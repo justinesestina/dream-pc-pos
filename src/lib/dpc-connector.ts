@@ -119,6 +119,13 @@ export interface DpcRoleRef {
   name: string;
 }
 
+export interface DpcBranchRef {
+  id: number;
+  code: string;
+  name: string;
+  address: string;
+}
+
 export interface DpcUser {
   id: number;
   username: string;
@@ -131,6 +138,10 @@ export interface DpcUser {
   role: string;
   roles: DpcRoleRef[];
   permissions: string[];
+  branches: DpcBranchRef[];
+  primary_branch_id: number | null;
+  failed_attempts: number;
+  locked_until: string | null;
   last_login_at: string | null;
   created_at: string;
   initials: string;

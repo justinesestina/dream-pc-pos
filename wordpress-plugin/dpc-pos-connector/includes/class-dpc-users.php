@@ -167,7 +167,7 @@ class DPC_POS_Users {
 				'email'             => $email,
 				'display_name'      => $display ? $display : $username,
 				'password_hash'     => '' !== $password ? DPC_POS_Security::hash_password( $password ) : '',
-				'status'            => 'active',
+				'status'            => in_array( (string) $request->get_param( 'status' ), self::statuses(), true ) ? (string) $request->get_param( 'status' ) : 'active',
 			),
 			array( '%d', '%s', '%s', '%s', '%s', '%s' )
 		);
@@ -179,7 +179,7 @@ class DPC_POS_Users {
 		foreach ( $roles as $slug ) {
 			DPC_POS_RBAC::assign_role( $user_id, $slug, (int) $auth['user']['id'] );
 		}
-		self::sync_branches( $user_id, (array) $request->get_param( 'branch_ids' ) );
+		self::sync_branches( $user_id, (array) $request->get_param( 'branch_ids' ), $request->get_param( 'primary_branch_id' ) ? (int) $request->get_param( 'primary_branch_id' ) : null );
 
 		DPC_POS_Audit::record(
 			array(
@@ -282,7 +282,7 @@ class DPC_POS_Users {
 		}
 
 		if ( null !== $request->get_param( 'branch_ids' ) ) {
-			self::sync_branches( $user_id, (array) $request->get_param( 'branch_ids' ) );
+			self::sync_branches( $user_id, (array) $request->get_param( 'branch_ids' ), $request->get_param( 'primary_branch_id' ) ? (int) $request->get_param( 'primary_branch_id' ) : null );
 		}
 
 		DPC_POS_Audit::record(
@@ -450,14 +450,27 @@ class DPC_POS_Users {
 	 */
 	public static function set_roles( $request, $auth ) {
 		$user_id = (int) $request->get_param( 'id' );
-		if ( ! self::row( $user_id ) ) {
+		$row     = self::row( $user_id );
+		if ( ! $row ) {
 			return DPC_POS_Auth::error( 'dpc_not_found', 'User not found.', 404 );
 		}
-		$roles = self::sanitize_roles( (array) $request->get_param( 'roles' ), $auth, $user_id );
+		$before = DPC_POS_RBAC::get_user_roles( $user_id );
+		$roles  = self::sanitize_roles( (array) $request->get_param( 'roles' ), $auth, $user_id );
 		if ( is_wp_error( $roles ) ) {
 			return $roles;
 		}
 		self::apply_roles( $user_id, $roles, (int) $auth['user']['id'] );
+		DPC_POS_Audit::record(
+			array(
+				'user_id'   => (int) $auth['user']['id'],
+				'action'    => 'user.roles_updated',
+				'module'    => 'users',
+				'resource'  => 'user',
+				'record_id' => $user_id,
+				'old_value' => array( 'roles' => $before ),
+				'new_value' => array( 'roles' => $roles ),
+			)
+		);
 		DPC_POS_Audit::activity(
 			array(
 				'user_id'     => (int) $auth['user']['id'],
@@ -626,30 +639,220 @@ class DPC_POS_Users {
 	/**
 	 * Replaces the branch assignment for a user.
 	 *
-	 * @param int   $user_id    DPC user id.
-	 * @param array $branch_ids Branch ids.
+	 * @param int         $user_id          DPC user id.
+	 * @param array       $branch_ids       Branch ids.
+	 * @param int|null    $primary_branch_id Branch id flagged as the primary.
 	 * @return void
 	 */
-	private static function sync_branches( $user_id, array $branch_ids ) {
+	private static function sync_branches( $user_id, array $branch_ids, $primary_branch_id = null ) {
 		global $wpdb;
 		$table = DPC_POS_RBAC::table( 'user_branches' );
 		$wpdb->delete( $table, array( 'user_id' => $user_id ), array( '%d' ) );
-		$seen = array();
+		$seen    = array();
+		$primary = $primary_branch_id ? (int) $primary_branch_id : null;
 		foreach ( $branch_ids as $index => $branch_id ) {
 			$branch_id = (int) $branch_id;
 			if ( ! $branch_id || isset( $seen[ $branch_id ] ) ) {
 				continue;
 			}
 			$seen[ $branch_id ] = true;
+			if ( null === $primary ) {
+				$primary = $branch_id;
+			}
 			$wpdb->insert(
 				$table,
 				array(
 					'user_id'    => $user_id,
 					'branch_id'  => $branch_id,
-					'is_primary' => 0 === (int) $index ? 1 : 0,
+					'is_primary' => $branch_id === $primary ? 1 : 0,
 				),
 				array( '%d', '%d', '%d' )
 			);
 		}
+	}
+
+	/**
+	 * GET /branches — list every branch.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @param array           $auth    Auth context.
+	 * @return WP_REST_Response
+	 */
+	public static function list_branches( $request, $auth ) {
+		global $wpdb;
+		$table = DPC_POS_RBAC::table( 'branches' );
+		$rows  = $wpdb->get_results( "SELECT id, code, name, address, status FROM {$table} ORDER BY name ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$items = array();
+		foreach ( (array) $rows as $row ) {
+			$items[] = array(
+				'id'      => (int) $row['id'],
+				'code'    => (string) $row['code'],
+				'name'    => (string) $row['name'],
+				'address' => (string) $row['address'],
+				'status'  => (string) $row['status'],
+			);
+		}
+		return rest_ensure_response( array( 'items' => $items ) );
+	}
+
+	/**
+	 * POST /users/{id}/branches — replace a user's branch assignments.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @param array           $auth    Auth context.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function set_branches( $request, $auth ) {
+		global $wpdb;
+		$user_id = (int) $request->get_param( 'id' );
+		$row     = self::row( $user_id );
+		if ( ! $row ) {
+			return DPC_POS_Auth::error( 'dpc_not_found', 'User not found.', 404 );
+		}
+
+		$branch_ids = array_values( array_unique( array_filter( array_map( 'intval', (array) $request->get_param( 'branch_ids' ) ) ) ) );
+		if ( empty( $branch_ids ) ) {
+			$branch_ids = array();
+		}
+		$primary = $request->get_param( 'primary_branch_id' );
+		$primary = $primary ? (int) $primary : null;
+
+		$table = DPC_POS_RBAC::table( 'branches' );
+		$known = array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$table}" ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		foreach ( $branch_ids as $branch_id ) {
+			if ( ! in_array( $branch_id, $known, true ) ) {
+				return DPC_POS_Auth::error( 'dpc_invalid_branch', sprintf( 'Unknown branch: %d', $branch_id ), 400 );
+			}
+		}
+		if ( $primary && ! in_array( $primary, $branch_ids, true ) ) {
+			$primary = $branch_ids[0] ?? null;
+		}
+
+		self::sync_branches( $user_id, $branch_ids, $primary );
+
+		DPC_POS_Audit::record(
+			array(
+				'user_id'   => (int) $auth['user']['id'],
+				'action'    => 'user.branches_updated',
+				'module'    => 'users',
+				'resource'  => 'user',
+				'record_id' => $user_id,
+				'new_value' => array(
+					'branch_ids'         => $branch_ids,
+					'primary_branch_id'  => $primary,
+				),
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.branches_updated',
+				'description' => sprintf( 'Branches for user id %d set to: %s', $user_id, $branch_ids ? implode( ', ', $branch_ids ) : '(none)' ),
+				'record_id'   => $user_id,
+			)
+		);
+
+		return rest_ensure_response( DPC_POS_Auth::user_payload( $user_id ) );
+	}
+
+	/**
+	 * POST /users/{id}/sessions/revoke — revoke every active session.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @param array           $auth    Auth context.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function revoke_sessions( $request, $auth ) {
+		$user_id = (int) $request->get_param( 'id' );
+		$row     = self::row( $user_id );
+		if ( ! $row ) {
+			return DPC_POS_Auth::error( 'dpc_not_found', 'User not found.', 404 );
+		}
+		DPC_POS_Security::revoke_all_sessions( $user_id );
+		DPC_POS_Audit::record(
+			array(
+				'user_id'   => (int) $auth['user']['id'],
+				'action'    => 'user.sessions_revoked',
+				'module'    => 'users',
+				'resource'  => 'user',
+				'record_id' => $user_id,
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => (int) $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'user.sessions_revoked',
+				'description' => sprintf( 'All sessions revoked for %s (id %d)', $row['username'], $user_id ),
+				'record_id'   => $user_id,
+			)
+		);
+		return rest_ensure_response( array( 'ok' => true ) );
+	}
+
+	/**
+	 * GET /login-history — global login event log across every user.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @param array           $auth    Auth context.
+	 * @return WP_REST_Response
+	 */
+	public static function list_login_history( $request, $auth ) {
+		global $wpdb;
+		$table    = DPC_POS_RBAC::table( 'login_history' );
+		$users    = DPC_POS_RBAC::table( 'users' );
+		$where    = array( '1=1' );
+		$params   = array();
+
+		$search = (string) $request->get_param( 'search' );
+		if ( '' !== $search ) {
+			$like     = '%' . $wpdb->esc_like( $search ) . '%';
+			$where[]  = '(lh.username LIKE %s OR u.username LIKE %s OR u.display_name LIKE %s)';
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+		}
+		$result = (string) $request->get_param( 'result' );
+		if ( in_array( $result, array( 'success', 'failed' ), true ) ) {
+			$where[]  = 'lh.result = %s';
+			$params[] = $result;
+		}
+		$user_id = (int) $request->get_param( 'user_id' );
+		if ( $user_id ) {
+			$where[]  = 'lh.user_id = %d';
+			$params[] = $user_id;
+		}
+		$from = (string) $request->get_param( 'from' );
+		if ( '' !== $from && strtotime( $from ) ) {
+			$where[]  = 'lh.created_at >= %s';
+			$params[] = gmdate( 'Y-m-d H:i:s', strtotime( $from ) );
+		}
+		$to = (string) $request->get_param( 'to' );
+		if ( '' !== $to && strtotime( $to ) ) {
+			$where[]  = 'lh.created_at <= %s';
+			$params[] = gmdate( 'Y-m-d H:i:s', strtotime( $to ) + 86399 );
+		}
+
+		$per_page = min( 200, max( 1, (int) ( $request->get_param( 'per_page' ) ? $request->get_param( 'per_page' ) : 50 ) ) );
+		$page     = max( 1, (int) ( $request->get_param( 'page' ) ? $request->get_param( 'page' ) : 1 ) );
+		$offset   = ( $page - 1 ) * $per_page;
+		$where_sql = implode( ' AND ', $where );
+
+		$count_sql = "SELECT COUNT(*) FROM {$table} lh LEFT JOIN {$users} u ON u.id = lh.user_id WHERE {$where_sql}";
+		$total     = (int) ( $params ? $wpdb->get_var( $wpdb->prepare( $count_sql, $params ) ) : $wpdb->get_var( $count_sql ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		$list_sql = "SELECT lh.id, lh.user_id, lh.username AS logged_username, COALESCE(u.username, lh.username) AS username, u.display_name, lh.ip, lh.user_agent, lh.result, lh.reason, lh.created_at FROM {$table} lh LEFT JOIN {$users} u ON u.id = lh.user_id WHERE {$where_sql} ORDER BY lh.id DESC LIMIT %d OFFSET %d";
+		$args     = array_merge( $params, array( $per_page, $offset ) );
+		$items    = $wpdb->get_results( $wpdb->prepare( $list_sql, $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		return rest_ensure_response(
+			array(
+				'items'    => (array) $items,
+				'total'    => $total,
+				'page'     => $page,
+				'per_page' => $per_page,
+			)
+		);
 	}
 }

@@ -729,6 +729,26 @@ export type AdminUserStatus = "active" | "suspended" | "deactivated";
 
 export type AdminUser = DpcUser;
 
+export interface AdminBranch {
+  id: number;
+  code: string;
+  name: string;
+  address: string;
+  status: string;
+}
+
+export interface AdminLoginHistoryRow {
+  id: number;
+  user_id: number | null;
+  username: string;
+  display_name: string;
+  ip: string;
+  user_agent: string;
+  result: string;
+  reason: string;
+  created_at: string;
+}
+
 export interface AdminUserList {
   items: AdminUser[];
   total: number;
@@ -835,6 +855,9 @@ export interface AdminUserInput {
   display_name: string;
   password?: string;
   roles?: string[];
+  branch_ids?: number[];
+  primary_branch_id?: number;
+  status?: AdminUserStatus;
   wordpress_user_id?: number;
 }
 
@@ -890,6 +913,44 @@ export async function fetchAdminUserSessions(id: number): Promise<AdminSessionEn
 export async function fetchAdminUserLoginHistory(id: number): Promise<AdminLoginEntry[]> {
   const res = await apiRequest<{ items: AdminLoginEntry[] }>(`/api/v1/users/${id}/login-history`);
   return res.ok && res.data ? res.data.items : [];
+}
+
+export async function fetchAdminBranches(): Promise<AdminBranch[]> {
+  const res = await apiRequest<{ items: AdminBranch[] }>("/api/v1/branches");
+  return res.ok && res.data ? res.data.items : [];
+}
+
+export async function setAdminUserBranches(
+  id: number,
+  input: { branch_ids: number[]; primary_branch_id?: number | null },
+): Promise<AdminUser | null> {
+  const res = await apiRequest<AdminUser>(`/api/v1/users/${id}/branches`, "POST", {
+    branch_ids: input.branch_ids,
+    primary_branch_id: input.primary_branch_id ?? null,
+  });
+  return res.ok ? res.data || null : null;
+}
+
+export async function revokeAdminUserSessions(id: number): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/users/${id}/sessions/revoke`, "POST");
+  return res.ok;
+}
+
+export async function fetchGlobalLoginHistory(
+  params: {
+    search?: string;
+    result?: "success" | "failed";
+    user_id?: number;
+    from?: string;
+    to?: string;
+    page?: number;
+    per_page?: number;
+  } = {},
+): Promise<{ items: AdminLoginHistoryRow[]; total: number }> {
+  const res = await apiRequest<{ items: AdminLoginHistoryRow[]; total: number }>(
+    `/api/v1/login-history${qs(params)}`,
+  );
+  return res.ok && res.data ? res.data : { items: [], total: 0 };
 }
 
 export async function fetchAdminRoles(): Promise<AdminRolesBundle> {
@@ -955,7 +1016,16 @@ export async function fetchAdminAudit(
 }
 
 export async function fetchAdminActivity(
-  params: { module?: string; user_id?: number; page?: number; per_page?: number } = {},
+  params: {
+    module?: string;
+    action?: string;
+    user_id?: number;
+    search?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    per_page?: number;
+  } = {},
 ): Promise<{ items: AdminActivityRow[]; total: number }> {
   const res = await apiRequest<{ items: AdminActivityRow[]; total: number }>(
     `/api/v1/activity-logs${qs(params)}`,

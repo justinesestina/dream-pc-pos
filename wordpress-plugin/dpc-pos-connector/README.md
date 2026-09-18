@@ -8,7 +8,7 @@ tables inside the **existing WordPress database** — no separate database is
 required.
 
 - **REST namespace:** `dpc/v1` (under `/wp-json/`)
-- **Current version:** `0.6.1`
+- **Current version:** `0.7.0`
 - **Requires:** WordPress 6.2+, PHP 7.4+
 - **Phase 0 scope:** schema, RBAC, sessions, audit/activity, user management,
   role editing, WordPress Admin SSO, integrations.
@@ -330,6 +330,23 @@ also writes to `wp_dpc_audit_logs`.
 ---
 
 ## Changelog
+
+### 0.7.0
+
+- **Branch management surface:** new `GET /branches`, `POST /users/{id}/branches`
+  (replaces assignments and the primary branch) and
+  `POST /users/{id}/sessions/revoke` (signs out every session, audited).
+- The User object now returns `branches`, `primary_branch_id`, `failed_attempts`
+  and `locked_until` so the app can render branch access and lockout state.
+- `sync_branches` accepts an explicit primary branch; `POST /users` and
+  `PATCH /users/{id}` accept `primary_branch_id`.
+- `POST /users` accepts an optional `status` (defaults to `active`).
+- **Global login history:** `GET /login-history` lists attempts across all
+  accounts with `search`, `result`, `user_id`, `from`/`to` filters.
+- Activity reads (`GET /activity-logs`) gained `action`, `search` and
+  `from`/`to` filters.
+- Role changes (`POST /users/{id}/roles`) now write audit records in addition to
+  activity timeline entries.
 
 ### 0.6.1
 
