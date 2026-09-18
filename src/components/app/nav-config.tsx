@@ -4,6 +4,7 @@ import {
   BarChart3,
   BadgePercent,
   Calculator,
+  CalendarDays,
   ClipboardList,
   FileText,
   FolderKanban,
@@ -11,6 +12,7 @@ import {
   Landmark,
   LayoutDashboard,
   LifeBuoy,
+  ListChecks,
   Megaphone,
   Package,
   Percent,
@@ -23,6 +25,7 @@ import {
   Target,
   Ticket,
   Truck,
+  UserRound,
   Users,
   Wallet,
   Warehouse,
@@ -144,7 +147,13 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Projects",
-    items: [{ label: "Projects (locked)", icon: FolderKanban, soon: true, cap: "settings" }],
+    items: [
+      { label: "All Projects", to: "/projects", search: { tab: "projects" }, icon: FolderKanban, cap: "settings" },
+      { label: "Tasks Board", to: "/projects", search: { tab: "tasks" }, icon: ListChecks, cap: "settings" },
+      { label: "Calendar", to: "/projects", search: { tab: "calendar" }, icon: CalendarDays, cap: "settings" },
+      { label: "Team Workload", to: "/projects", search: { tab: "team" }, icon: UserRound, cap: "settings" },
+      { label: "Reports", to: "/projects", search: { tab: "reports" }, icon: BarChart3, cap: "settings" },
+    ],
   },
   {
     label: "Promo Codes",

@@ -730,3 +730,36 @@ export interface ReleaseRecord {
   completedAt?: string;
   notes?: string;
 }
+
+/* ─── Projects & Tasks (Project Studio module) ─── */
+
+export type ProjectStatus = "planning" | "active" | "on_hold" | "completed";
+export type ProjectTaskStatus = "todo" | "in_progress" | "done";
+
+export interface Project {
+  id: string;
+  name: string;
+  customer: string;
+  customerType: string;
+  status: ProjectStatus;
+  startDate: string;
+  due: string;
+  owner: string;
+  description: string;
+  scope: string;
+  members: string[];
+  value: number;
+  tasks: number;
+  done: number;
+}
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  project: string;
+  projectId: string;
+  assignee: string;
+  status: ProjectTaskStatus;
+  due: string;
+  duration: string;
+}
