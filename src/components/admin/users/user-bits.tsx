@@ -43,10 +43,11 @@ export function StatusCell({ status, locked }: { status: string; locked?: boolea
 }
 
 export function RoleBadges({ user }: { user: AdminUser }) {
-  if (user.roles.length === 0) return <span className="text-xs text-subtle">—</span>;
+  const roles = user.roles ?? [];
+  if (roles.length === 0) return <span className="text-xs text-subtle">—</span>;
   return (
     <div className="flex max-w-[240px] flex-wrap gap-1">
-      {user.roles.map((role) => (
+      {roles.map((role) => (
         <StatusBadge
           key={role.slug}
           status={role.slug}
@@ -59,18 +60,19 @@ export function RoleBadges({ user }: { user: AdminUser }) {
 }
 
 export function BranchCell({ user }: { user: AdminUser }) {
-  if (user.branches.length === 0) return <span className="text-xs text-subtle">—</span>;
+  const branches = user.branches ?? [];
+  if (branches.length === 0) return <span className="text-xs text-subtle">—</span>;
   return (
     <div className="flex max-w-[220px] flex-wrap gap-1">
-      {user.branches.map((b) => (
+      {branches.map((b) => (
         <StatusBadge
           key={b.id}
           status={String(b.id)}
           label={b.name}
           tone={user.primary_branch_id === b.id ? "info" : "neutral"}
-          className={
-            user.primary_branch_id === b.id ? "border-info/30 bg-info/10 text-info" : undefined
-          }
+          {...(user.primary_branch_id === b.id
+            ? { className: "border-info/30 bg-info/10 text-info" }
+            : {})}
         />
       ))}
     </div>

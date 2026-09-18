@@ -34,7 +34,7 @@ export function useAdminUserData(): AdminUserData {
     ])
       .then(([u, r, b]) => {
         if (!active) return;
-        setUsers(u);
+        setUsers(u.map(normalizeUser));
         setRoles(r);
         setBranches(b);
       })
@@ -57,6 +57,19 @@ export function useAdminUserData(): AdminUserData {
   return { users, roles, branches, loading, reload };
 }
 
+/** Fill in fields an older connector may have omitted so tables never crash. */
+function normalizeUser(u: AdminUser): AdminUser {
+  return {
+    ...u,
+    roles: u.roles ?? [],
+    branches: u.branches ?? [],
+    status: u.status ?? "active",
+    failed_attempts: u.failed_attempts ?? 0,
+    locked_until: u.locked_until ?? null,
+    primary_branch_id: u.primary_branch_id ?? null,
+  };
+}
+
 /** Minimal client-side filtering shared by table pages. */
 export function filterUsers(
   users: AdminUser[],
@@ -68,8 +81,8 @@ export function filterUsers(
   const needle = query.trim().toLowerCase();
   return users.filter((u) => {
     if (status !== "all" && u.status !== status) return false;
-    if (role !== "all" && !u.roles.some((r) => r.slug === role)) return false;
-    if (branch !== "all" && !u.branches.some((b) => String(b.id) === branch)) return false;
+    if (role !== "all" && !(u.roles ?? []).some((r) => r.slug === role)) return false;
+    if (branch !== "all" && !(u.branches ?? []).some((b) => String(b.id) === branch)) return false;
     if (!needle) return true;
     return (
       u.username.toLowerCase().includes(needle) ||

@@ -12,6 +12,7 @@ import {
   setAdminUserStatus,
   deleteAdminUser,
   type AdminUser,
+  type AdminUserStatus,
 } from "@/lib/api-client";
 import { dateTimeShort } from "@/lib/format";
 import { useAdminUserData } from "./use-admin-user-data";
@@ -62,7 +63,7 @@ export function AccountStatusPage() {
     });
   }, [users, query, statusFilter]);
 
-  const runStatus = async (u: AdminUser, status: AdminUser["status"]) => {
+  const runStatus = async (u: AdminUser, status: AdminUserStatus) => {
     if (busy) return;
     setBusy(true);
     const res = await setAdminUserStatus(u.id, status);
@@ -178,6 +179,8 @@ export function AccountStatusPage() {
 
   const rows: Row[] = filtered.map((u) => ({ id: String(u.id), user: u }));
 
+  const target = confirm?.user;
+
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
@@ -188,8 +191,8 @@ export function AccountStatusPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
         <StatCard label="Total accounts" value={counts.total} />
         <StatCard label="Active" value={counts.active} accent="success" />
-        <StatCard label="Locked" value={counts.locked} accent="fail" hint="Sign-in lockouts" />
-        <StatCard label="Suspended" value={counts.suspended} accent="warn" />
+        <StatCard label="Locked" value={counts.locked} accent="danger" hint="Sign-in lockouts" />
+        <StatCard label="Suspended" value={counts.suspended} accent="warning" />
         <StatCard label="Deactivated" value={counts.deactivated} accent="neutral" />
       </div>
 

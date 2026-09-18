@@ -50,7 +50,7 @@ export function SidePanel({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: ReactNode;
+  title?: ReactNode;
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -59,10 +59,12 @@ export function SidePanel({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className={`overflow-y-auto pb-0 ${widthClass}`}>
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          {description && <SheetDescription>{description}</SheetDescription>}
-        </SheetHeader>
+        {(title || description) && (
+          <SheetHeader>
+            {title && <SheetTitle>{title}</SheetTitle>}
+            {description && <SheetDescription>{description}</SheetDescription>}
+          </SheetHeader>
+        )}
         <div className="flex-1 py-4">{children}</div>
         {footer && <SheetFooter className="border-t border-border py-4">{footer}</SheetFooter>}
       </SheetContent>

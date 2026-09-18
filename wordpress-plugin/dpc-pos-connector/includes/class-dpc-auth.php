@@ -192,16 +192,6 @@ class DPC_POS_Auth {
 			if ( $attempts >= DPC_POS_Security::max_login_attempts() ) {
 				$data['locked_until'] = gmdate( 'Y-m-d H:i:s', time() + DPC_POS_Security::lockout_seconds() );
 				DPC_POS_Security::log_login_attempt( $user_id, $login, 'lockout', 'max_attempts' );
-				DPC_POS_Audit::record(
-					array(
-						'user_id'   => $user_id,
-						'action'    => 'auth.account_locked',
-						'module'    => 'users',
-						'resource'  => 'user',
-						'record_id' => $user_id,
-						'result'    => 'failure',
-					)
-				);
 			} else {
 				DPC_POS_Security::log_login_attempt( $user_id, $login, 'failure', 'bad_password' );
 			}
@@ -274,6 +264,15 @@ class DPC_POS_Auth {
 				'module'    => 'users',
 				'resource'  => 'user',
 				'record_id' => $auth['user']['id'],
+			)
+		);
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => $auth['user']['id'],
+				'module'      => 'users',
+				'action'      => 'auth.logout',
+				'description' => ( ! empty( $auth['user']['display_name'] ) ? $auth['user']['display_name'] : 'User' ) . ' signed out',
+				'record_id'   => $auth['user']['id'],
 			)
 		);
 		return rest_ensure_response( array( 'ok' => true ) );

@@ -46,7 +46,7 @@ export function RolesPage() {
   const openFor = (u: Row["user"]) => {
     setTarget(u);
     setPrimary(u.role);
-    setAdditional(u.roles ?? []);
+    setAdditional((u.roles ?? []).map((r) => r.slug));
   };
 
   useEffect(() => {

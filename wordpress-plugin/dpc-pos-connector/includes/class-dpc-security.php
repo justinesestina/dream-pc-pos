@@ -454,6 +454,33 @@ class DPC_POS_Security {
 			),
 			array( '%d', '%s', '%s', '%s', '%s', '%s' )
 		);
+
+		// Mirror failed/lockout attempts into the audit trail so auth security
+		// events are visible alongside login_history (success is logged by DPC_POS_Auth).
+		if ( 'lockout' === $result ) {
+			DPC_POS_Audit::record(
+				array(
+					'user_id'   => $user_id ? (int) $user_id : null,
+					'action'    => 'auth.account_locked',
+					'module'    => 'users',
+					'resource'  => 'user',
+					'record_id' => $user_id,
+					'result'    => 'failure',
+				)
+			);
+		} elseif ( 'failure' === $result ) {
+			DPC_POS_Audit::record(
+				array(
+					'user_id'   => $user_id ? (int) $user_id : null,
+					'action'    => 'auth.login_failed',
+					'module'    => 'users',
+					'resource'  => 'user',
+					'record_id' => $user_id,
+					'result'    => 'failure',
+				)
+			);
+		}
+
 		do_action( 'dpc_pos_login_attempt', $user_id, $username, $result, $reason );
 	}
 }

@@ -853,10 +853,10 @@ export interface AdminUserInput {
   username: string;
   email: string;
   display_name: string;
-  password?: string;
+  password?: string | undefined;
   roles?: string[];
   branch_ids?: number[];
-  primary_branch_id?: number;
+  primary_branch_id?: number | undefined;
   status?: AdminUserStatus;
   wordpress_user_id?: number;
 }
@@ -890,7 +890,7 @@ export async function setAdminUserStatus(
 export async function setAdminUserPassword(
   id: number,
   input: { password?: string; generate?: boolean },
-): Promise<{ ok: boolean; password?: string }> {
+): Promise<{ ok: boolean; password?: string | undefined }> {
   const res = await apiRequest<{ ok: boolean; password?: string | null }>(
     `/api/v1/users/${id}/password`,
     "POST",
@@ -938,13 +938,13 @@ export async function revokeAdminUserSessions(id: number): Promise<boolean> {
 
 export async function fetchGlobalLoginHistory(
   params: {
-    search?: string;
-    result?: "success" | "failed";
-    user_id?: number;
-    from?: string;
-    to?: string;
-    page?: number;
-    per_page?: number;
+    search?: string | undefined;
+    result?: "success" | "failed" | undefined;
+    user_id?: number | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    page?: number | undefined;
+    per_page?: number | undefined;
   } = {},
 ): Promise<{ items: AdminLoginHistoryRow[]; total: number }> {
   const res = await apiRequest<{ items: AdminLoginHistoryRow[]; total: number }>(
@@ -1017,14 +1017,14 @@ export async function fetchAdminAudit(
 
 export async function fetchAdminActivity(
   params: {
-    module?: string;
-    action?: string;
-    user_id?: number;
-    search?: string;
-    from?: string;
-    to?: string;
-    page?: number;
-    per_page?: number;
+    module?: string | undefined;
+    action?: string | undefined;
+    user_id?: number | undefined;
+    search?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    page?: number | undefined;
+    per_page?: number | undefined;
   } = {},
 ): Promise<{ items: AdminActivityRow[]; total: number }> {
   const res = await apiRequest<{ items: AdminActivityRow[]; total: number }>(

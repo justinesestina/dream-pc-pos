@@ -26,12 +26,12 @@ function generatePassword(): string {
     const buf = new Uint32Array(1);
     if (typeof crypto !== "undefined" && crypto.getRandomValues) {
       crypto.getRandomValues(buf);
-      return buf[0] % max;
+      return (buf[0] ?? 0) % max;
     }
     return Math.floor(Math.random() * max);
   };
   const out: string[] = [];
-  for (let i = 0; i < 16; i++) out.push(chars[rand(chars.length)]);
+  for (let i = 0; i < 16; i++) out.push(chars[rand(chars.length)]!);
   return out.join("");
 }
 
