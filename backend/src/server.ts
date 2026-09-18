@@ -39,6 +39,7 @@ import { releasesRoutes } from "./routes/releases.js";
 import { auditRoutes } from "./routes/audit.js";
 import { notificationsRoutes } from "./routes/notifications.js";
 import { searchRoutes } from "./routes/search.js";
+import { projectsRoutes } from "./routes/projects.js";
 
 export const app = new Hono();
 
@@ -112,6 +113,7 @@ app.get("/api/v1/health", (c) => {
       "releases",
       "audit",
       "notifications",
+      "projects",
     ],
   });
 });
@@ -142,6 +144,7 @@ app.route("/api/v1/releases", releasesRoutes());
 app.route("/api/v1/audit", auditRoutes());
 app.route("/api/v1/notifications", notificationsRoutes());
 app.route("/api/v1/search", searchRoutes());
+app.route("/api/v1/projects", projectsRoutes());
 
 app.notFound((c) => c.json({ error: { code: "NOT_FOUND", message: "No such route" } }, 404));
 
