@@ -299,8 +299,8 @@ export function AuditLogsPage({
           <SearchInput value={query} onChange={setQuery} placeholder="Search events…" />
           <FilterSelect
             value={resultFilter}
-            onValueChange={setResultFilter}
-            options={["all", "success", "failure", "none"]}
+            onChange={setResultFilter}
+            options={["success", "failure", "none"]}
             label="Result"
           />
           {rows.length < total && (

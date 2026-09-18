@@ -219,6 +219,42 @@ class DPC_POS_REST {
 				'permission_callback' => $this->require_permission( 'users.read' ),
 			)
 		);
+		register_rest_route(
+			$ns,
+			'/users/(?P<id>\d+)/branches',
+			array(
+				'methods'             => 'POST',
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'set_branches' ) ),
+				'permission_callback' => $this->require_permission( 'users.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/users/(?P<id>\d+)/sessions/revoke',
+			array(
+				'methods'             => 'POST',
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'revoke_sessions' ) ),
+				'permission_callback' => $this->require_permission( 'users.update' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/branches',
+			array(
+				'methods'             => 'GET',
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'list_branches' ) ),
+				'permission_callback' => $this->require_permission( 'users.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/login-history',
+			array(
+				'methods'             => 'GET',
+				'callback' => $this->with_auth( array( 'DPC_POS_Users', 'list_login_history' ) ),
+				'permission_callback' => $this->require_permission( 'audit.read' ),
+			)
+		);
 
 		// ---- Roles & permissions -----------------------------------------
 		register_rest_route(
@@ -1133,7 +1169,11 @@ class DPC_POS_REST {
 		$result = DPC_POS_Audit::list_activity(
 			array(
 				'module'   => (string) $request->get_param( 'module' ),
+				'action'   => (string) $request->get_param( 'action' ),
 				'user_id'  => (int) $request->get_param( 'user_id' ),
+				'search'   => (string) $request->get_param( 'search' ),
+				'from'     => (string) $request->get_param( 'from' ),
+				'to'       => (string) $request->get_param( 'to' ),
 				'page'     => (int) $request->get_param( 'page' ),
 				'per_page' => (int) $request->get_param( 'per_page' ),
 			)

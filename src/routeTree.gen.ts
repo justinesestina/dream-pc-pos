@@ -22,7 +22,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppAdminActivityRouteImport } from './routes/_app.admin.activity'
 import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
 import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
-import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes.index'
 import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
@@ -59,7 +58,17 @@ import { Route as AppWarehousesIndexRouteImport } from './routes/_app.warehouses
 import { Route as AppWarehousesWarehouseIdRouteImport } from './routes/_app.warehouses.$warehouseId'
 import { Route as AppWarrantyIndexRouteImport } from './routes/_app.warranty.index'
 import { Route as AppWarrantyWarrantyIdRouteImport } from './routes/_app.warranty.$warrantyId'
+import { Route as AppAdministrationUsersIndexRouteImport } from './routes/_app.administration.users.index'
+import { Route as AppAdministrationUsersAccountStatusRouteImport } from './routes/_app.administration.users.account-status'
+import { Route as AppAdministrationUsersActivityRouteImport } from './routes/_app.administration.users.activity'
+import { Route as AppAdministrationUsersBranchesRouteImport } from './routes/_app.administration.users.branches'
+import { Route as AppAdministrationUsersLoginHistoryRouteImport } from './routes/_app.administration.users.login-history'
+import { Route as AppAdministrationUsersNewRouteImport } from './routes/_app.administration.users.new'
+import { Route as AppAdministrationUsersPasswordResetRouteImport } from './routes/_app.administration.users.password-reset'
+import { Route as AppAdministrationUsersProfilesRouteImport } from './routes/_app.administration.users.profiles'
+import { Route as AppAdministrationUsersRolesRouteImport } from './routes/_app.administration.users.roles'
 import { Route as AppWarrantyClaimsClaimIdRouteImport } from './routes/_app.warranty.claims.$claimId'
+import { Route as AppAdministrationUsersUserIdProfileRouteImport } from './routes/_app.administration.users.$userId.profile'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -123,11 +132,6 @@ const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
 const AppAdminRolesRoute = AppAdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAttributesIndexRoute = AppAttributesIndexRouteImport.update({
@@ -311,10 +315,70 @@ const AppWarrantyWarrantyIdRoute = AppWarrantyWarrantyIdRouteImport.update({
   path: '/warranty/$warrantyId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdministrationUsersIndexRoute =
+  AppAdministrationUsersIndexRouteImport.update({
+    id: '/administration/users/',
+    path: '/administration/users/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersAccountStatusRoute =
+  AppAdministrationUsersAccountStatusRouteImport.update({
+    id: '/administration/users/account-status',
+    path: '/administration/users/account-status',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersActivityRoute =
+  AppAdministrationUsersActivityRouteImport.update({
+    id: '/administration/users/activity',
+    path: '/administration/users/activity',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersBranchesRoute =
+  AppAdministrationUsersBranchesRouteImport.update({
+    id: '/administration/users/branches',
+    path: '/administration/users/branches',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersLoginHistoryRoute =
+  AppAdministrationUsersLoginHistoryRouteImport.update({
+    id: '/administration/users/login-history',
+    path: '/administration/users/login-history',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersNewRoute =
+  AppAdministrationUsersNewRouteImport.update({
+    id: '/administration/users/new',
+    path: '/administration/users/new',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersPasswordResetRoute =
+  AppAdministrationUsersPasswordResetRouteImport.update({
+    id: '/administration/users/password-reset',
+    path: '/administration/users/password-reset',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersProfilesRoute =
+  AppAdministrationUsersProfilesRouteImport.update({
+    id: '/administration/users/profiles',
+    path: '/administration/users/profiles',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersRolesRoute =
+  AppAdministrationUsersRolesRouteImport.update({
+    id: '/administration/users/roles',
+    path: '/administration/users/roles',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppWarrantyClaimsClaimIdRoute =
   AppWarrantyClaimsClaimIdRouteImport.update({
     id: '/warranty/claims/$claimId',
     path: '/warranty/claims/$claimId',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppAdministrationUsersUserIdProfileRoute =
+  AppAdministrationUsersUserIdProfileRouteImport.update({
+    id: '/administration/users/$userId/profile',
+    path: '/administration/users/$userId/profile',
     getParentRoute: () => AppRoute,
   } as any)
 
@@ -331,7 +395,6 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AppAdminActivityRoute
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
-  '/admin/users': typeof AppAdminUsersRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -368,7 +431,17 @@ export interface FileRoutesByFullPath {
   '/transfers/': typeof AppTransfersIndexRoute
   '/warehouses/': typeof AppWarehousesIndexRoute
   '/warranty/': typeof AppWarrantyIndexRoute
+  '/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
+  '/administration/users/activity': typeof AppAdministrationUsersActivityRoute
+  '/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
+  '/administration/users/login-history': typeof AppAdministrationUsersLoginHistoryRoute
+  '/administration/users/new': typeof AppAdministrationUsersNewRoute
+  '/administration/users/password-reset': typeof AppAdministrationUsersPasswordResetRoute
+  '/administration/users/profiles': typeof AppAdministrationUsersProfilesRoute
+  '/administration/users/roles': typeof AppAdministrationUsersRolesRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
+  '/administration/users/': typeof AppAdministrationUsersIndexRoute
+  '/administration/users/$userId/profile': typeof AppAdministrationUsersUserIdProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -383,7 +456,6 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AppAdminActivityRoute
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
-  '/admin/users': typeof AppAdminUsersRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -420,7 +492,17 @@ export interface FileRoutesByTo {
   '/transfers': typeof AppTransfersIndexRoute
   '/warehouses': typeof AppWarehousesIndexRoute
   '/warranty': typeof AppWarrantyIndexRoute
+  '/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
+  '/administration/users/activity': typeof AppAdministrationUsersActivityRoute
+  '/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
+  '/administration/users/login-history': typeof AppAdministrationUsersLoginHistoryRoute
+  '/administration/users/new': typeof AppAdministrationUsersNewRoute
+  '/administration/users/password-reset': typeof AppAdministrationUsersPasswordResetRoute
+  '/administration/users/profiles': typeof AppAdministrationUsersProfilesRoute
+  '/administration/users/roles': typeof AppAdministrationUsersRolesRoute
   '/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
+  '/administration/users': typeof AppAdministrationUsersIndexRoute
+  '/administration/users/$userId/profile': typeof AppAdministrationUsersUserIdProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -437,7 +519,6 @@ export interface FileRoutesById {
   '/_app/admin/activity': typeof AppAdminActivityRoute
   '/_app/admin/audit': typeof AppAdminAuditRoute
   '/_app/admin/roles': typeof AppAdminRolesRoute
-  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -474,7 +555,17 @@ export interface FileRoutesById {
   '/_app/transfers/': typeof AppTransfersIndexRoute
   '/_app/warehouses/': typeof AppWarehousesIndexRoute
   '/_app/warranty/': typeof AppWarrantyIndexRoute
+  '/_app/administration/users/account-status': typeof AppAdministrationUsersAccountStatusRoute
+  '/_app/administration/users/activity': typeof AppAdministrationUsersActivityRoute
+  '/_app/administration/users/branches': typeof AppAdministrationUsersBranchesRoute
+  '/_app/administration/users/login-history': typeof AppAdministrationUsersLoginHistoryRoute
+  '/_app/administration/users/new': typeof AppAdministrationUsersNewRoute
+  '/_app/administration/users/password-reset': typeof AppAdministrationUsersPasswordResetRoute
+  '/_app/administration/users/profiles': typeof AppAdministrationUsersProfilesRoute
+  '/_app/administration/users/roles': typeof AppAdministrationUsersRolesRoute
   '/_app/warranty/claims/$claimId': typeof AppWarrantyClaimsClaimIdRoute
+  '/_app/administration/users/': typeof AppAdministrationUsersIndexRoute
+  '/_app/administration/users/$userId/profile': typeof AppAdministrationUsersUserIdProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -491,7 +582,6 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/audit'
     | '/admin/roles'
-    | '/admin/users'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -528,7 +618,17 @@ export interface FileRouteTypes {
     | '/transfers/'
     | '/warehouses/'
     | '/warranty/'
+    | '/administration/users/account-status'
+    | '/administration/users/activity'
+    | '/administration/users/branches'
+    | '/administration/users/login-history'
+    | '/administration/users/new'
+    | '/administration/users/password-reset'
+    | '/administration/users/profiles'
+    | '/administration/users/roles'
     | '/warranty/claims/$claimId'
+    | '/administration/users/'
+    | '/administration/users/$userId/profile'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -543,7 +643,6 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/audit'
     | '/admin/roles'
-    | '/admin/users'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -580,7 +679,17 @@ export interface FileRouteTypes {
     | '/transfers'
     | '/warehouses'
     | '/warranty'
+    | '/administration/users/account-status'
+    | '/administration/users/activity'
+    | '/administration/users/branches'
+    | '/administration/users/login-history'
+    | '/administration/users/new'
+    | '/administration/users/password-reset'
+    | '/administration/users/profiles'
+    | '/administration/users/roles'
     | '/warranty/claims/$claimId'
+    | '/administration/users'
+    | '/administration/users/$userId/profile'
   id:
     | '__root__'
     | '/'
@@ -596,7 +705,6 @@ export interface FileRouteTypes {
     | '/_app/admin/activity'
     | '/_app/admin/audit'
     | '/_app/admin/roles'
-    | '/_app/admin/users'
     | '/_app/builds/$buildId'
     | '/_app/customers/$customerId'
     | '/_app/inventory/$productId'
@@ -633,7 +741,17 @@ export interface FileRouteTypes {
     | '/_app/transfers/'
     | '/_app/warehouses/'
     | '/_app/warranty/'
+    | '/_app/administration/users/account-status'
+    | '/_app/administration/users/activity'
+    | '/_app/administration/users/branches'
+    | '/_app/administration/users/login-history'
+    | '/_app/administration/users/new'
+    | '/_app/administration/users/password-reset'
+    | '/_app/administration/users/profiles'
+    | '/_app/administration/users/roles'
     | '/_app/warranty/claims/$claimId'
+    | '/_app/administration/users/'
+    | '/_app/administration/users/$userId/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -732,13 +850,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AppAdminRolesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/admin/users': {
-      id: '/_app/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/attributes/': {
@@ -993,11 +1104,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWarrantyWarrantyIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/administration/users/': {
+      id: '/_app/administration/users/'
+      path: '/administration/users'
+      fullPath: '/administration/users/'
+      preLoaderRoute: typeof AppAdministrationUsersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/account-status': {
+      id: '/_app/administration/users/account-status'
+      path: '/administration/users/account-status'
+      fullPath: '/administration/users/account-status'
+      preLoaderRoute: typeof AppAdministrationUsersAccountStatusRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/activity': {
+      id: '/_app/administration/users/activity'
+      path: '/administration/users/activity'
+      fullPath: '/administration/users/activity'
+      preLoaderRoute: typeof AppAdministrationUsersActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/branches': {
+      id: '/_app/administration/users/branches'
+      path: '/administration/users/branches'
+      fullPath: '/administration/users/branches'
+      preLoaderRoute: typeof AppAdministrationUsersBranchesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/login-history': {
+      id: '/_app/administration/users/login-history'
+      path: '/administration/users/login-history'
+      fullPath: '/administration/users/login-history'
+      preLoaderRoute: typeof AppAdministrationUsersLoginHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/new': {
+      id: '/_app/administration/users/new'
+      path: '/administration/users/new'
+      fullPath: '/administration/users/new'
+      preLoaderRoute: typeof AppAdministrationUsersNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/password-reset': {
+      id: '/_app/administration/users/password-reset'
+      path: '/administration/users/password-reset'
+      fullPath: '/administration/users/password-reset'
+      preLoaderRoute: typeof AppAdministrationUsersPasswordResetRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/profiles': {
+      id: '/_app/administration/users/profiles'
+      path: '/administration/users/profiles'
+      fullPath: '/administration/users/profiles'
+      preLoaderRoute: typeof AppAdministrationUsersProfilesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/roles': {
+      id: '/_app/administration/users/roles'
+      path: '/administration/users/roles'
+      fullPath: '/administration/users/roles'
+      preLoaderRoute: typeof AppAdministrationUsersRolesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/warranty/claims/$claimId': {
       id: '/_app/warranty/claims/$claimId'
       path: '/warranty/claims/$claimId'
       fullPath: '/warranty/claims/$claimId'
       preLoaderRoute: typeof AppWarrantyClaimsClaimIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/administration/users/$userId/profile': {
+      id: '/_app/administration/users/$userId/profile'
+      path: '/administration/users/$userId/profile'
+      fullPath: '/administration/users/$userId/profile'
+      preLoaderRoute: typeof AppAdministrationUsersUserIdProfileRouteImport
       parentRoute: typeof AppRoute
     }
   }
@@ -1015,7 +1196,6 @@ interface AppRouteChildren {
   AppAdminActivityRoute: typeof AppAdminActivityRoute
   AppAdminAuditRoute: typeof AppAdminAuditRoute
   AppAdminRolesRoute: typeof AppAdminRolesRoute
-  AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
@@ -1052,7 +1232,17 @@ interface AppRouteChildren {
   AppTransfersIndexRoute: typeof AppTransfersIndexRoute
   AppWarehousesIndexRoute: typeof AppWarehousesIndexRoute
   AppWarrantyIndexRoute: typeof AppWarrantyIndexRoute
+  AppAdministrationUsersAccountStatusRoute: typeof AppAdministrationUsersAccountStatusRoute
+  AppAdministrationUsersActivityRoute: typeof AppAdministrationUsersActivityRoute
+  AppAdministrationUsersBranchesRoute: typeof AppAdministrationUsersBranchesRoute
+  AppAdministrationUsersLoginHistoryRoute: typeof AppAdministrationUsersLoginHistoryRoute
+  AppAdministrationUsersNewRoute: typeof AppAdministrationUsersNewRoute
+  AppAdministrationUsersPasswordResetRoute: typeof AppAdministrationUsersPasswordResetRoute
+  AppAdministrationUsersProfilesRoute: typeof AppAdministrationUsersProfilesRoute
+  AppAdministrationUsersRolesRoute: typeof AppAdministrationUsersRolesRoute
   AppWarrantyClaimsClaimIdRoute: typeof AppWarrantyClaimsClaimIdRoute
+  AppAdministrationUsersIndexRoute: typeof AppAdministrationUsersIndexRoute
+  AppAdministrationUsersUserIdProfileRoute: typeof AppAdministrationUsersUserIdProfileRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -1067,7 +1257,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminActivityRoute: AppAdminActivityRoute,
   AppAdminAuditRoute: AppAdminAuditRoute,
   AppAdminRolesRoute: AppAdminRolesRoute,
-  AppAdminUsersRoute: AppAdminUsersRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppInventoryProductIdRoute: AppInventoryProductIdRoute,
@@ -1104,7 +1293,21 @@ const AppRouteChildren: AppRouteChildren = {
   AppTransfersIndexRoute: AppTransfersIndexRoute,
   AppWarehousesIndexRoute: AppWarehousesIndexRoute,
   AppWarrantyIndexRoute: AppWarrantyIndexRoute,
+  AppAdministrationUsersAccountStatusRoute:
+    AppAdministrationUsersAccountStatusRoute,
+  AppAdministrationUsersActivityRoute: AppAdministrationUsersActivityRoute,
+  AppAdministrationUsersBranchesRoute: AppAdministrationUsersBranchesRoute,
+  AppAdministrationUsersLoginHistoryRoute:
+    AppAdministrationUsersLoginHistoryRoute,
+  AppAdministrationUsersNewRoute: AppAdministrationUsersNewRoute,
+  AppAdministrationUsersPasswordResetRoute:
+    AppAdministrationUsersPasswordResetRoute,
+  AppAdministrationUsersProfilesRoute: AppAdministrationUsersProfilesRoute,
+  AppAdministrationUsersRolesRoute: AppAdministrationUsersRolesRoute,
   AppWarrantyClaimsClaimIdRoute: AppWarrantyClaimsClaimIdRoute,
+  AppAdministrationUsersIndexRoute: AppAdministrationUsersIndexRoute,
+  AppAdministrationUsersUserIdProfileRoute:
+    AppAdministrationUsersUserIdProfileRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

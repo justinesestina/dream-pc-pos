@@ -20,6 +20,7 @@ import {
 } from "react";
 import * as demo from "./demo-data";
 import { emitBuildStatus } from "./build-sync";
+import { clearLoggedOutFlag, setLoggedOutFlag } from "./dpc-connector";
 import {
   fetchBackendProducts,
   fetchBackendOrders,
@@ -613,6 +614,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             error: "Incorrect password for this role.",
           };
         }
+        clearLoggedOutFlag();
         try {
           localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
         } catch {
@@ -622,6 +624,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ok: true };
       },
       signInWithUser: (u) => {
+        clearLoggedOutFlag();
         try {
           localStorage.setItem("dpc-nexus-user", JSON.stringify(u));
         } catch {
@@ -630,7 +633,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         patch((s) => ({ ...s, user: u }));
       },
       signOut: () => {
-        void logoutBackend();
+        // Clear cached auth synchronously first, so the login screen cannot
+        // restore a phantom user while the server-side revoke is in flight.
+        try {
+          localStorage.removeItem("dpc-nexus-user");
+          localStorage.removeItem("dpc-nexus-auth-token");
+          localStorage.removeItem("dpc-nexus-wp-credentials");
+        } catch {
+          // Ignore localStorage errors
+        }
+        setLoggedOutFlag();
+        void logoutBackend().catch(() => undefined);
         patch((s) => ({ ...s, user: null }));
       },
 

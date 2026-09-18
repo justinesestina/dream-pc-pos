@@ -9,7 +9,7 @@ import { Reveal } from "@/components/nexus/motion";
 import { useStore } from "@/lib/store";
 import { homeFor } from "@/lib/permissions";
 import { authenticateWordPress, wpSiteUrl } from "@/lib/wp-auth";
-import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
+import { dpcCurrentUser, hasLoggedOutFlag, isDpcConnectorEnabled } from "@/lib/dpc-connector";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,24 +45,49 @@ function LoginPage() {
   useEffect(() => {
     if (!store.hydrated) return;
 
-    // Check if user is already logged in
     if (store.user) {
       void navigate({ to: homeFor(store.user.role), replace: true });
       return;
     }
 
-    // Try to restore user session from localStorage
+    // After an explicit logout the app must not silently re-authenticate from
+    // the cache: wait for a fresh sign-in instead. Avoids the "logout looks
+    // like a refresh" loop while the server-side revoke is in flight.
+    if (hasLoggedOutFlag()) return;
+
+    if (dpcEnabled) {
+      // Connector mode: the HttpOnly session cookie is the source of truth, so
+      // only restore when the session is still live on the server.
+      void (async () => {
+        try {
+          const live = await dpcCurrentUser();
+          if (live) {
+            store.signInWithUser(live);
+            return;
+          }
+          try {
+            localStorage.removeItem("dpc-nexus-user");
+          } catch {
+            /* ignore */
+          }
+        } catch {
+          // Offline — keep the sign-in form visible.
+        }
+      })();
+      return;
+    }
+
+    // Legacy non-WordPress flow: restore the cached user without a server check.
     try {
       const savedUser = localStorage.getItem("dpc-nexus-user");
       if (savedUser) {
         const user = JSON.parse(savedUser);
         store.signInWithUser(user);
-        return;
       }
     } catch {
       // Ignore localStorage errors
     }
-  }, [store.hydrated, store.user, navigate]);
+  }, [store.hydrated, store.user, navigate, dpcEnabled]);
 
   const submitWordPress = async (e: React.FormEvent) => {
     e.preventDefault();
