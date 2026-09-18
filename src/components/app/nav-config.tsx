@@ -7,12 +7,10 @@ import {
   ClipboardList,
   FileText,
   FolderKanban,
-  FolderPlus,
   History,
   Landmark,
   LayoutDashboard,
   LifeBuoy,
-  ListChecks,
   Megaphone,
   Package,
   Percent,
@@ -25,7 +23,6 @@ import {
   Target,
   Ticket,
   Truck,
-  UserRound,
   Users,
   Wallet,
   Warehouse,
@@ -147,13 +144,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Projects",
-    items: [
-      { label: "All Projects", icon: FolderKanban, soon: true, cap: "settings" },
-      { label: "Create Project", icon: FolderPlus, soon: true, cap: "settings" },
-      { label: "Tasks", icon: ListChecks, soon: true, cap: "settings" },
-      { label: "Team Members", icon: UserRound, soon: true, cap: "settings" },
-      { label: "Reports", icon: BarChart3, soon: true, cap: "settings" },
-    ],
+    items: [{ label: "Projects (locked)", icon: FolderKanban, soon: true, cap: "settings" }],
   },
   {
     label: "Promo Codes",
@@ -356,7 +347,16 @@ export function flattenNav(item: NavItem): NavItem[] {
 }
 
 /** True when the item or any descendant targets the given pathname. */
-export function isNavActive(item: NavItem, pathname: string): boolean {
-  if (item.to && (pathname === item.to || pathname.startsWith(`${item.to}/`))) return true;
-  return item.children?.some((c) => isNavActive(c, pathname)) ?? false;
+export function isNavActive(
+  item: NavItem,
+  pathname: string,
+  search: Record<string, unknown> = {},
+): boolean {
+  if (item.to && (pathname === item.to || pathname.startsWith(`${item.to}/`))) {
+    if (!item.search) return true;
+    return Object.entries(item.search).every(
+      ([key, value]) => String(search[key] ?? "") === String(value),
+    );
+  }
+  return item.children?.some((child) => isNavActive(child, pathname, search)) ?? false;
 }

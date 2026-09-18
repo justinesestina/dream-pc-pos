@@ -33,16 +33,18 @@ interface HoverHandlers {
 function AdminNavList({
   items,
   pathname,
+  search,
   handlers,
 }: {
   items: NavItem[];
   pathname: string;
+  search: Record<string, unknown>;
   handlers: HoverHandlers;
 }) {
   return (
     <>
       {items.map((item) => {
-        const active = isNavActive(item, pathname);
+        const active = isNavActive(item, pathname, search);
 
         if (item.children?.length) {
           return (
@@ -59,6 +61,7 @@ function AdminNavList({
               <AdminNavPanel
                 items={item.children}
                 pathname={pathname}
+                search={search}
                 nested
                 onPointerEnter={handlers.onPointerEnter}
                 onPointerLeave={handlers.onPointerLeave}
@@ -106,18 +109,25 @@ function AdminNavList({
 export function AdminNavPanel({
   items,
   pathname,
+  search,
   nested,
   onPointerEnter,
   onPointerLeave,
 }: {
   items: NavItem[];
   pathname: string;
+  search: Record<string, unknown>;
   nested?: boolean | undefined;
   onPointerEnter?: (() => void) | undefined;
   onPointerLeave?: (() => void) | undefined;
 }) {
   const list = (
-    <AdminNavList items={items} pathname={pathname} handlers={{ onPointerEnter, onPointerLeave }} />
+    <AdminNavList
+      items={items}
+      pathname={pathname}
+      search={search}
+      handlers={{ onPointerEnter, onPointerLeave }}
+    />
   );
 
   return nested ? (

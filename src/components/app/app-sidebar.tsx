@@ -59,12 +59,14 @@ function SoonTag() {
 function Flyout({
   items,
   pathname,
+  search,
   nested,
   onPointerEnter,
   onPointerLeave,
 }: {
   items: NavItem[];
   pathname: string;
+  search: Record<string, unknown>;
   nested?: boolean | undefined;
   onPointerEnter?: (() => void) | undefined;
   onPointerLeave?: (() => void) | undefined;
@@ -79,6 +81,7 @@ function Flyout({
           <Flyout
             items={child.children}
             pathname={pathname}
+            search={search}
             nested
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
@@ -94,7 +97,7 @@ function Flyout({
         </DropdownMenuItem>
       );
     }
-    const active = child.to ? isNavActive(child, pathname) : false;
+    const active = child.to ? isNavActive(child, pathname, search) : false;
     return (
       <DropdownMenuItem
         asChild
@@ -142,10 +145,12 @@ function Flyout({
 function NavFlyout({
   item,
   pathname,
+  search,
   collapsed,
 }: {
   item: NavItem;
   pathname: string;
+  search: Record<string, unknown>;
   collapsed: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -167,7 +172,7 @@ function NavFlyout({
   };
   useEffect(() => cancel, []);
 
-  const active = isNavActive(item, pathname);
+  const active = isNavActive(item, pathname, search);
   const content = (
     <>
       <ActiveBar active={active} />
@@ -198,6 +203,7 @@ function NavFlyout({
         <AdminNavPanel
           items={item.children ?? []}
           pathname={pathname}
+          search={search}
           onPointerEnter={openNow}
           onPointerLeave={closeSoon}
         />
@@ -205,6 +211,7 @@ function NavFlyout({
         <Flyout
           items={item.children ?? []}
           pathname={pathname}
+          search={search}
           onPointerEnter={openNow}
           onPointerLeave={closeSoon}
         />
@@ -216,12 +223,16 @@ function NavFlyout({
 export function AppSidebar() {
   const store = useStore();
   const collapsed = store.sidebarCollapsed;
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const pathname = location.pathname;
+  const search = location.search as Record<string, unknown>;
   const role = store.user?.role ?? "owner";
   const { isCollapsed, setCollapsed, toggle } = useNavSections();
 
   // Auto-expand the section that contains the active page.
-  const activeSection = navGroups.find((g) => g.items.some((i) => isNavActive(i, pathname)))?.label;
+  const activeSection = navGroups.find((g) =>
+    g.items.some((i) => isNavActive(i, pathname, search)),
+  )?.label;
   useEffect(() => {
     if (activeSection) setCollapsed(activeSection, false);
   }, [activeSection, setCollapsed]);
@@ -313,12 +324,17 @@ export function AppSidebar() {
                 <div className="overflow-hidden">
                   <ul className="space-y-0.5">
                     {items.map((item) => {
-                      const active = isNavActive(item, pathname);
+                      const active = isNavActive(item, pathname, search);
 
                       if (item.children?.length) {
                         return (
                           <li key={item.label}>
-                            <NavFlyout item={item} pathname={pathname} collapsed={collapsed} />
+                            <NavFlyout
+                              item={item}
+                              pathname={pathname}
+                              search={search}
+                              collapsed={collapsed}
+                            />
                           </li>
                         );
                       }
