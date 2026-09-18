@@ -3,7 +3,7 @@
  * Plugin Name:       DPC POS Connector
  * Plugin URI:        https://dreampcbuild.com
  * Description:       Secure backend/API connector between the DPC POS interface and WordPress + WooCommerce. Owns DPC POS users, roles, permissions, branches, sessions, audit/activity logs, approval workflows and WordPress Admin SSO. Stores its data in wp_dpc_* tables inside the existing WordPress database.
- * Version:           0.3.0
+ * Version:           0.3.1
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Dream PC Build & IT Solutions
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'DPC_POS_VERSION', '0.3.0' );
+define( 'DPC_POS_VERSION', '0.3.1' );
 define( 'DPC_POS_FILE', __FILE__ );
 define( 'DPC_POS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DPC_POS_URL', plugin_dir_url( __FILE__ ) );

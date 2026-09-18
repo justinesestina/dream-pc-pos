@@ -4,7 +4,8 @@
  * and credentialed CORS for the DPC POS frontend.
  *
  * All endpoints live under the `dpc/v1` namespace. Authenticated routes receive
- * an auth context via a request attribute set by the permission callback.
+ * an auth context resolved by the permission callback and stashed on the class
+ * for the duration of the request (WordPress has no request-attribute store).
  *
  * @package DPC_POS_Connector
  */
@@ -15,6 +16,13 @@ defined( 'ABSPATH' ) || exit;
  * Registers every connector route.
  */
 class DPC_POS_REST {
+
+	/**
+	 * Auth context for the in-flight request, set by the permission callback.
+	 *
+	 * @var array
+	 */
+	private static $current_auth = array();
 
 	/**
 	 * Namespace shared by all routes.
@@ -331,6 +339,22 @@ class DPC_POS_REST {
 	private function register_cors() {
 		remove_filter( 'rest_pre_serve_request', 'rest_send_cors_headers' );
 		add_filter( 'rest_pre_serve_request', array( $this, 'send_cors_headers' ), 15, 1 );
+		// Send headers before dispatch so even a fatal error carries CORS and the
+		// browser surfaces the real message instead of an opaque CORS failure.
+		add_action( 'rest_api_init', array( $this, 'maybe_send_early_cors' ), 1 );
+	}
+
+	/**
+	 * Sends CORS headers up-front for connector routes.
+	 *
+	 * @return void
+	 */
+	public function maybe_send_early_cors() {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+		if ( false === strpos( $uri, '/dpc/v1/' ) ) {
+			return;
+		}
+		$this->send_cors_headers( false );
 	}
 
 	/**
@@ -379,7 +403,7 @@ class DPC_POS_REST {
 			if ( ! DPC_POS_RBAC::user_can( (int) $auth['user']['id'], $permission ) ) {
 				return new WP_Error( 'dpc_forbidden', 'You do not have permission to do that.', array( 'status' => 403 ) );
 			}
-			$request->set_attribute( 'dpc_auth', $auth );
+			self::$current_auth = $auth;
 			return true;
 		};
 	}
@@ -395,7 +419,7 @@ class DPC_POS_REST {
 			if ( ! $auth ) {
 				return new WP_Error( 'dpc_unauthorized', 'Authentication required.', array( 'status' => 401 ) );
 			}
-			$request->set_attribute( 'dpc_auth', $auth );
+			self::$current_auth = $auth;
 			return true;
 		};
 	}
@@ -403,28 +427,26 @@ class DPC_POS_REST {
 	/**
 	 * Wraps a class-method callback so it also receives the auth context.
 	 *
-	 * WordPress invokes REST callbacks with only the request; the auth context
-	 * is attached to the request as the `dpc_auth` attribute by the permission
-	 * callback. This adapter forwards it as the callback's second argument.
+	 * WordPress invokes REST callbacks with only the request; the permission
+	 * callback stashes the auth context on this class. This adapter forwards it
+	 * as the callback's second argument.
 	 *
 	 * @param callable $callable Target callback that accepts `( $request, $auth )`.
 	 * @return callable
 	 */
 	private function with_auth( $callable ) {
 		return function ( $request ) use ( $callable ) {
-			return call_user_func( $callable, $request, self::auth( $request ) );
+			return call_user_func( $callable, $request, self::auth() );
 		};
 	}
 
 	/**
-	 * Returns the auth context attached by the permission callback.
+	 * Returns the auth context stashed by the permission callback.
 	 *
-	 * @param WP_REST_Request $request REST request.
 	 * @return array
 	 */
-	private static function auth( WP_REST_Request $request ) {
-		$auth = $request->get_attribute( 'dpc_auth' );
-		return is_array( $auth ) ? $auth : array();
+	private static function auth() {
+		return is_array( self::$current_auth ) ? self::$current_auth : array();
 	}
 
 	/**
@@ -450,7 +472,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function logout( WP_REST_Request $request ) {
-		return DPC_POS_Auth::logout( $request, self::auth( $request ) );
+		return DPC_POS_Auth::logout( $request, self::auth() );
 	}
 
 	/**
@@ -460,7 +482,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function me( WP_REST_Request $request ) {
-		return DPC_POS_Auth::me( $request, self::auth( $request ) );
+		return DPC_POS_Auth::me( $request, self::auth() );
 	}
 
 	/**
@@ -470,7 +492,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function change_password( WP_REST_Request $request ) {
-		return DPC_POS_Auth::change_password( $request, self::auth( $request ) );
+		return DPC_POS_Auth::change_password( $request, self::auth() );
 	}
 
 	/**
@@ -480,7 +502,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function list_sessions( WP_REST_Request $request ) {
-		return DPC_POS_Auth::list_sessions( $request, self::auth( $request ) );
+		return DPC_POS_Auth::list_sessions( $request, self::auth() );
 	}
 
 	/**
@@ -490,7 +512,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function revoke_session( WP_REST_Request $request ) {
-		return DPC_POS_Auth::revoke_session( $request, self::auth( $request ) );
+		return DPC_POS_Auth::revoke_session( $request, self::auth() );
 	}
 
 	/**
@@ -500,7 +522,7 @@ class DPC_POS_REST {
 	 * @return WP_REST_Response
 	 */
 	public function sso_token( WP_REST_Request $request ) {
-		return DPC_POS_SSO::issue_token( $request, self::auth( $request ) );
+		return DPC_POS_SSO::issue_token( $request, self::auth() );
 	}
 
 	/**
