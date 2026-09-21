@@ -171,21 +171,21 @@ class DPC_POS_Search {
 		$projects_table = DPC_POS_RBAC::table( 'projects' );
 		$project_rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, name, status, client_name FROM {$projects_table} WHERE name LIKE %s OR client_name LIKE %s LIMIT 10",
+				"SELECT id, name, status, customer FROM {$projects_table} WHERE name LIKE %s OR customer LIKE %s LIMIT 10",
 				$like,
 				$like
 			),
 			ARRAY_A
 		);
 		foreach ( (array) $project_rows as $project_row ) {
-			$client_name = isset( $project_row['client_name'] ) ? $project_row['client_name'] : '';
-			$haystack = strtolower( $project_row['name'] . ' ' . $client_name . ' ' . $project_row['status'] );
+			$customer = isset( $project_row['customer'] ) ? $project_row['customer'] : '';
+			$haystack = strtolower( $project_row['name'] . ' ' . $customer . ' ' . $project_row['status'] );
 			if ( false !== strpos( $haystack, $query ) ) {
 				$result[] = array(
 					'id'       => 'project-' . $project_row['id'],
 					'type'     => 'projects',
 					'label'    => $project_row['name'],
-					'subtitle' => $client_name ? $client_name . ' | ' . $project_row['status'] : $project_row['status'],
+					'subtitle' => $customer ? $customer . ' | ' . $project_row['status'] : $project_row['status'],
 					'route'    => '/projects/' . $project_row['id'],
 				);
 			}
