@@ -28,6 +28,7 @@ import { AdminNavPanel } from "./admin-nav";
 import { useNavSections } from "./nav-sections";
 import { useStore } from "@/lib/store";
 import { can, roleLabels } from "@/lib/permissions";
+import { UserAvatar } from "@/components/admin/users/user-bits";
 
 const rowBase =
   "group relative flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[13px] transition-colors";
@@ -495,9 +496,7 @@ export function UserMenu({ collapsed = false }: { collapsed?: boolean }) {
             collapsed && "justify-center px-0",
           )}
         >
-          <span className="mono flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[11px] text-foreground">
-            {user.initials}
-          </span>
+          <UserAvatar user={user} size="sm" rounded="md" className="rounded-md" />
           {!collapsed && (
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] text-foreground">{user.name}</span>

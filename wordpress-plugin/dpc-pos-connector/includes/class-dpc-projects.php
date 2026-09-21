@@ -121,7 +121,7 @@ class DPC_POS_Projects {
 		$table = self::table( 'users' );
 		$ids   = array_map( 'absint', array_unique( $user_ids ) );
 		$ph    = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT id, display_name, status FROM {$table} WHERE id IN ({$ph})", $ids ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT id, display_name, avatar_url, status FROM {$table} WHERE id IN ({$ph})", $ids ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$map = array();
 		foreach ( (array) $rows as $row ) {
@@ -136,10 +136,11 @@ class DPC_POS_Projects {
 				$role_name = (string) $rrow['name'];
 			}
 			$map[ $uid ] = array(
-				'id'       => $uid,
-				'name'     => $name,
-				'initials' => $init,
-				'role'     => $role_name,
+				'id'         => $uid,
+				'name'       => $name,
+				'initials'   => $init,
+				'role'       => $role_name,
+				'avatar_url' => isset( $row['avatar_url'] ) ? (string) $row['avatar_url'] : '',
 			);
 		}
 		return $map;
@@ -804,7 +805,7 @@ class DPC_POS_Projects {
 	public static function team_members( $request, $auth ) {
 		global $wpdb;
 		$table = self::table( 'users' );
-		$rows  = $wpdb->get_results( "SELECT id, display_name, email, status FROM {$table} ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results( "SELECT id, display_name, email, avatar_url, status FROM {$table} ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$items = array();
 		foreach ( (array) $rows as $row ) {
@@ -818,13 +819,14 @@ class DPC_POS_Projects {
 				$role = (string) $rrow['name'];
 			}
 			$items[] = array(
-				'id'       => $uid,
-				'name'     => $name,
-				'email'    => (string) $row['email'],
-				'role'     => $role,
-				'role_slug'=> $slug,
-				'status'   => (string) $row['status'],
-				'initials' => self::initials( $name ),
+				'id'         => $uid,
+				'name'       => $name,
+				'email'      => (string) $row['email'],
+				'role'       => $role,
+				'role_slug'  => $slug,
+				'status'     => (string) $row['status'],
+				'initials'   => self::initials( $name ),
+				'avatar_url' => isset( $row['avatar_url'] ) ? (string) $row['avatar_url'] : '',
 			);
 		}
 		return rest_ensure_response( array( 'items' => $items ) );

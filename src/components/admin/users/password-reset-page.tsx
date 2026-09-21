@@ -20,7 +20,7 @@ import {
 import { getLastApiError, setAdminUserPassword, type AdminUser } from "@/lib/api-client";
 import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData } from "./use-admin-user-data";
-import { RoleBadges, StatusCell, isLocked } from "./user-bits";
+import { RoleBadges, StatusCell, UserAvatar, isLocked } from "./user-bits";
 
 interface Row {
   id: string;
@@ -104,9 +104,7 @@ export function PasswordResetPage() {
       header: "User",
       cell: (r) => (
         <div className="flex items-center gap-2.5">
-          <span className="mono flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[11px] text-foreground">
-            {r.user.initials}
-          </span>
+          <UserAvatar user={r.user} size="sm" />
           <div className="min-w-0">
             <p className="truncate text-[13px] text-foreground">{r.user.display_name}</p>
             <p className="mono truncate text-[10.5px] text-subtle">{r.user.username}</p>

@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/admin/users/user-bits";
 import {
   createAdminRole,
   deleteAdminRole,
@@ -974,9 +975,7 @@ function AssignmentsTab({ roles }: { roles: AdminRole[] }) {
               key={u.id}
               className="flex items-center gap-3 rounded-md border border-border px-3 py-2 text-[13px]"
             >
-              <span className="mono flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[11px] text-foreground">
-                {u.initials}
-              </span>
+              <UserAvatar user={u} size="sm" />
               <span className="flex-1 min-w-0">
                 <span className="block truncate text-foreground">{u.display_name}</span>
                 <span className="mono text-[10.5px] text-subtle">{u.email}</span>

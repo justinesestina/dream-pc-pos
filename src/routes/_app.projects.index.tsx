@@ -68,6 +68,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useStore } from "@/lib/store";
+import { UserAvatar } from "@/components/admin/users/user-bits";
 import { CLIENT_TYPES } from "@/lib/client-types";
 import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
 import { canAct } from "@/lib/permissions";
@@ -124,14 +125,14 @@ type Task = {
   duration: string; // Replaced priority with Estimated Duration
 };
 
-type MemberInfo = { name: string; role: string; initials: string; email: string; phone: string; skills: string[] };
+type MemberInfo = { name: string; role: string; initials: string; email: string; phone: string; skills: string[]; avatar_url: string };
 
 /** Fallback roster rendered only until real DPC users load from the connector. */
 let TEAM_MEMBERS: MemberInfo[] = [
-  { name: "niel", role: "Project Manager", initials: "NI", email: "niel@dreampc.com", phone: "+63 917 000 0001", skills: ["Project Management", "Client Relations", "System Architecture"] },
-  { name: "Dana Lim", role: "Purchasing", initials: "DL", email: "dana.lim@dreampc.com", phone: "+63 917 000 0002", skills: ["Purchasing", "Vendor Management", "Logistics"] },
-  { name: "Arnel Bautista", role: "Technician", initials: "AB", email: "arnel.bautista@dreampc.com", phone: "+63 917 000 0003", skills: ["Hardware Diagnostics", "Network Setup", "PC Assembly"] },
-  { name: "Grace Tan", role: "Purchasing Lead", initials: "GT", email: "grace.tan@dreampc.com", phone: "+63 917 000 0004", skills: ["Procurement", "Cost Analysis", "Supplier Relations"] },
+  { name: "niel", role: "Project Manager", initials: "NI", email: "niel@dreampc.com", phone: "+63 917 000 0001", avatar_url: "", skills: ["Project Management", "Client Relations", "System Architecture"] },
+  { name: "Dana Lim", role: "Purchasing", initials: "DL", email: "dana.lim@dreampc.com", phone: "+63 917 000 0002", avatar_url: "", skills: ["Purchasing", "Vendor Management", "Logistics"] },
+  { name: "Arnel Bautista", role: "Technician", initials: "AB", email: "arnel.bautista@dreampc.com", phone: "+63 917 000 0003", avatar_url: "", skills: ["Hardware Diagnostics", "Network Setup", "PC Assembly"] },
+  { name: "Grace Tan", role: "Purchasing Lead", initials: "GT", email: "grace.tan@dreampc.com", phone: "+63 917 000 0004", avatar_url: "", skills: ["Procurement", "Cost Analysis", "Supplier Relations"] },
 ];
 
 const STATUS_META: Record<ProjectStatus, { color: string; bg: string; border: string }> = {
@@ -269,7 +270,7 @@ function MemberPicker({ selected, onChange }: { selected: string[]; onChange: (m
           return (
             <button key={member.name} type="button" onClick={() => toggle(member.name)}
               className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors ${isSelected ? "bg-info/10 text-foreground" : "text-foreground hover:bg-elevated"}`}>
-              <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${isSelected ? "bg-info text-white" : "bg-elevated text-muted-foreground border border-border"}`}>{member.initials}</span>
+              <UserAvatar user={member} size="sm" rounded="full" className="size-8" />
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-medium truncate">{member.name}</span>
                 <span className="block text-[11px] text-muted-foreground">{member.role}</span>
@@ -446,7 +447,11 @@ function TaskCard({ task, onCycle, busy }: { task: Task; onCycle: () => void; bu
       <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mb-3"><FolderKanban className="size-3" />{task.project}</p>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span title={task.assignee} className="flex size-6 items-center justify-center rounded-full bg-elevated text-[10px] font-bold text-foreground ring-2 ring-background shadow-sm">{member?.initials}</span>
+          {member ? (
+            <UserAvatar user={member} size="sm" rounded="full" className="size-6" />
+          ) : (
+            <span title={task.assignee} className="flex size-6 items-center justify-center rounded-full bg-elevated text-[10px] font-bold text-foreground ring-2 ring-background shadow-sm">?</span>
+          )}
           {task.duration && (
             <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-medium bg-elevated px-2 py-0.5 rounded-md border border-border">
               <Clock className="size-3" /> {task.duration}
@@ -495,7 +500,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
       </div>
       <div className="flex items-center gap-4 mt-1">
         <div className="flex -space-x-2">
-          {memberList.slice(0, 4).map((m) => (<span key={m.name} title={m.name} className="flex size-7 items-center justify-center rounded-full border-2 border-surface bg-info/10 text-[10px] font-bold text-info shadow-sm">{m.initials}</span>))}
+          {memberList.slice(0, 4).map((m) => (<UserAvatar key={m.name} user={m} size="sm" rounded="full" className="size-7 border-2 border-surface" />))}
           {project.members.length > 4 && <span className="flex size-7 items-center justify-center rounded-full border-2 border-surface bg-elevated text-[10px] font-bold text-muted-foreground shadow-sm">+{project.members.length - 4}</span>}
         </div>
         <div className="flex flex-1 items-center gap-3">
@@ -546,6 +551,7 @@ function ProjectsPage() {
       initials: m.initials,
       email: m.email,
       phone: "",
+      avatar_url: m.avatar_url || "",
       skills: [m.role || "Team Member", "Project Delivery"],
     }));
   }, [store.team]);
@@ -941,7 +947,7 @@ function ProjectsPage() {
                 {TEAM_MEMBERS.map(m => (
                   <button key={m.name} type="button" onClick={() => setTaskFilter(m.name)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${taskFilter === m.name ? "bg-info/10 text-info border border-info/20 shadow-sm" : "text-muted-foreground hover:bg-elevated border border-transparent"}`}>
-                    <span className="flex size-5 items-center justify-center rounded-full bg-elevated text-[9px] font-bold ring-1 ring-border">{m.initials}</span>
+                    <UserAvatar user={m} size="sm" rounded="full" className="size-5" />
                     {m.name}
                     <Mono className="text-[10px]">({tasks.filter(t => t.assignee === m.name && t.status !== "done").length})</Mono>
                   </button>
@@ -1297,9 +1303,13 @@ function ProjectsPage() {
               <button key={member.name} type="button" onClick={() => setDetailMember(member.name)}
                 className="relative overflow-hidden group flex flex-col items-center p-6 bg-card border border-border rounded-2xl text-center hover:border-info/40 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-info/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className={`relative flex size-20 items-center justify-center rounded-full text-2xl font-black shadow-sm transition-all duration-300 group-hover:scale-105 ${isOverloaded ? "bg-red-500/10 text-red-400 ring-red-500/30" : "bg-info/10 text-info ring-info/30"} ring-2 ring-offset-4 ring-offset-card`}>
-                  {member.initials}
-                </div>
+                {member.avatar_url ? (
+                  <UserAvatar user={member} size="xl" rounded="full" className="size-20 shadow-sm ring-2 ring-offset-4 ring-offset-card transition-all duration-300 group-hover:scale-105" />
+                ) : (
+                  <div className={`relative flex size-20 items-center justify-center rounded-full text-2xl font-black shadow-sm transition-all duration-300 group-hover:scale-105 ${isOverloaded ? "bg-red-500/10 text-red-400 ring-red-500/30" : "bg-info/10 text-info ring-info/30"} ring-2 ring-offset-4 ring-offset-card`}>
+                    {member.initials}
+                  </div>
+                )}
                 <h3 className="mt-6 text-base font-bold text-foreground group-hover:text-info transition-colors">{member.name}</h3>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1.5">{member.role}</p>
                 <div className="grid grid-cols-2 gap-4 w-full mt-6 pt-5 border-t border-border/60 relative z-10">
@@ -1636,7 +1646,11 @@ function ProjectsPage() {
                     {TEAM_MEMBERS.map((member) => (
                       <label key={member.name} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-all ${detailProject.members.includes(member.name) ? "border-info/50 bg-info/5 shadow-sm ring-1 ring-info/20" : "border-border bg-card hover:bg-elevated"} ${busy === "member" ? "opacity-60 pointer-events-none" : ""}`}>
                         <input type="checkbox" checked={detailProject.members.includes(member.name)} onChange={() => toggleProjectMember(member.name)} disabled={busy === "member"} className="rounded border-border size-4 text-info focus:ring-info/30" />
+                        {member.avatar_url ? (
+                        <UserAvatar user={member} size="sm" rounded="full" className="size-8" />
+                      ) : (
                         <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${detailProject.members.includes(member.name) ? "bg-info text-white" : "bg-elevated text-muted-foreground"}`}>{member.initials}</span>
+                      )}
                         <span className="flex-1 min-w-0"><span className="block text-sm font-bold truncate">{member.name}</span><span className="text-[10px] uppercase tracking-wider text-muted-foreground block truncate">{member.role}</span></span>
                       </label>
                     ))}
@@ -1666,7 +1680,11 @@ function ProjectsPage() {
                   <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-info via-info to-info/20" />
                   <div className="absolute -right-8 -top-8 size-40 rounded-full bg-info/5 blur-2xl pointer-events-none" />
                   <div className="flex flex-col items-center text-center gap-4 relative z-10">
-                    <div className="flex size-24 items-center justify-center rounded-full bg-background border-4 border-card text-info font-black text-3xl shadow-xl ring-2 ring-info/20">{member.initials}</div>
+                    {member.avatar_url ? (
+                      <UserAvatar user={member} size="xl" rounded="full" className="size-24 border-4 border-card shadow-xl ring-2 ring-info/20" />
+                    ) : (
+                      <div className="flex size-24 items-center justify-center rounded-full bg-background border-4 border-card text-info font-black text-3xl shadow-xl ring-2 ring-info/20">{member.initials}</div>
+                    )}
                     <div>
                       <h2 className="text-2xl font-black text-foreground tracking-tight">{member.name}</h2>
                       <p className="text-xs font-bold uppercase tracking-widest text-info mt-1.5 bg-info/10 px-3 py-1 rounded-full inline-block">{member.role}</p>

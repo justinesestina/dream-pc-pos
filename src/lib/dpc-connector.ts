@@ -214,6 +214,9 @@ export function dpcUserToUser(dpc: DpcUser): User {
     role: mapDpcRoleToPosRole(dpc.role || dpc.roles[0]?.slug || ""),
     initials: (dpc.initials || initialsFrom(name)).toUpperCase(),
   };
+  if (dpc.avatar_url) {
+    user.avatar_url = dpc.avatar_url;
+  }
   if (Array.isArray(dpc.permissions) && dpc.permissions.length > 0) {
     user.permissions = dpc.permissions;
   }

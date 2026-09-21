@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/nexus/page-header";
 import { Panel, PanelHeader, EmptyState } from "@/components/nexus/primitives";
 import { KeyValueGrid } from "@/components/nexus/detail";
+import { UserAvatar } from "@/components/admin/users/user-bits";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -248,15 +249,19 @@ function GeneralSection({
       <Panel>
         <PanelHeader title="Active session" hint="Currently signed-in user" />
         {store.user ? (
-          <KeyValueGrid
-            cols={2}
-            items={[
-              { label: "Name", value: store.user.name },
-              { label: "Email", value: store.user.email, mono: true },
-              { label: "Role", value: roleLabels[store.user.role] },
-              { label: "Initials", value: store.user.initials },
-            ]}
-          />
+          <div className="flex items-center gap-3">
+            <UserAvatar user={store.user} size="lg" rounded="full" />
+            <div className="min-w-0 flex-1">
+              <KeyValueGrid
+                cols={2}
+                items={[
+                  { label: "Name", value: store.user.name },
+                  { label: "Email", value: store.user.email, mono: true },
+                  { label: "Role", value: roleLabels[store.user.role] },
+                ]}
+              />
+            </div>
+          </div>
         ) : (
           <div className="p-4 text-sm text-muted-foreground">No user signed in.</div>
         )}

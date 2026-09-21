@@ -40,6 +40,14 @@ const AVATAR_SIZES = {
   xl: "size-16 text-lg",
 } as const;
 
+/** Any object carrying avatar + display identity (AdminUser, User, TeamMember, …). */
+type AvatarUser = {
+  avatar_url?: string;
+  initials?: string;
+  display_name?: string;
+  name?: string;
+};
+
 /** Profile photo with the initials chip as a fallback. */
 export function UserAvatar({
   user,
@@ -47,7 +55,7 @@ export function UserAvatar({
   rounded = "md",
   className,
 }: {
-  user: Pick<AdminUser, "avatar_url" | "initials" | "display_name">;
+  user: AvatarUser;
   size?: keyof typeof AVATAR_SIZES;
   rounded?: "md" | "full";
   className?: string;
@@ -55,11 +63,12 @@ export function UserAvatar({
   const url = user.avatar_url?.trim();
   const theme = rounded === "full" ? "rounded-full" : "rounded-md";
   const base = `${AVATAR_SIZES[size]} shrink-0 border object-cover border-border bg-elevated`;
+  const label = user.display_name || user.name || "User";
   if (url) {
     return (
       <img
         src={url}
-        alt={user.display_name || "User"}
+        alt={label}
         referrerPolicy="no-referrer"
         className={cn(base, theme, className)}
       />

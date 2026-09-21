@@ -24,6 +24,7 @@ export interface TeamMember {
   role: string;
   role_slug?: string;
   initials: string;
+  avatar_url?: string;
 }
 
 export interface ProjectMemberRef {
@@ -31,6 +32,7 @@ export interface ProjectMemberRef {
   name: string;
   initials: string;
   role: string;
+  avatar_url?: string;
 }
 
 export interface Project {
@@ -95,6 +97,8 @@ export interface User {
   email: string;
   role: Role;
   initials: string;
+  /** Profile photo URL when the signed-in account has one uploaded. */
+  avatar_url?: string;
   /** DEMO ONLY: plaintext placeholder credential until a real auth backend exists. */
   password?: string;
   /** Connector RBAC permission slugs, when signed in through the DPC connector. */
