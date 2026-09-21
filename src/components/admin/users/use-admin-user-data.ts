@@ -7,6 +7,7 @@ import {
   type AdminRole,
   type AdminUser,
 } from "@/lib/api-client";
+import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
 
 export interface AdminUserData {
   users: AdminUser[];
@@ -35,6 +36,8 @@ export function useAdminUserData(): AdminUserData {
       .then(([u, r, b]) => {
         if (!active) return;
         console.log("Loaded users:", u.length, "roles:", r.length, "branches:", b.length);
+        console.log("Sample user:", u[0]);
+        console.log("DPC Connector enabled:", isDpcConnectorEnabled());
         setUsers(u.map(normalizeUser));
         setRoles(r);
         setBranches(b);
