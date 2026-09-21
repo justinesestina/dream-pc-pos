@@ -12,6 +12,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once dirname( __FILE__ ) . '/class-dpc-audit.php';
+
 /**
  * Warehouse + inventory reads and writes.
  */
@@ -448,7 +450,28 @@ class DPC_POS_Inventory {
 		if ( ! empty( $input['default'] ) ) {
 			self::clear_other_defaults( $created->get_id() );
 		}
-		return self::map_warehouse( $created );
+		$warehouse = self::map_warehouse( $created );
+		
+		// Log warehouse creation to activity log
+		$actor = isset( $input['actor'] ) ? $input['actor'] : array( 'name' => 'System', 'userId' => null );
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => isset( $actor['userId'] ) ? (int) $actor['userId'] : null,
+				'module'      => 'inventory',
+				'action'      => 'warehouse.created',
+				'description' => sprintf(
+					'%s created warehouse %s (%s) of type %s',
+					isset( $actor['name'] ) ? $actor['name'] : 'User',
+					$warehouse['name'],
+					$warehouse['code'],
+					$warehouse['type']
+				),
+				'record_id'   => $warehouse['id'],
+				'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+			)
+		);
+		
+		return $warehouse;
 	}
 
 	/**
@@ -487,7 +510,27 @@ class DPC_POS_Inventory {
 		if ( $merged['default'] ) {
 			self::clear_other_defaults( $order_id );
 		}
-		return self::map_warehouse( $order );
+		$warehouse = self::map_warehouse( $order );
+		
+		// Log warehouse update to activity log
+		$actor = isset( $input['actor'] ) ? $input['actor'] : array( 'name' => 'System', 'userId' => null );
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => isset( $actor['userId'] ) ? (int) $actor['userId'] : null,
+				'module'      => 'inventory',
+				'action'      => 'warehouse.updated',
+				'description' => sprintf(
+					'%s updated warehouse %s (%s)',
+					isset( $actor['name'] ) ? $actor['name'] : 'User',
+					$warehouse['name'],
+					$warehouse['code']
+				),
+				'record_id'   => $warehouse['id'],
+				'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+			)
+		);
+		
+		return $warehouse;
 	}
 
 	/**
@@ -501,7 +544,28 @@ class DPC_POS_Inventory {
 		if ( ! $order instanceof WC_Order || ! self::is_warehouse( $order ) ) {
 			return false;
 		}
-		return (bool) $order->delete( true );
+		$warehouse = self::map_warehouse( $order );
+		$result = (bool) $order->delete( true );
+		
+		if ( $result ) {
+			// Log warehouse deletion to activity log
+			DPC_POS_Audit::activity(
+				array(
+					'user_id'     => null,
+					'module'      => 'inventory',
+					'action'      => 'warehouse.deleted',
+					'description' => sprintf(
+						'Warehouse %s (%s) was deleted',
+						$warehouse['name'],
+						$warehouse['code']
+					),
+					'record_id'   => $warehouse['id'],
+					'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+				)
+			);
+		}
+		
+		return $result;
 	}
 
 	/**
@@ -1069,6 +1133,26 @@ class DPC_POS_Inventory {
 		if ( is_wp_error( $movement ) ) {
 			return $movement;
 		}
+		
+		// Log stock addition to activity log
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => isset( $input['actor']['userId'] ) ? (int) $input['actor']['userId'] : null,
+				'module'      => 'inventory',
+				'action'      => 'stock.added',
+				'description' => sprintf(
+					'%s added %d units to %s (SKU: %s) in %s%s',
+					isset( $input['actor']['name'] ) ? $input['actor']['name'] : 'User',
+					$quantity,
+					$product->get_name(),
+					$product->get_sku() ? $product->get_sku() : $product->get_id(),
+					$warehouse['name'],
+					! empty( $input['supplier'] ) ? ' (Supplier: ' . $input['supplier'] . ')' : ''
+				),
+				'record_id'   => (string) $product->get_id(),
+				'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+			)
+		);
 
 		if ( isset( $input['costPrice'] ) && is_numeric( $input['costPrice'] ) && (float) $input['costPrice'] > 0 ) {
 			$cost    = (float) $input['costPrice'];
@@ -1113,7 +1197,12 @@ class DPC_POS_Inventory {
 		if ( ! $product instanceof WC_Product ) {
 			return new WP_Error( 'dpc_not_found', 'Product not found.', array( 'status' => 404 ) );
 		}
-		return self::apply_delta(
+		
+		// Get current stock for audit
+		$map = self::parse_stock_map( $product );
+		$old_qty = isset( $map[ $warehouse['id'] ] ) ? $map[ $warehouse['id'] ] : 0;
+		
+		$result = self::apply_delta(
 			$product,
 			$warehouse,
 			$delta,
@@ -1126,6 +1215,31 @@ class DPC_POS_Inventory {
 				'idempotencyKey' => '' !== $idem ? $idem : null,
 			)
 		);
+		
+		// Log stock adjustment to activity log
+		if ( ! is_wp_error( $result ) ) {
+			DPC_POS_Audit::activity(
+				array(
+					'user_id'     => isset( $input['actor']['userId'] ) ? (int) $input['actor']['userId'] : null,
+					'module'      => 'inventory',
+					'action'      => 'stock.adjusted',
+					'description' => sprintf(
+						'%s %s adjusted stock for %s (SKU: %s) in %s from %d to %d',
+						isset( $input['actor']['name'] ) ? $input['actor']['name'] : 'User',
+						isset( $input['type'] ) ? $input['type'] : 'adjustment',
+						$product->get_name(),
+						$product->get_sku() ? $product->get_sku() : $product->get_id(),
+						$warehouse['name'],
+						$old_qty,
+						$old_qty + $delta
+					),
+					'record_id'   => (string) $product->get_id(),
+					'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+				)
+			);
+		}
+		
+		return $result;
 	}
 
 	/**
@@ -1189,6 +1303,27 @@ class DPC_POS_Inventory {
 					return $movement;
 				}
 			}
+		}
+		
+		// Log stock set to activity log
+		if ( ! is_wp_error( $movement ) ) {
+			DPC_POS_Audit::activity(
+				array(
+					'user_id'     => isset( $input['actor']['userId'] ) ? (int) $input['actor']['userId'] : null,
+					'module'      => 'inventory',
+					'action'      => 'stock.set',
+					'description' => sprintf(
+						'%s set stock for %s (SKU: %s) in %s to %d',
+						isset( $input['actor']['name'] ) ? $input['actor']['name'] : 'User',
+						$product->get_name(),
+						$product->get_sku() ? $product->get_sku() : $product->get_id(),
+						$warehouse['name'],
+						$target
+					),
+					'record_id'   => (string) $product->get_id(),
+					'branch_id'   => isset( $warehouse['branch_id'] ) ? (int) $warehouse['branch_id'] : null,
+				)
+			);
 		}
 
 		$row = null;
@@ -1355,7 +1490,29 @@ class DPC_POS_Inventory {
 				$k['createdBy']   => $input['actor'],
 			)
 		);
-		return self::map_transfer( $order );
+		
+		// Log transfer creation to activity log
+		$transfer = self::map_transfer( $order );
+		DPC_POS_Audit::activity(
+			array(
+				'user_id'     => isset( $input['actor']['userId'] ) ? (int) $input['actor']['userId'] : null,
+				'module'      => 'inventory',
+				'action'      => 'transfer.created',
+				'description' => sprintf(
+					'%s created transfer of %d units of %s (SKU: %s) from %s to %s',
+					isset( $input['actor']['name'] ) ? $input['actor']['name'] : 'User',
+					$quantity,
+					$product->get_name(),
+					$product->get_sku() ? $product->get_sku() : $product->get_id(),
+					$from['name'],
+					$to['name']
+				),
+				'record_id'   => $transfer['id'],
+				'branch_id'   => isset( $from['branch_id'] ) ? (int) $from['branch_id'] : null,
+			)
+		);
+		
+		return $transfer;
 	}
 
 	/**
@@ -1427,6 +1584,27 @@ class DPC_POS_Inventory {
 			$order->update_meta_data( $k['status'], 'completed' );
 			$order->update_meta_data( $k['completedAt'], gmdate( 'c' ) );
 			$order->save();
+			
+			// Log transfer completion to activity log
+			DPC_POS_Audit::activity(
+				array(
+					'user_id'     => isset( $transfer['createdBy']['userId'] ) ? (int) $transfer['createdBy']['userId'] : null,
+					'module'      => 'inventory',
+					'action'      => 'transfer.completed',
+					'description' => sprintf(
+						'%s completed transfer of %d units of %s (SKU: %s) from %s to %s',
+						isset( $transfer['createdBy']['name'] ) ? $transfer['createdBy']['name'] : 'User',
+						$transfer['quantity'],
+						$transfer['productName'],
+						$transfer['sku'],
+						$transfer['fromWarehouseName'],
+						$transfer['toWarehouseName']
+					),
+					'record_id'   => $transfer['id'],
+					'branch_id'   => isset( $from['branch_id'] ) ? (int) $from['branch_id'] : null,
+				)
+			);
+			
 			return self::map_transfer( $order );
 		}
 
