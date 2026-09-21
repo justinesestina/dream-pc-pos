@@ -64,7 +64,7 @@ interface OpsSnapshot {
 function seed(): OpsSnapshot {
   return {
     schemaVersion: SCHEMA_VERSION,
-    suppliers: [],
+    suppliers: structuredClone(seedData.suppliers),
     purchaseOrders: structuredClone(seedData.purchaseOrders),
     receipts: structuredClone(seedData.goodsReceipts),
     returns: structuredClone(seedData.returnRequests),

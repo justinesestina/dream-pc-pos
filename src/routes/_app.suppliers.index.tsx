@@ -22,6 +22,7 @@ import {
 import { useOps } from "@/lib/ops-store";
 import { useSimulatedLoad, useStore } from "@/lib/store";
 import { SupplierFormDialog } from "@/components/suppliers/supplier-form-dialog";
+import { BrandChips } from "@/components/suppliers/brand-chips";
 import { num } from "@/lib/format";
 import type { Supplier } from "@/lib/ops-types";
 
@@ -50,16 +51,16 @@ function SuppliersIndexPage() {
   const { openNew } = Route.useSearch();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
-  const [category, setCategory] = useState("all");
+  const [brand, setBrand] = useState("all");
   const [dialog, setDialog] = useState<{ open: boolean; supplier?: Supplier }>({ open: false });
 
   useEffect(() => {
     if (openNew) setDialog({ open: true });
   }, [openNew]);
 
-  const categories = useMemo(
-    () => Array.from(new Set(suppliers.flatMap((s) => s.productIds?.map((id) => products.find((product) => product.id === id)?.brand).filter(Boolean) ?? []))).sort(),
-    [suppliers, products],
+  const brandOptions = useMemo(
+    () => Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort(),
+    [products],
   );
 
   const filtered = useMemo(() => {
@@ -70,10 +71,16 @@ function SuppliersIndexPage() {
         if (!hay.includes(query)) return false;
       }
       if (status !== "all" && s.status !== status) return false;
-      if (category !== "all" && !(s.productIds ?? []).some((id) => products.find((product) => product.id === id)?.brand === category)) return false;
+      if (
+        brand !== "all" &&
+        !(s.productIds ?? []).some(
+          (id) => products.find((product) => product.id === id)?.brand === brand,
+        )
+      )
+        return false;
       return true;
     });
-  }, [suppliers, q, status, category]);
+  }, [suppliers, q, status, brand, products]);
 
   const stats = useMemo(() => {
     const active = suppliers.filter((s) => s.status === "active");
@@ -86,13 +93,19 @@ function SuppliersIndexPage() {
     return {
       active: active.length,
       avgLead,
-      categories: categories.length,
+      brands: brandOptions.length,
       openPos,
     };
-  }, [suppliers, purchaseOrders, categories]);
+  }, [suppliers, purchaseOrders, brandOptions]);
 
   const columns: Column<Supplier>[] = [
-    { key: "name", header: "Name", cell: (r) => <span className="text-foreground">{r.name}</span>, sortValue: (r) => r.name, className: "min-w-[10rem]" },
+    {
+      key: "name",
+      header: "Name",
+      cell: (r) => <span className="text-foreground">{r.name}</span>,
+      sortValue: (r) => r.name,
+      className: "min-w-[10rem]",
+    },
     { key: "contact", header: "Contact", cell: (r) => r.contact, sortValue: (r) => r.contact },
     {
       key: "reach",
@@ -106,18 +119,9 @@ function SuppliersIndexPage() {
       className: "min-w-[12rem]",
     },
     {
-      key: "categories",
-      header: "Categories",
-      cell: (r) => (
-        <div className="flex flex-wrap gap-1">
-          {r.categories.slice(0, 3).map((c) => (
-            <span key={c} className="rounded border border-border bg-elevated px-1.5 py-0.5 text-[10.5px] text-muted-foreground">
-              {c}
-            </span>
-          ))}
-          {r.categories.length > 3 && <span className="text-[10.5px] text-subtle">+{r.categories.length - 3}</span>}
-        </div>
-      ),
+      key: "brands",
+      header: "Brands",
+      cell: (r) => <BrandChips productIds={r.productIds} products={products} limit={3} />,
       className: "min-w-[10rem]",
     },
     {
@@ -135,7 +139,12 @@ function SuppliersIndexPage() {
       sortValue: (r) => r.rating,
       align: "right",
     },
-    { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status} />, align: "right" },
+    {
+      key: "status",
+      header: "Status",
+      cell: (r) => <StatusBadge status={r.status} />,
+      align: "right",
+    },
     {
       key: "actions",
       header: "",
@@ -214,25 +223,57 @@ function SuppliersIndexPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Active suppliers" numericValue={stats.active} format={(n) => num(Math.round(n))} accent="success" />
-        <StatCard label="Avg. lead time" numericValue={stats.avgLead} format={(n) => `${Math.round(n)}d`} accent="info" />
-        <StatCard label="Categories covered" numericValue={stats.categories} format={(n) => num(Math.round(n))} accent="neutral" />
-        <StatCard label="Open POs" numericValue={stats.openPos} format={(n) => num(Math.round(n))} accent="warning" />
+        <StatCard
+          label="Active suppliers"
+          numericValue={stats.active}
+          format={(n) => num(Math.round(n))}
+          accent="success"
+        />
+        <StatCard
+          label="Avg. lead time"
+          numericValue={stats.avgLead}
+          format={(n) => `${Math.round(n)}d`}
+          accent="info"
+        />
+        <StatCard
+          label="Brands covered"
+          numericValue={stats.brands}
+          format={(n) => num(Math.round(n))}
+          accent="neutral"
+        />
+        <StatCard
+          label="Open POs"
+          numericValue={stats.openPos}
+          format={(n) => num(Math.round(n))}
+          accent="warning"
+        />
       </div>
 
       <Panel>
         <Toolbar>
           <SearchInput value={q} onChange={setQ} placeholder="Search name or contact…" />
-          <FilterSelect value={status} onChange={setStatus} label="Status" options={["active", "inactive"]} />
-          <FilterSelect value={category} onChange={setCategory} label="Category" options={categories} />
+          <FilterSelect
+            value={status}
+            onChange={setStatus}
+            label="Status"
+            options={["active", "inactive"]}
+          />
+          <FilterSelect value={brand} onChange={setBrand} label="Brand" options={brandOptions} />
           <ResultCount shown={filtered.length} total={suppliers.length} noun="suppliers" />
         </Toolbar>
         <DataTable
           rows={filtered}
           columns={columns}
           loading={loading}
-          onRowClick={(r) => navigate({ to: "/suppliers/$supplierId", params: { supplierId: r.id } })}
-          empty={<EmptyState title="No suppliers match" description="Try clearing the search or filters." />}
+          onRowClick={(r) =>
+            navigate({ to: "/suppliers/$supplierId", params: { supplierId: r.id } })
+          }
+          empty={
+            <EmptyState
+              title="No suppliers match"
+              description="Try clearing the search or filters."
+            />
+          }
         />
       </Panel>
 
