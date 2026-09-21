@@ -186,7 +186,7 @@ class DPC_POS_Search {
 					'type'     => 'projects',
 					'label'    => $project_row['name'],
 					'subtitle' => $customer ? $customer . ' | ' . $project_row['status'] : $project_row['status'],
-					'route'    => '/projects',
+					'route'    => '/projects?projectId=' . $project_row['id'],
 				);
 			}
 		}

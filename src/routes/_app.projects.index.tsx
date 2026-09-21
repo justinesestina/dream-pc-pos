@@ -84,6 +84,7 @@ export const Route = createFileRoute("/_app/projects/")({
   validateSearch: (search: Record<string, unknown>) => ({
     tab: typeof search["tab"] === "string" ? search["tab"] : "projects",
     newProject: search["new"] === "1" || search["new"] === true,
+    projectId: typeof search["projectId"] === "string" ? search["projectId"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -520,7 +521,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
 function ProjectsPage() {
   const store = useStore();
   const { customers, createCustomer } = store;
-  const { tab: requestedTab, newProject } = Route.useSearch();
+  const { tab: requestedTab, newProject, projectId } = Route.useSearch();
   const navigate = useNavigate();
   const [tab, setTab] = useState(requestedTab);
   const [query, setQuery] = useState("");
@@ -536,6 +537,18 @@ function ProjectsPage() {
 
   useEffect(() => { if (newProject) setCreateOpen(true); }, [newProject]);
   useEffect(() => { setTab(requestedTab); }, [requestedTab]);
+  
+  // Open project detail modal when projectId is provided in search
+  useEffect(() => {
+    if (projectId) {
+      const project = store.projects.find((p) => p.id === Number(projectId));
+      if (project) {
+        setDetailProject(toProject(project));
+        // Clear the projectId from URL after opening modal
+        navigate({ to: '/projects', search: { tab: requestedTab } });
+      }
+    }
+  }, [projectId, store.projects, requestedTab, navigate]);
 
   // Data is server-backed through the connector — refresh once on mount.
   useEffect(() => {
