@@ -23,6 +23,7 @@ import { TechLabel } from "@/components/nexus/primitives";
 import { ImageDropzone } from "@/components/products/image-dropzone";
 import { useStore } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
+import { BRAND_ROSTER } from "@/lib/brands";
 import type { Product, ProductType } from "@/lib/types";
 
 function parseSpecs(raw: string): Product["specs"] {
@@ -93,6 +94,19 @@ export function ProductFormDialog({
     [store.categories, product?.categoryId],
   );
 
+  const brands = useMemo(() => {
+    const productBrands = store.products.map((p) => p.brand).filter(Boolean);
+    const merged = [...BRAND_ROSTER, ...productBrands];
+    if (product?.brand) merged.push(product.brand);
+    return Array.from(new Set(merged.map((b) => b.trim()).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [store.products, product?.brand]);
+
+  const CUSTOM_BRAND_SENTINEL = "__custom__";
+  const [brandMode, setBrandMode] = useState<"select" | "custom">("select");
+  const effectiveBrand = brand === CUSTOM_BRAND_SENTINEL ? "" : brand;
+
   useEffect(() => {
     if (!open) {
       initializedFor.current = null;
@@ -102,10 +116,22 @@ export function ProductFormDialog({
     if (initializedFor.current === formKey) return;
 
     const inv = product ? store.invFor(product.id) : undefined;
+    const initialBrand = product?.brand ?? "";
+    const brandsList = [
+      ...BRAND_ROSTER,
+      ...store.products.map((p) => p.brand).filter(Boolean),
+    ].map((b) => b.trim());
+    const hasBrandInList = initialBrand && brandsList.includes(initialBrand.trim());
     setName(product?.name ?? "");
     setImageUrl(product?.imageUrl ?? "");
     setSku(product?.sku ?? "");
-    setBrand(product?.brand ?? "");
+    if (initialBrand && !hasBrandInList) {
+      setBrandMode("custom");
+      setBrand(initialBrand);
+    } else {
+      setBrandMode("select");
+      setBrand(initialBrand);
+    }
     setCategoryId(product?.categoryId ?? store.categories.find((c) => !c.archived)?.id ?? "");
     setProductType(product?.productType ?? (product?.isService ? "service" : "product"));
     setDescription(product?.description ?? "");
@@ -138,7 +164,7 @@ export function ProductFormDialog({
       name: name.trim(),
       imageUrl: imageUrl.trim() || undefined,
       sku: sku.trim().toUpperCase(),
-      brand: brand.trim() || "Generic",
+      brand: effectiveBrand.trim() || "Generic",
       categoryId,
       productType,
       isService: productType === "service",
@@ -207,7 +233,53 @@ export function ProductFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-brand">Brand</Label>
-              <Input id="pf-brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Gigabyte" />
+              {brandMode === "select" ? (
+                <Select
+                  value={brand}
+                  onValueChange={(v) => {
+                    if (v === CUSTOM_BRAND_SENTINEL) {
+                      setBrandMode("custom");
+                      setBrand("");
+                    } else {
+                      setBrand(v);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="pf-brand">
+                    <SelectValue placeholder="Select a brand…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_BRAND_SENTINEL} className="text-muted-foreground italic">
+                      + Custom brand…
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    id="pf-brand"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    placeholder="Enter brand name"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBrandMode("select");
+                      setBrand("");
+                    }}
+                    tabIndex={-1}
+                  >
+                    Back
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-category">Category</Label>
