@@ -823,7 +823,7 @@ class DPC_POS_Projects {
 				'email'    => (string) $row['email'],
 				'role'     => $role,
 				'role_slug'=> $slug,
-				'initials' => DPC_POS_Auth::initials( $name ),
+				'initials' => self::initials( $name ),
 			);
 		}
 		return rest_ensure_response( array( 'items' => $items ) );
