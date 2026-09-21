@@ -538,9 +538,15 @@ function ProjectsPage() {
   useEffect(() => { if (newProject) setCreateOpen(true); }, [newProject]);
   useEffect(() => { setTab(requestedTab); }, [requestedTab]);
   
+  // Data is server-backed through the connector — refresh once on mount.
+  useEffect(() => {
+    if (isDpcConnectorEnabled() || store.projects.length === 0) void store.refreshProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Open project detail modal when projectId is provided in search
   useEffect(() => {
-    if (projectId) {
+    if (projectId && store.projects.length > 0) {
       const project = store.projects.find((p) => p.id === Number(projectId));
       if (project) {
         setDetailProject(toProject(project));
@@ -549,12 +555,6 @@ function ProjectsPage() {
       }
     }
   }, [projectId, store.projects, requestedTab, navigate]);
-
-  // Data is server-backed through the connector — refresh once on mount.
-  useEffect(() => {
-    if (isDpcConnectorEnabled() || store.projects.length === 0) void store.refreshProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const teamMembers = useMemo(() => {
     if (store.team.length === 0) return TEAM_MEMBERS;
