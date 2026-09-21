@@ -11,6 +11,84 @@ export type Role = "owner" | "admin" | "cashier" | "inventory";
 /** Client classification attached to a sale from the POS. */
 export type ClientType = "walk-in" | "business" | "household";
 
+/** Project lifecycle mirrors the connector's `dpc_projects.status` column. */
+export type ProjectStatus = "planning" | "active" | "on_hold" | "completed";
+
+export type ProjectTaskStatus = "todo" | "in_progress" | "done";
+
+/** A DPC user available as an owner / member / assignee. */
+export interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  role_slug?: string;
+  initials: string;
+}
+
+export interface ProjectMemberRef {
+  id: number;
+  name: string;
+  initials: string;
+  role: string;
+}
+
+export interface Project {
+  id: number;
+  code: string;
+  name: string;
+  customer: string;
+  customerType: ClientType;
+  status: ProjectStatus;
+  startDate: string; // YYYY-MM-DD or ""
+  due: string; // YYYY-MM-DD or ""
+  owner: number;
+  ownerName: string;
+  description: string;
+  scope: string;
+  value: number;
+  members: number[];
+  memberNames: string[];
+  memberDetails: ProjectMemberRef[];
+  tasks: number;
+  done: number;
+}
+
+export interface ProjectTask {
+  id: number;
+  projectId: number;
+  project: string;
+  title: string;
+  assignee: number;
+  assigneeName: string;
+  status: ProjectTaskStatus;
+  due: string; // YYYY-MM-DD or ""
+  duration: string;
+}
+
+/** Client-facing input for creating/updating a project. */
+export interface ProjectSaveInput {
+  name?: string;
+  customer?: string;
+  customerType?: ClientType;
+  status?: ProjectStatus;
+  startDate?: string;
+  due?: string;
+  owner?: number;
+  description?: string;
+  scope?: string;
+  value?: number;
+  members?: number[];
+}
+
+export interface ProjectTaskSaveInput {
+  title?: string;
+  assignee?: number;
+  status?: ProjectTaskStatus;
+  due?: string;
+  duration?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -19,6 +97,8 @@ export interface User {
   initials: string;
   /** DEMO ONLY: plaintext placeholder credential until a real auth backend exists. */
   password?: string;
+  /** Connector RBAC permission slugs, when signed in through the DPC connector. */
+  permissions?: string[];
 }
 
 export type ProductType = "product" | "service" | "bundle";

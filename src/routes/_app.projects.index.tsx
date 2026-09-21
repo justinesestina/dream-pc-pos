@@ -68,7 +68,13 @@ import {
 } from "@/components/ui/command";
 import { useStore } from "@/lib/store";
 import { CLIENT_TYPES } from "@/lib/client-types";
-import type { ClientType } from "@/lib/types";
+import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
+import { canAct } from "@/lib/permissions";
+import type {
+  ClientType,
+  Project as StoreProject,
+  ProjectTask as StoreTask,
+} from "@/lib/types";
 import { Reveal } from "@/components/nexus/motion";
 import { money } from "@/lib/format";
 
@@ -117,7 +123,10 @@ type Task = {
   duration: string; // Replaced priority with Estimated Duration
 };
 
-const TEAM_MEMBERS = [
+type MemberInfo = { name: string; role: string; initials: string; email: string; phone: string; skills: string[] };
+
+/** Fallback roster rendered only until real DPC users load from the connector. */
+let TEAM_MEMBERS: MemberInfo[] = [
   { name: "niel", role: "Project Manager", initials: "NI", email: "niel@dreampc.com", phone: "+63 917 000 0001", skills: ["Project Management", "Client Relations", "System Architecture"] },
   { name: "Dana Lim", role: "Purchasing", initials: "DL", email: "dana.lim@dreampc.com", phone: "+63 917 000 0002", skills: ["Purchasing", "Vendor Management", "Logistics"] },
   { name: "Arnel Bautista", role: "Technician", initials: "AB", email: "arnel.bautista@dreampc.com", phone: "+63 917 000 0003", skills: ["Hardware Diagnostics", "Network Setup", "PC Assembly"] },
@@ -131,40 +140,44 @@ const STATUS_META: Record<ProjectStatus, { color: string; bg: string; border: st
   completed: { color: "text-success", bg: "bg-success/10", border: "border-success/20" },
 };
 
-const TODAY = "2026-09-18";
+/** Resolves today once at load so overdue/due-today comparisons always work. */
+const TODAY = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+})();
 
-const initialProjects: Project[] = [
-  {
-    id: "PRJ-001", name: "Office PC Refresh", customer: "Northstar Accounting", customerType: "business",
-    status: "active", startDate: "2026-09-10", due: "2026-09-28", owner: "niel",
-    description: "Replace twelve workstations and migrate user profiles.",
-    tasks: 8, done: 5, members: ["niel", "Dana Lim"],
-    scope: "Hardware replacement, profile migration, deployment and handover.", value: 450000,
-  },
-  {
-    id: "PRJ-002", name: "Creator Workstation Build", customer: "Mara Santos", customerType: "walk-in",
-    status: "planning", startDate: "2026-09-20", due: "2026-10-04", owner: "niel",
-    description: "High-end editing workstation with calibrated display.",
-    tasks: 6, done: 1, members: ["niel"],
-    scope: "Parts sourcing, assembly, burn-in testing and client orientation.", value: 185000,
-  },
-  {
-    id: "PRJ-003", name: "Branch Network Upgrade", customer: "Dream PC Cebu", customerType: "business",
-    status: "on_hold", startDate: "2026-10-01", due: "2026-10-12", owner: "niel",
-    description: "Switch, access point and structured cabling upgrade.",
-    tasks: 10, done: 4, members: ["Arnel Bautista", "Grace Tan"],
-    scope: "Site survey, network design, installation and validation.", value: 210000,
-  },
-];
+/** Maps a connector project onto the page's display shape (code as id). */
+function toProject(p: StoreProject): Project {
+  return {
+    id: p.code,
+    name: p.name,
+    customer: p.customer,
+    customerType: p.customerType,
+    status: p.status,
+    startDate: p.startDate,
+    due: p.due,
+    owner: p.ownerName || "Unassigned",
+    description: p.description || "No description added.",
+    tasks: p.tasks,
+    done: p.done,
+    members: p.memberNames.length ? p.memberNames : [],
+    scope: p.scope || "Scope to be defined.",
+    value: p.value,
+  };
+}
 
-const initialTasks: Task[] = [
-  { id: "TSK-101", title: "Confirm component availability", project: "Office PC Refresh", assignee: "niel", status: "done", due: "2026-09-18", duration: "30 mins" },
-  { id: "TSK-102", title: "Prepare migration checklist", project: "Office PC Refresh", assignee: "niel", status: "in_progress", due: "2026-09-20", duration: "2 hours" },
-  { id: "TSK-103", title: "Send final quote for approval", project: "Creator Workstation Build", assignee: "Dana Lim", status: "todo", due: "2026-09-22", duration: "1 hour" },
-  { id: "TSK-104", title: "Confirm cabling schedule", project: "Branch Network Upgrade", assignee: "Arnel Bautista", status: "todo", due: "2026-09-24", duration: "Half-day" },
-  { id: "TSK-105", title: "Order replacement SSDs", project: "Office PC Refresh", assignee: "Dana Lim", status: "in_progress", due: "2026-09-19", duration: "1 hour" },
-  { id: "TSK-106", title: "Benchmark test workstation", project: "Creator Workstation Build", assignee: "niel", status: "todo", due: "2026-09-25", duration: "4 hours" },
-];
+/** Maps a connector task onto the page's display shape. */
+function toTask(t: StoreTask): Task {
+  return {
+    id: `T${t.id}`,
+    title: t.title,
+    project: t.project,
+    assignee: t.assigneeName || "Unassigned",
+    status: t.status,
+    due: t.due,
+    duration: t.duration,
+  };
+}
 
 
 function Telemetry({ label, children, className }: { label: string; children: React.ReactNode, className?: string }) {
@@ -292,9 +305,9 @@ function CreateProjectModal({ open, onOpenChange, customers, onSubmit, onAddCust
   onSubmit: (form: CreateForm) => void; onAddCustomer: () => void;
 }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<CreateForm>({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: ["niel"], value: 0 });
+  const [form, setForm] = useState<CreateForm>({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: TEAM_MEMBERS[0] ? [TEAM_MEMBERS[0].name] : [], value: 0 });
   const set = <K extends keyof CreateForm>(key: K, val: CreateForm[K]) => setForm((f) => ({ ...f, [key]: val }));
-  const reset = () => { setStep(1); setForm({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: ["niel"], value: 0 }); };
+  const reset = () => { setStep(1); setForm({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: TEAM_MEMBERS[0] ? [TEAM_MEMBERS[0].name] : [], value: 0 }); };
   const handleClose = (v: boolean) => { if (!v) reset(); onOpenChange(v); };
   const handleSubmit = () => { if (!form.name.trim() || !form.due || !form.startDate) { toast.error("Project name and dates are required."); return; } onSubmit(form); reset(); };
   const canNext = step === 1 ? Boolean(form.name.trim() && form.due && form.startDate) : true;
@@ -499,12 +512,11 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════════════════════ */
 function ProjectsPage() {
-  const { customers, createCustomer } = useStore();
+  const store = useStore();
+  const { customers, createCustomer } = store;
   const { tab: requestedTab, newProject } = Route.useSearch();
   const navigate = useNavigate();
   const [tab, setTab] = useState(requestedTab);
-  const [projects, setProjects] = useState(initialProjects);
-  const [tasks, setTasks] = useState(initialTasks);
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
@@ -512,11 +524,41 @@ function ProjectsPage() {
   const [detailMember, setDetailMember] = useState<string | null>(null);
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<string>("all");
-  const [taskForm, setTaskForm] = useState({ title: "", project: "", assignee: "niel", due: TODAY, duration: "" });
+  const [taskForm, setTaskForm] = useState({ title: "", project: "", assignee: "", due: TODAY, duration: "" });
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", phone: "", type: "individual" as "individual" | "business", address: "", notes: "" });
 
   useEffect(() => { if (newProject) setCreateOpen(true); }, [newProject]);
   useEffect(() => { setTab(requestedTab); }, [requestedTab]);
+
+  // Data is server-backed through the connector — refresh once on mount.
+  useEffect(() => {
+    if (isDpcConnectorEnabled() || store.projects.length === 0) void store.refreshProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const teamMembers = useMemo(() => {
+    if (store.team.length === 0) return TEAM_MEMBERS;
+    return store.team.map((m) => ({
+      name: m.name,
+      role: m.role || "Team Member",
+      initials: m.initials,
+      email: m.email,
+      phone: "",
+      skills: [m.role || "Team Member", "Project Delivery"],
+    }));
+  }, [store.team]);
+  TEAM_MEMBERS = teamMembers;
+
+  const teamIdByName = useMemo(
+    () => new Map(store.team.map((m) => [m.name, m.id])),
+    [store.team],
+  );
+
+  const projects = useMemo(() => store.projects.map(toProject), [store.projects]);
+  const tasks = useMemo(() => store.projectTasks.map(toTask), [store.projectTasks]);
+
+  const canCreateProject = store.user ? canAct(store.user, "projects.create") : false;
+  const canUpdateProject = store.user ? canAct(store.user, "projects.update") : false;
 
   const filteredProjects = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -530,35 +572,65 @@ function ProjectsPage() {
 
   const switchTab = (id: string) => { setTab(id); void navigate({ to: "/projects", search: { tab: id, newProject: false } }); };
 
-  const handleCreateProject = (form: CreateForm) => {
-    setProjects((current) => [{
-      id: `PRJ-${String(current.length + 1).padStart(3, "0")}`, name: form.name.trim(), customer: form.customer || "Internal",
-      customerType: form.customerType, status: "planning", startDate: form.startDate, due: form.due, owner: "niel",
-      description: form.description.trim() || "No description added.", tasks: 0, done: 0,
-      members: form.members.length > 0 ? form.members : ["niel"], scope: form.scope.trim() || "Scope to be defined.", value: form.value,
-    }, ...current]);
+  const handleCreateProject = async (form: CreateForm) => {
+    if (!canCreateProject) { toast.error("You do not have permission to create projects."); return; }
+    const created = await store.createProject({
+      name: form.name.trim(),
+      customer: form.customer.trim() || "Internal",
+      customerType: form.customerType,
+      status: "planning",
+      startDate: form.startDate,
+      due: form.due,
+      description: form.description.trim() || "No description added.",
+      scope: form.scope.trim() || "Scope to be defined.",
+      value: form.value,
+      members: form.members.map((n) => teamIdByName.get(n) ?? 0).filter((id) => id > 0),
+    });
     setCreateOpen(false);
-    toast.success("Project created successfully.");
+    if (created) toast.success("Project created successfully.");
+    else toast.error("Could not create project. Check your connection and try again.");
   };
 
-  const cycleTask = (id: string) => setTasks((current) => current.map((task) => task.id !== id ? task : { ...task, status: task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo" }));
+  const cycleTask = (id: string) => {
+    if (!canUpdateProject) { toast.error("You do not have permission to update tasks."); return; }
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const storeTask = store.projectTasks.find((t) => String(t.id) === id.slice(1));
+    if (!storeTask) return;
+    const next = task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo";
+    void store.updateProjectTask(storeTask.id, { status: next });
+  };
 
   const createTask = () => {
+    if (!canCreateProject) { toast.error("You do not have permission to add tasks."); return; }
     if (!taskForm.title.trim() || !taskForm.project || !taskForm.due) { toast.error("Task title, project, and due date are required."); return; }
-    const task: Task = { id: `TSK-${Math.floor(Math.random() * 900 + 100)}`, title: taskForm.title.trim(), project: taskForm.project, assignee: taskForm.assignee, status: "todo", due: taskForm.due, duration: taskForm.duration.trim() };
-    setTasks((current) => [task, ...current]);
-    setProjects((current) => current.map((p) => (p.name === task.project ? { ...p, tasks: p.tasks + 1 } : p)));
-    setTaskForm({ title: "", project: "", assignee: "niel", due: TODAY, duration: "" });
+    const project = store.projects.find((p) => p.name === taskForm.project);
+    if (!project) { toast.error("Select a valid project."); return; }
+    const assigneeId = teamIdByName.get(taskForm.assignee) ?? 0;
+    void store.createProjectTask(project.id, {
+      title: taskForm.title.trim(),
+      due: taskForm.due,
+      duration: taskForm.duration.trim(),
+      ...(assigneeId > 0 ? { assignee: assigneeId } : {}),
+    });
+    setTaskForm({ title: "", project: "", assignee: teamMembers[0]?.name ?? "", due: TODAY, duration: "" });
     setTaskOpen(false);
     toast.success("Task created and assigned.");
   };
 
-  const toggleProjectMember = (member: string) => {
+  const toggleProjectMember = (memberName: string) => {
     if (!detailProject) return;
-    const members = detailProject.members.includes(member) ? detailProject.members.filter((m) => m !== member) : [...detailProject.members, member];
-    const updated = { ...detailProject, members };
-    setDetailProject(updated);
-    setProjects((current) => current.map((p) => (p.id === updated.id ? updated : p)));
+    if (!canUpdateProject) { toast.error("You do not have permission to update the team."); return; }
+    const storeProject = store.projects.find((p) => p.code === detailProject.id);
+    if (!storeProject) return;
+    const id = teamIdByName.get(memberName) ?? 0;
+    if (!id) return;
+    const members = storeProject.members.includes(id)
+      ? storeProject.members.filter((m) => m !== id)
+      : [...storeProject.members, id];
+    void store.updateProject(storeProject.id, { members }).then((updated) => {
+      if (updated) setDetailProject(toProject(updated));
+    });
   };
 
   const addCustomer = () => {
@@ -569,9 +641,9 @@ function ProjectsPage() {
     toast.success(`${customer.name} added and selected.`);
   };
 
-  // Calendar states
-  const [calendarYear, setCalendarYear] = useState(2026);
-  const [calendarMonth, setCalendarMonth] = useState(8); // 8 = September (0-indexed)
+  // Calendar states (default to the current month/view).
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth());
   const [selectedDate, setSelectedDate] = useState(TODAY);
   const [calendarViewMode, setCalendarViewMode] = useState<"month" | "year">("month");
 
@@ -600,8 +672,9 @@ function ProjectsPage() {
   };
 
   const goToToday = () => {
-    setCalendarYear(2026);
-    setCalendarMonth(8);
+    const now = new Date();
+    setCalendarYear(now.getFullYear());
+    setCalendarMonth(now.getMonth());
     setSelectedDate(TODAY);
   };
 
@@ -733,7 +806,13 @@ function ProjectsPage() {
               title="Projects Studio"
               description="Coordinate builds, service work and internal initiatives with precision."
               actions={
-                <Button onClick={() => setCreateOpen(true)} className="gap-2 shadow-sm font-semibold h-10 px-5">
+                <Button
+                  onClick={() => {
+                    if (!canCreateProject) { toast.error("You do not have permission to create projects."); return; }
+                    setCreateOpen(true);
+                  }}
+                  className="gap-2 shadow-sm font-semibold h-10 px-5"
+                >
                    <Plus className="size-4" /> Create Project
                 </Button>
               }

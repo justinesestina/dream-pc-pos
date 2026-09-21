@@ -206,13 +206,17 @@ function initialsFrom(name: string): string {
 /** Converts a DPC connector user into the frontend `User` shape. */
 export function dpcUserToUser(dpc: DpcUser): User {
   const name = (dpc.display_name || dpc.username).trim().replace(/\s+/g, " ") || dpc.username;
-  return {
+  const user: User = {
     id: `dpc-${dpc.id}`,
     name,
     email: dpc.email || `${dpc.username}@dpc.local`,
     role: mapDpcRoleToPosRole(dpc.role || dpc.roles[0]?.slug || ""),
     initials: (dpc.initials || initialsFrom(name)).toUpperCase(),
   };
+  if (Array.isArray(dpc.permissions) && dpc.permissions.length > 0) {
+    user.permissions = dpc.permissions;
+  }
+  return user;
 }
 
 // ---------------------------------------------------------------------------

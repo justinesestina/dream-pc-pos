@@ -879,6 +879,95 @@ class DPC_POS_REST {
 			)
 		);
 
+		// ---- Projects ------------------------------------------------------
+		register_rest_route(
+			$ns,
+			'/projects',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'list_projects' ) ),
+					'permission_callback' => $this->require_permission( 'projects.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'create_project' ) ),
+					'permission_callback' => $this->require_permission( 'projects.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/projects/team',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'team_members' ) ),
+				'permission_callback' => $this->require_permission( 'projects.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/projects/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'get_project' ) ),
+					'permission_callback' => $this->require_permission( 'projects.read' ),
+				),
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'update_project' ) ),
+					'permission_callback' => $this->require_permission( 'projects.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'delete_project' ) ),
+					'permission_callback' => $this->require_permission( 'projects.delete' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/projects/(?P<id>\d+)/tasks',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'list_tasks' ) ),
+					'permission_callback' => $this->require_permission( 'projects.read' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'create_task' ) ),
+					'permission_callback' => $this->require_permission( 'projects.create' ),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/tasks',
+			array(
+				'methods'             => 'GET',
+				'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'all_tasks' ) ),
+				'permission_callback' => $this->require_permission( 'projects.read' ),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/tasks/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => array( 'PUT', 'PATCH' ),
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'update_task' ) ),
+					'permission_callback' => $this->require_permission( 'projects.update' ),
+				),
+				array(
+					'methods'             => 'DELETE',
+					'callback'            => $this->with_auth( array( 'DPC_POS_Projects', 'delete_task' ) ),
+					'permission_callback' => $this->require_permission( 'projects.delete' ),
+				),
+			)
+		);
+
 		// ---- Media --------------------------------------------------------
 		register_rest_route(
 			$ns,

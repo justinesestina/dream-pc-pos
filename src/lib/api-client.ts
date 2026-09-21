@@ -14,6 +14,15 @@ import type {
   StockTransfer,
   TransferStatus,
   ProductStockInfo,
+  ClientType,
+  Project,
+  ProjectStatus,
+  ProjectTask,
+  ProjectTaskStatus,
+  ProjectSaveInput,
+  ProjectTaskSaveInput,
+  ProjectMemberRef,
+  TeamMember,
 } from "./types";
 import type { Supplier } from "./ops-types";
 import {
@@ -90,7 +99,7 @@ function getWpCredentials(): { username: string; appPassword: string } | null {
 
 async function apiRequest<T>(
   path: string,
-  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
   body?: unknown,
   opts: { auth?: boolean; contentType?: "json" | "text" } = {},
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
@@ -669,6 +678,185 @@ export async function createBackendQuote(quote: Partial<Quote>): Promise<Quote |
 export async function updateBackendQuote(id: string, quote: Partial<Quote>): Promise<Quote | null> {
   const res = await apiRequest<Quote>(`/api/v1/quotes/${id}`, "PUT", quote);
   return res.ok ? res.data || null : null;
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+// Connector wire shapes (snake_case) mapped onto the camelCase frontend types.
+interface ConnectorProject {
+  id: number;
+  code: string;
+  name: string;
+  customer: string;
+  customer_type: string;
+  status: ProjectStatus;
+  start_date: string;
+  due_date: string;
+  owner: number | null;
+  owner_name: string;
+  description: string;
+  scope: string;
+  value: number;
+  members: number[];
+  member_names: string[];
+  member_details: ProjectMemberRef[];
+  tasks: number;
+  done: number;
+}
+
+interface ConnectorProjectTask {
+  id: number;
+  project_id: number;
+  project: string;
+  title: string;
+  assignee: number | null;
+  assignee_name: string;
+  status: ProjectTaskStatus;
+  due_date: string;
+  duration: string;
+}
+
+function makeProject(raw: ConnectorProject): Project {
+  return {
+    id: raw.id,
+    code: raw.code,
+    name: raw.name,
+    customer: raw.customer ?? "Internal",
+    customerType: (raw.customer_type as ClientType) || "walk-in",
+    status: raw.status,
+    startDate: raw.start_date ?? "",
+    due: raw.due_date ?? "",
+    owner: Number(raw.owner ?? 0),
+    ownerName: raw.owner_name ?? "",
+    description: raw.description ?? "",
+    scope: raw.scope ?? "",
+    value: Number(raw.value ?? 0),
+    members: Array.isArray(raw.members) ? raw.members.map(Number) : [],
+    memberNames: Array.isArray(raw.member_names) ? raw.member_names : [],
+    memberDetails: Array.isArray(raw.member_details) ? raw.member_details : [],
+    tasks: Number(raw.tasks ?? 0),
+    done: Number(raw.done ?? 0),
+  };
+}
+
+function makeTask(raw: ConnectorProjectTask): ProjectTask {
+  return {
+    id: raw.id,
+    projectId: raw.project_id,
+    project: raw.project ?? "",
+    title: raw.title,
+    assignee: Number(raw.assignee ?? 0),
+    assigneeName: raw.assignee_name ?? "Unassigned",
+    status: raw.status,
+    due: raw.due_date ?? "",
+    duration: raw.duration ?? "",
+  };
+}
+
+/** Renames the camelCase save-input keys to the connector's snake_case params. */
+function projectParams(input: ProjectSaveInput | ProjectTaskSaveInput): Record<string, unknown> {
+  const keys = new Map<string, string>([
+    ["customerType", "customer_type"],
+    ["startDate", "start_date"],
+    ["due", "due_date"],
+    ["projectId", "project_id"],
+  ]);
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === null) continue;
+    body[keys.get(key) ?? key] = value;
+  }
+  return body;
+}
+
+export async function fetchBackendProjects(): Promise<Project[]> {
+  const res = await apiRequest<{ items: ConnectorProject[] }>("/api/v1/projects");
+  return res.ok && res.data ? res.data.items.map(makeProject) : [];
+}
+
+export async function fetchBackendTeam(): Promise<TeamMember[]> {
+  const res = await apiRequest<{ items: TeamMember[] }>("/api/v1/projects/team");
+  return res.ok && res.data ? res.data.items : [];
+}
+
+/** Picks the payload out of a possibly-enveloped single-resource response. */
+function payloadOf<T>(body: T | { data: T } | null | undefined): T | null {
+  if (!body) return null;
+  if (typeof body === "object" && "data" in body) {
+    const enveloped = (body as { data?: T }).data;
+    return enveloped === undefined ? null : enveloped;
+  }
+  return body as T;
+}
+
+export async function createBackendProject(input: ProjectSaveInput): Promise<Project | null> {
+  const res = await apiRequest<ConnectorProject | { data: ConnectorProject }>(
+    "/api/v1/projects",
+    "POST",
+    projectParams(input),
+  );
+  if (!res.ok) return null;
+  const raw = payloadOf(res.data);
+  return raw ? makeProject(raw) : null;
+}
+
+export async function updateBackendProject(
+  id: number,
+  patch: ProjectSaveInput,
+): Promise<Project | null> {
+  const res = await apiRequest<ConnectorProject | { data: ConnectorProject }>(
+    `/api/v1/projects/${id}`,
+    "PATCH",
+    projectParams(patch),
+  );
+  if (!res.ok) return null;
+  const raw = payloadOf(res.data);
+  return raw ? makeProject(raw) : null;
+}
+
+export async function deleteBackendProject(id: number): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/projects/${id}`, "DELETE");
+  return res.ok;
+}
+
+export async function fetchBackendProjectTasks(): Promise<ProjectTask[]> {
+  const res = await apiRequest<{ items: ConnectorProjectTask[] }>("/api/v1/tasks");
+  return res.ok && res.data ? res.data.items.map(makeTask) : [];
+}
+
+export async function createBackendProjectTask(
+  projectId: number,
+  input: ProjectTaskSaveInput,
+): Promise<ProjectTask | null> {
+  const res = await apiRequest<ConnectorProjectTask | { data: ConnectorProjectTask }>(
+    `/api/v1/projects/${projectId}/tasks`,
+    "POST",
+    projectParams(input),
+  );
+  if (!res.ok) return null;
+  const raw = payloadOf(res.data);
+  return raw ? makeTask(raw) : null;
+}
+
+export async function updateBackendProjectTask(
+  id: number,
+  patch: ProjectTaskSaveInput,
+): Promise<ProjectTask | null> {
+  const res = await apiRequest<ConnectorProjectTask | { data: ConnectorProjectTask }>(
+    `/api/v1/tasks/${id}`,
+    "PATCH",
+    projectParams(patch),
+  );
+  if (!res.ok) return null;
+  const raw = payloadOf(res.data);
+  return raw ? makeTask(raw) : null;
+}
+
+export async function deleteBackendProjectTask(id: number): Promise<boolean> {
+  const res = await apiRequest(`/api/v1/tasks/${id}`, "DELETE");
+  return res.ok;
 }
 
 // ---------------------------------------------------------------------------

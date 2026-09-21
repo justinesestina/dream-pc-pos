@@ -19,6 +19,7 @@ export type Capability =
   | "services"
   | "warranty"
   | "reports"
+  | "projects"
   | "settings"
   | "costs"
   | "purchasing"
@@ -45,6 +46,7 @@ const matrix: Record<Role, Capability[]> = {
     "warranty",
     "reports",
     "settings",
+    "projects",
     "costs",
     "purchasing",
     "receiving",
@@ -69,6 +71,7 @@ const matrix: Record<Role, Capability[]> = {
     "warranty",
     "reports",
     "settings",
+    "projects",
     "costs",
     "purchasing",
     "receiving",
@@ -102,6 +105,40 @@ const matrix: Record<Role, Capability[]> = {
 
 export function can(role: Role, cap: Capability) {
   return (matrix[role] ?? []).includes(cap);
+}
+
+/**
+ * View-gate for an authenticated user. When the DPC connector provided real
+ * RBAC permissions they take precedence (e.g. a sales/accountant account maps
+ * to the `cashier` UI role but still holds `projects.read`). Falls back to the
+ * demo role matrix otherwise.
+ */
+export function canView(user: { role: Role; permissions?: string[] }, cap: Capability): boolean {
+  const perms = user.permissions;
+  if (Array.isArray(perms) && perms.length > 0) {
+    return permAllows(perms, `${cap}.read`);
+  }
+  return can(user.role, cap);
+}
+
+/** True when a permission list grants a slug (directly, via module `*.` or `*`). */
+export function permAllows(perms: string[], slug: string): boolean {
+  if (!perms || perms.length === 0) return false;
+  if (perms.includes(slug)) return true;
+  if (perms.includes("*")) return true;
+  const module = slug.split(".")[0];
+  return perms.includes(`${module}.*`);
+}
+
+/** True when the user can take a write action (e.g. `projects.update`). */
+export function canAct(user: { role: Role; permissions?: string[] }, slug: string): boolean {
+  const perms = user.permissions;
+  if (Array.isArray(perms) && perms.length > 0) {
+    return permAllows(perms, slug);
+  }
+  const [module] = slug.split(".");
+  if (!module) return false;
+  return can(user.role, module as Capability);
 }
 
 /** Landing page after sign-in — where each role actually works. */
@@ -138,7 +175,7 @@ const PATH_CAPS: Array<[RegExp, Capability]> = [
   [/^\/suppliers/, "purchasing"],
   [/^\/receiving/, "receiving"],
   [/^\/customers/, "customers"],
-  [/^\/projects/, "settings"],
+  [/^\/projects/, "projects"],
   [/^\/services/, "services"],
   [/^\/warranty/, "warranty"],
   [/^\/releases/, "releases"],

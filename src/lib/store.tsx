@@ -37,6 +37,15 @@ import {
   updateBackendOrderStatus,
   createBackendQuote,
   updateBackendQuote,
+  fetchBackendProjects,
+  fetchBackendProjectTasks,
+  fetchBackendTeam,
+  createBackendProject,
+  updateBackendProject,
+  deleteBackendProject,
+  createBackendProjectTask,
+  updateBackendProjectTask,
+  deleteBackendProjectTask,
   canReachBackend,
   restoreDpcSession,
   logoutBackend,
@@ -71,6 +80,11 @@ import type {
   User,
   Warranty,
   WarrantyClaim,
+  Project,
+  ProjectSaveInput,
+  ProjectTask,
+  ProjectTaskSaveInput,
+  TeamMember,
 } from "./types";
 
 const STORAGE_KEY = "dpc-nexus-demo-v1";
@@ -230,6 +244,18 @@ interface StoreValue extends Snapshot {
   products: Product[];
   hydrated: boolean;
   loadingWooCommerce: boolean;
+  /* projects (server-backed through the connector) */
+  projects: Project[];
+  projectTasks: ProjectTask[];
+  team: TeamMember[];
+  loadingProjects: boolean;
+  refreshProjects: () => Promise<void>;
+  createProject: (input: ProjectSaveInput) => Promise<Project | null>;
+  updateProject: (id: number, patch: ProjectSaveInput) => Promise<Project | null>;
+  deleteProject: (id: number) => Promise<boolean>;
+  createProjectTask: (projectId: number, input: ProjectTaskSaveInput) => Promise<ProjectTask | null>;
+  updateProjectTask: (id: number, patch: ProjectTaskSaveInput) => Promise<ProjectTask | null>;
+  deleteProjectTask: (id: number) => Promise<boolean>;
   /* session */
   signInAs: (role: Role, password: string) => { ok: boolean; error?: string };
   signInWithUser: (user: User) => void;
@@ -387,6 +413,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<Snapshot>(() => emptyState());
   const [hydrated, setHydrated] = useState(false);
   const [loadingWooCommerce, setLoadingWooCommerce] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectTasks, setProjectTasks] = useState<ProjectTask[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const skipWrite = useRef(true);
 
   useEffect(() => {
@@ -588,6 +618,93 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ...s.notifications,
   ];
 
+  const refreshProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    try {
+      const [ps, ts, m] = await Promise.all([
+        fetchBackendProjects(),
+        fetchBackendProjectTasks(),
+        fetchBackendTeam(),
+      ]);
+      setProjects(ps);
+      setProjectTasks(ts);
+      if (m && m.length > 0) setTeam(m);
+    } catch {
+      /* keep the last known state when the backend is unavailable */
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, []);
+
+  const createProject = useCallback(
+    async (input: ProjectSaveInput): Promise<Project | null> => {
+      const created = await createBackendProject(input);
+      if (created) {
+        setProjects((prev) => [created, ...prev]);
+        void refreshProjects();
+      }
+      return created;
+    },
+    [refreshProjects],
+  );
+
+  const updateProject = useCallback(
+    async (id: number, patch: ProjectSaveInput): Promise<Project | null> => {
+      const updated = await updateBackendProject(id, patch);
+      if (updated) {
+        setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+        void refreshProjects();
+      }
+      return updated;
+    },
+    [refreshProjects],
+  );
+
+  const deleteProject = useCallback(async (id: number): Promise<boolean> => {
+    const ok = await deleteBackendProject(id);
+    if (ok) {
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      setProjectTasks((prev) => prev.filter((t) => t.projectId !== id));
+    }
+    return ok;
+  }, []);
+
+  const createProjectTask = useCallback(
+    async (projectId: number, input: ProjectTaskSaveInput): Promise<ProjectTask | null> => {
+      const created = await createBackendProjectTask(projectId, input);
+      if (created) {
+        setProjectTasks((prev) => [...prev, created]);
+        void refreshProjects();
+      }
+      return created;
+    },
+    [refreshProjects],
+  );
+
+  const updateProjectTask = useCallback(
+    async (id: number, patch: ProjectTaskSaveInput): Promise<ProjectTask | null> => {
+      const updated = await updateBackendProjectTask(id, patch);
+      if (updated) {
+        setProjectTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+        void refreshProjects();
+      }
+      return updated;
+    },
+    [refreshProjects],
+  );
+
+  const deleteProjectTask = useCallback(
+    async (id: number): Promise<boolean> => {
+      const ok = await deleteBackendProjectTask(id);
+      if (ok) {
+        setProjectTasks((prev) => prev.filter((t) => t.id !== id));
+        void refreshProjects();
+      }
+      return ok;
+    },
+    [refreshProjects],
+  );
+
   const value: StoreValue = useMemo(() => {
     const lineFor = (l: CartLine) => {
       const p = productById(l.productId);
@@ -605,6 +722,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...state,
       hydrated,
       loadingWooCommerce,
+      projects,
+      projectTasks,
+      team,
+      loadingProjects,
+      refreshProjects,
+      createProject,
+      updateProject,
+      deleteProject,
+      createProjectTask,
+      updateProjectTask,
+      deleteProjectTask,
 
       signInAs: (role, password) => {
         const u = demo.demoUsers.find((u) => u.role === role);
@@ -2023,7 +2151,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ],
         })),
     };
-  }, [state, hydrated]);
+  }, [state, hydrated, projects, projectTasks, team, loadingProjects, refreshProjects, createProject, updateProject, deleteProject, createProjectTask, updateProjectTask, deleteProjectTask]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

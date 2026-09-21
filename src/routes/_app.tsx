@@ -12,7 +12,7 @@ import { AppTopbar } from "@/components/app/app-topbar";
 import { CommandPalette } from "@/components/app/command-palette";
 import { ScrollProgress } from "@/components/nexus/motion";
 import { useStore } from "@/lib/store";
-import { can, capForPath, homeFor } from "@/lib/permissions";
+import { canView, capForPath, homeFor } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -58,7 +58,7 @@ function AppLayout() {
   useEffect(() => {
     if (!store.hydrated || !store.user) return;
     const cap = capForPath(pathname);
-    if (cap && !can(store.user.role, cap)) {
+    if (cap && !canView(store.user, cap)) {
       toast.error(
         `${store.user.name}, that page is outside the ${homeFor(store.user.role)} scope.`,
       );

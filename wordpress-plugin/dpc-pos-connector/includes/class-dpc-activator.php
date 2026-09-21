@@ -18,7 +18,7 @@ class DPC_POS_Activator {
 	/**
 	 * Database schema version. Bump when the schema changes.
 	 */
-	const DB_VERSION = '0.2.0';
+	const DB_VERSION = '0.3.0';
 
 	/**
 	 * Option holding the installed schema version.
@@ -61,6 +61,7 @@ class DPC_POS_Activator {
 		self::seed_permissions();
 		self::seed_roles();
 		self::bootstrap_owner();
+		self::seed_projects();
 		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 	}
 
@@ -86,6 +87,8 @@ class DPC_POS_Activator {
 		$workflows       = DPC_POS_RBAC::table( 'approval_workflows' );
 		$requests        = DPC_POS_RBAC::table( 'approval_requests' );
 		$settings        = DPC_POS_RBAC::table( 'settings' );
+		$projects        = DPC_POS_RBAC::table( 'projects' );
+		$project_tasks   = DPC_POS_RBAC::table( 'project_tasks' );
 
 		$queries = array();
 
@@ -293,6 +296,45 @@ class DPC_POS_Activator {
 			UNIQUE KEY setting_key (setting_key)
 		) {$charset_collate};";
 
+		$queries[] = "CREATE TABLE {$projects} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			code varchar(20) NOT NULL,
+			name varchar(150) NOT NULL,
+			customer varchar(150) NOT NULL DEFAULT 'Internal',
+			customer_type varchar(20) NOT NULL DEFAULT 'walk-in',
+			status varchar(20) NOT NULL DEFAULT 'planning',
+			start_date date DEFAULT NULL,
+			due_date date DEFAULT NULL,
+			owner bigint(20) unsigned DEFAULT NULL,
+			description text,
+			scope text,
+			value decimal(12,2) NOT NULL DEFAULT 0.00,
+			members text,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code (code),
+			KEY status (status),
+			KEY owner (owner),
+			KEY due_date (due_date)
+		) {$charset_collate};";
+
+		$queries[] = "CREATE TABLE {$project_tasks} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			project_id bigint(20) unsigned NOT NULL,
+			title varchar(200) NOT NULL,
+			assignee bigint(20) unsigned DEFAULT NULL,
+			status varchar(20) NOT NULL DEFAULT 'todo',
+			due_date date DEFAULT NULL,
+			duration varchar(60) NOT NULL DEFAULT '',
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY project_id (project_id),
+			KEY assignee (assignee),
+			KEY status (status)
+		) {$charset_collate};";
+
 		foreach ( $queries as $query ) {
 			dbDelta( $query );
 		}
@@ -480,5 +522,131 @@ class DPC_POS_Activator {
 			$i++;
 		}
 		return $try;
+	}
+
+	/**
+	 * Seeds a few demo projects and tasks on first install (idempotent).
+	 *
+	 * Owners, members and assignees are the earliest active DPC accounts so the
+	 * team views have real data on first load. Skips entirely once the projects
+	 * table already contains rows.
+	 */
+	private static function seed_projects() {
+		global $wpdb;
+		$proj  = DPC_POS_RBAC::table( 'projects' );
+		$tasks = DPC_POS_RBAC::table( 'project_tasks' );
+		$users = DPC_POS_RBAC::table( 'users' );
+
+		$has = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$proj}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $has > 0 ) {
+			return;
+		}
+
+		$user_rows = $wpdb->get_results( "SELECT id FROM {$users} WHERE status = 'active' ORDER BY id ASC LIMIT 4", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( empty( $user_rows ) ) {
+			return;
+		}
+		$uids = array_map( 'intval', array_column( $user_rows, 'id' ) );
+		$first = $uids[0];
+		$pick  = function ( $index ) use ( $uids ) {
+			return $uids[ $index % count( $uids ) ];
+		};
+		$members = wp_json_encode( array_values( array_unique( array( $pick( 0 ), $pick( 1 ) ) ) ) );
+		$members_solo = wp_json_encode( array( $first ) );
+
+		$demo_projects = array(
+			array(
+				'code'  => 'PRJ-001',
+				'name'  => 'Office PC Refresh',
+				'customer' => 'Northstar Accounting',
+				'customer_type' => 'business',
+				'status' => 'active',
+				'start_date' => '2026-09-10',
+				'due_date' => '2026-09-28',
+				'owner' => $first,
+				'description' => 'Replace twelve workstations and migrate user profiles.',
+				'scope' => 'Hardware replacement, profile migration, deployment and handover.',
+				'value' => 450000,
+				'members' => $members,
+			),
+			array(
+				'code'  => 'PRJ-002',
+				'name'  => 'Creator Workstation Build',
+				'customer' => 'Mara Santos',
+				'customer_type' => 'walk-in',
+				'status' => 'planning',
+				'start_date' => '2026-09-20',
+				'due_date' => '2026-10-04',
+				'owner' => $first,
+				'description' => 'High-end editing workstation with calibrated display.',
+				'scope' => 'Parts sourcing, assembly, burn-in testing and client orientation.',
+				'value' => 185000,
+				'members' => $members_solo,
+			),
+			array(
+				'code'  => 'PRJ-003',
+				'name'  => 'Branch Network Upgrade',
+				'customer' => 'Dream PC Cebu',
+				'customer_type' => 'business',
+				'status' => 'on_hold',
+				'start_date' => '2026-10-01',
+				'due_date' => '2026-10-12',
+				'owner' => $first,
+				'description' => 'Switch, access point and structured cabling upgrade.',
+				'scope' => 'Site survey, network design, installation and validation.',
+				'value' => 210000,
+				'members' => wp_json_encode( array_values( array_unique( array( $pick( 2 ), $pick( 3 ) ) ) ) ),
+			),
+		);
+
+		$project_ids = array();
+		foreach ( $demo_projects as $project ) {
+			$wpdb->insert(
+				$proj,
+				array(
+					'code'          => $project['code'],
+					'name'          => $project['name'],
+					'customer'      => $project['customer'],
+					'customer_type' => $project['customer_type'],
+					'status'        => $project['status'],
+					'start_date'    => $project['start_date'],
+					'due_date'      => $project['due_date'],
+					'owner'         => $project['owner'],
+					'description'   => $project['description'],
+					'scope'         => $project['scope'],
+					'value'         => $project['value'],
+					'members'       => $project['members'],
+				),
+				array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%f', '%s' )
+			);
+			$project_ids[] = (int) $wpdb->insert_id;
+		}
+
+		if ( empty( $project_ids ) ) {
+			return;
+		}
+
+		$demo_tasks = array(
+			array( 0, 'Confirm component availability', 0, 'done', '2026-09-18', '30 mins' ),
+			array( 0, 'Prepare migration checklist', 0, 'in_progress', '2026-09-20', '2 hours' ),
+			array( 1, 'Send final quote for approval', 1, 'todo', '2026-09-22', '1 hour' ),
+			array( 2, 'Confirm cabling schedule', 2, 'todo', '2026-09-24', 'Half-day' ),
+			array( 0, 'Order replacement SSDs', 1, 'in_progress', '2026-09-19', '1 hour' ),
+			array( 1, 'Benchmark test workstation', 0, 'todo', '2026-09-25', '4 hours' ),
+		);
+		foreach ( $demo_tasks as $task ) {
+			$wpdb->insert(
+				$tasks,
+				array(
+					'project_id' => $project_ids[ $task[0] ],
+					'title'      => $task[1],
+					'assignee'   => $pick( $task[2] ),
+					'status'     => $task[3],
+					'due_date'   => $task[4],
+					'duration'   => $task[5],
+				),
+				array( '%d', '%s', '%d', '%s', '%s', '%s' )
+			);
+		}
 	}
 }
