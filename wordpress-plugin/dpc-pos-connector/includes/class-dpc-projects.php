@@ -436,7 +436,13 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'project.created',
-				'description' => 'Created project ' . $data['name'],
+				'description' => sprintf(
+					'Created project %s (%s) for %s with value ₱%s',
+					$data['name'],
+					$code,
+					$data['customer'],
+					number_format( $data['value'], 2 )
+				),
 				'record_id'   => $id,
 			)
 		);
@@ -535,7 +541,12 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'project.updated',
-				'description' => 'Updated project ' . $data['name'],
+				'description' => sprintf(
+					'Updated project %s - status changed from %s to %s',
+					$data['name'],
+					$old['status'],
+					$data['status']
+				),
 				'record_id'   => $id,
 			)
 		);
@@ -558,6 +569,10 @@ class DPC_POS_Projects {
 		if ( ! $old ) {
 			return DPC_POS_Auth::error( 'dpc_project_not_found', 'Project not found.', 404 );
 		}
+		
+		// Get task count before deletion
+		$task_count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . self::table( 'project_tasks' ) . " WHERE project_id = %d", $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		
 		$wpdb->delete( self::table( 'project_tasks' ), array( 'project_id' => $id ), array( '%d' ) );
 		$wpdb->delete( self::table( 'projects' ), array( 'id' => $id ), array( '%d' ) );
 
@@ -576,7 +591,12 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'project.deleted',
-				'description' => 'Deleted project ' . sanitize_text_field( (string) $old['name'] ),
+				'description' => sprintf(
+					'Deleted project %s (%s) with %d tasks',
+					sanitize_text_field( (string) $old['name'] ),
+					$old['code'],
+					(int) $task_count
+				),
 				'record_id'   => $id,
 			)
 		);
@@ -668,7 +688,12 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'task.created',
-				'description' => 'Created task in project #' . $project_id,
+				'description' => sprintf(
+					'Created task "%s" in project %s (%s)',
+					$data['title'],
+					$row['project_name'],
+					$project_id
+				),
 				'record_id'   => $id,
 			)
 		);
@@ -746,7 +771,12 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'task.updated',
-				'description' => 'Updated task #' . $id,
+				'description' => sprintf(
+					'Updated task "%s" in project %s - status: %s',
+					$old['title'],
+					$row['project_name'],
+					isset( $update['status'] ) ? $update['status'] : $old['status']
+				),
 				'record_id'   => $id,
 			)
 		);
@@ -766,7 +796,7 @@ class DPC_POS_Projects {
 		$table = self::table( 'project_tasks' );
 		$id    = (int) $request->get_param( 'id' );
 		$actor = isset( $auth['user']['id'] ) ? (int) $auth['user']['id'] : 0;
-		$old   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$old   = $wpdb->get_row( $wpdb->prepare( "SELECT t.*, p.name AS project_name FROM {$table} t INNER JOIN " . self::table( 'projects' ) . " p ON p.id = t.project_id WHERE t.id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $old ) {
 			return DPC_POS_Auth::error( 'dpc_task_not_found', 'Task not found.', 404 );
 		}
@@ -787,7 +817,11 @@ class DPC_POS_Projects {
 				'user_id'     => $actor,
 				'module'      => 'projects',
 				'action'      => 'task.deleted',
-				'description' => 'Deleted task #' . $id,
+				'description' => sprintf(
+					'Deleted task "%s" from project %s',
+					$old['title'],
+					$old['project_name']
+				),
 				'record_id'   => $id,
 			)
 		);
