@@ -10,6 +10,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once dirname( __FILE__ ) . '/class-dpc-rbac.php';
+
 /**
  * Global search handler.
  */
@@ -37,6 +39,7 @@ class DPC_POS_Search {
 			array( 'id' => 'products', 'type' => 'page', 'label' => 'Products', 'subtitle' => 'Catalog and inventory', 'route' => '/products' ),
 			array( 'id' => 'quotes', 'type' => 'page', 'label' => 'Quotes', 'subtitle' => 'Customer quotes and approvals', 'route' => '/quotes' ),
 			array( 'id' => 'pos', 'type' => 'page', 'label' => 'Point of Sale', 'subtitle' => 'New sale checkout', 'route' => '/pos' ),
+			array( 'id' => 'users', 'type' => 'page', 'label' => 'Users', 'subtitle' => 'User management and roles', 'route' => '/administration/users' ),
 		);
 		foreach ( $nav_pages as $page ) {
 			$haystack = strtolower( $page['label'] . ' ' . $page['subtitle'] . ' ' . $page['type'] . ' ' . $page['route'] );
@@ -128,6 +131,38 @@ class DPC_POS_Search {
 					'subtitle' => $name . ' | ' . $order->get_status(),
 					'route'    => $is_quote ? '/quotes/' . $order->get_id() : '/orders/' . $order->get_id(),
 				);
+			}
+		}
+
+		// Search DPC users
+		global $wpdb;
+		$users_table = DPC_POS_RBAC::table( 'users' );
+		$like = '%' . $wpdb->esc_like( $q ) . '%';
+		$user_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, username, email, display_name, avatar_url, phone FROM {$users_table} WHERE username LIKE %s OR email LIKE %s OR display_name LIKE %s OR phone LIKE %s LIMIT 10",
+				$like,
+				$like,
+				$like,
+				$like
+			),
+			ARRAY_A
+		);
+		foreach ( (array) $user_rows as $user_row ) {
+			$phone = isset( $user_row['phone'] ) ? $user_row['phone'] : '';
+			$haystack = strtolower( $user_row['username'] . ' ' . $user_row['email'] . ' ' . $user_row['display_name'] . ' ' . $phone );
+			if ( false !== strpos( $haystack, $query ) ) {
+				$entry = array(
+					'id'       => 'user-' . $user_row['id'],
+					'type'     => 'users',
+					'label'    => $user_row['display_name'],
+					'subtitle' => $user_row['username'] . ' | ' . $user_row['email'],
+					'route'    => '/administration/users/' . $user_row['id'] . '/profile',
+				);
+				if ( ! empty( $user_row['avatar_url'] ) ) {
+					$entry['imageUrl'] = $user_row['avatar_url'];
+				}
+				$result[] = $entry;
 			}
 		}
 

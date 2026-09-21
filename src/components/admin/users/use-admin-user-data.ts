@@ -7,7 +7,6 @@ import {
   type AdminRole,
   type AdminUser,
 } from "@/lib/api-client";
-import { isDpcConnectorEnabled } from "@/lib/dpc-connector";
 
 export interface AdminUserData {
   users: AdminUser[];
@@ -35,15 +34,11 @@ export function useAdminUserData(): AdminUserData {
     ])
       .then(([u, r, b]) => {
         if (!active) return;
-        console.log("Loaded users:", u.length, "roles:", r.length, "branches:", b.length);
-        console.log("Sample user:", u[0]);
-        console.log("DPC Connector enabled:", isDpcConnectorEnabled());
         setUsers(u.map(normalizeUser));
         setRoles(r);
         setBranches(b);
       })
-      .catch((err) => {
-        console.error("Failed to load admin data:", err);
+      .catch(() => {
         if (!active) return;
         setUsers([]);
         setRoles([]);
@@ -85,22 +80,16 @@ export function filterUsers(
   branch: string,
 ): AdminUser[] {
   const needle = query.trim().toLowerCase();
-  console.log("Filtering users:", { totalUsers: users.length, query, status, role, branch, needle });
-  const filtered = users.filter((u) => {
+  return users.filter((u) => {
     if (status !== "all" && u.status !== status) return false;
     if (role !== "all" && !(u.roles ?? []).some((r) => r.slug === role)) return false;
     if (branch !== "all" && !(u.branches ?? []).some((b) => String(b.id) === branch)) return false;
     if (!needle) return true;
-    const matches = 
+    return (
       u.username.toLowerCase().includes(needle) ||
       u.email.toLowerCase().includes(needle) ||
       u.display_name.toLowerCase().includes(needle) ||
-      (u.phone && u.phone.toLowerCase().includes(needle));
-    if (matches) {
-      console.log("Match found:", u.username, u.email, u.display_name, u.phone);
-    }
-    return matches;
+      (u.phone && u.phone.toLowerCase().includes(needle))
+    );
   });
-  console.log("Filtered result:", filtered.length, "users");
-  return filtered;
 }

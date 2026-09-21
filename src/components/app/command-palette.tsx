@@ -6,6 +6,7 @@ import {
   Receipt,
   Search as SearchIcon,
   ShoppingBag,
+  User,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -69,9 +70,11 @@ function ResultIcon({ item }: { item: GlobalSearchResult }) {
       ? ShoppingBag
       : item.type === "customers"
         ? Users
-        : item.type === "dashboard"
-          ? LayoutDashboard
-          : SearchIcon;
+        : item.type === "users"
+          ? User
+          : item.type === "dashboard"
+            ? LayoutDashboard
+            : SearchIcon;
   if (item.imageUrl) {
     return (
       <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted/40">
