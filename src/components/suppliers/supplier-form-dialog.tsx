@@ -81,16 +81,22 @@ export function SupplierFormDialog({
     setNotes(supplier?.notes ?? "");
   }, [open, supplier, availableProducts]);
 
+  const wcBrandNames = useMemo(
+    () => new Set(wcBrands.map((b) => b.name)),
+    [wcBrands],
+  );
+
   const catalogBrands = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const product of availableProducts) {
       if (!product.brand) continue;
+      if (!wcBrandNames.has(product.brand)) continue;
       const ids = map.get(product.brand) ?? [];
       ids.push(product.id);
       map.set(product.brand, ids);
     }
     return map;
-  }, [availableProducts]);
+  }, [availableProducts, wcBrandNames]);
 
   const derivedBrands = useMemo(
     () => collectBrands(productIds, availableProducts),
@@ -100,19 +106,7 @@ export function SupplierFormDialog({
   const chips = useMemo(() => {
     const seen = new Set<string>();
     const list: { brand: string; total: number; covered: number }[] = [];
-    for (const wcBrand of wcBrands) {
-      const brand = wcBrand.name;
-      seen.add(brand);
-      const ids = catalogBrands.get(brand);
-      const total = ids?.length ?? 0;
-      list.push({
-        brand,
-        total,
-        covered: derivedBrands.find((d) => d.brand === brand)?.count ?? 0,
-      });
-    }
     for (const [brand, ids] of catalogBrands) {
-      if (seen.has(brand)) continue;
       seen.add(brand);
       list.push({
         brand,
@@ -122,11 +116,11 @@ export function SupplierFormDialog({
     }
     for (const brand of extraBrands) {
       if (seen.has(brand)) continue;
-      list.push({ brand, total: 0, covered: 0 });
+      list.push({ brand, total: catalogBrands.get(brand)?.length ?? 0, covered: derivedBrands.find((d) => d.brand === brand)?.count ?? 0 });
     }
     list.sort((a, b) => a.brand.localeCompare(b.brand));
     return list;
-  }, [wcBrands, catalogBrands, derivedBrands, extraBrands]);
+  }, [catalogBrands, derivedBrands, extraBrands]);
 
   const carriedBrands = useMemo(
     () =>
@@ -138,8 +132,7 @@ export function SupplierFormDialog({
 
   const availableWcBrands = useMemo(() => {
     const currentBrands = new Set([
-      ...chips.filter((c) => c.total > 0 || c.covered > 0).map((c) => c.brand),
-      ...extraBrands,
+      ...chips.map((c) => c.brand),
     ]);
     const query = brandSearch.toLowerCase();
     return wcBrands
@@ -147,7 +140,7 @@ export function SupplierFormDialog({
       .filter(
         (brand) => !currentBrands.has(brand) && brand.toLowerCase().includes(query),
       );
-  }, [wcBrands, chips, extraBrands, brandSearch]);
+  }, [wcBrands, chips, brandSearch]);
 
   const toggleBrand = (brand: string) => {
     const ids = catalogBrands.get(brand);
@@ -189,7 +182,7 @@ export function SupplierFormDialog({
     setBrandInput("");
   };
 
-  const addRosterBrand = (brand: string) => {
+  const addWcBrand = (brand: string) => {
     const ids = catalogBrands.get(brand);
     if (ids && ids.length > 0) {
       setProductIds((current) => Array.from(new Set([...current, ...ids])));
@@ -237,7 +230,7 @@ export function SupplierFormDialog({
           ...availableProducts
             .filter((product) => productIds.includes(product.id))
             .map((product) => product.brand)
-            .filter(Boolean),
+            .filter((b): b is string => Boolean(b) && wcBrandNames.has(b)),
           ...extraBrands,
         ]),
       ),
@@ -485,7 +478,7 @@ export function SupplierFormDialog({
                                 <button
                                   key={brand}
                                   type="button"
-                                  onClick={() => addRosterBrand(brand)}
+                                  onClick={() => addWcBrand(brand)}
                                   className="w-full flex items-center justify-between px-2 py-2 text-sm hover:bg-elevated rounded-lg transition-colors group"
                                 >
                                   <span className="font-medium">{brand}</span>
