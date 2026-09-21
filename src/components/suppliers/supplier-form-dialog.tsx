@@ -20,7 +20,6 @@ import {
 import { useOps } from "@/lib/ops-store";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { BRAND_ROSTER } from "@/lib/brands";
 import { collectBrands } from "./brand-chips";
 import type { Supplier } from "@/lib/ops-types";
 import type { Product } from "@/lib/types";
@@ -37,7 +36,7 @@ export function SupplierFormDialog({
   availableProducts: Product[];
 }) {
   const { createSupplier, updateSupplier, setSupplierProducts } = useOps();
-  const { updateProduct } = useStore();
+  const { updateProduct, brands: wcBrands, createBrand } = useStore();
   const isEdit = Boolean(supplier);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
@@ -101,9 +100,25 @@ export function SupplierFormDialog({
   const chips = useMemo(() => {
     const seen = new Set<string>();
     const list: { brand: string; total: number; covered: number }[] = [];
-    for (const [brand, ids] of catalogBrands) {
+    for (const wcBrand of wcBrands) {
+      const brand = wcBrand.name;
       seen.add(brand);
-      list.push({ brand, total: ids.length, covered: derivedBrands.find((d) => d.brand === brand)?.count ?? 0 });
+      const ids = catalogBrands.get(brand);
+      const total = ids?.length ?? 0;
+      list.push({
+        brand,
+        total,
+        covered: derivedBrands.find((d) => d.brand === brand)?.count ?? 0,
+      });
+    }
+    for (const [brand, ids] of catalogBrands) {
+      if (seen.has(brand)) continue;
+      seen.add(brand);
+      list.push({
+        brand,
+        total: ids.length,
+        covered: derivedBrands.find((d) => d.brand === brand)?.count ?? 0,
+      });
     }
     for (const brand of extraBrands) {
       if (seen.has(brand)) continue;
@@ -111,7 +126,7 @@ export function SupplierFormDialog({
     }
     list.sort((a, b) => a.brand.localeCompare(b.brand));
     return list;
-  }, [catalogBrands, derivedBrands, extraBrands]);
+  }, [wcBrands, catalogBrands, derivedBrands, extraBrands]);
 
   const carriedBrands = useMemo(
     () =>
@@ -121,17 +136,18 @@ export function SupplierFormDialog({
     [chips, extraBrands],
   );
 
-  // Available roster brands not yet added
-  const availableRosterBrands = useMemo(() => {
+  const availableWcBrands = useMemo(() => {
     const currentBrands = new Set([
       ...chips.filter((c) => c.total > 0 || c.covered > 0).map((c) => c.brand),
       ...extraBrands,
     ]);
     const query = brandSearch.toLowerCase();
-    return BRAND_ROSTER.filter(
-      (brand) => !currentBrands.has(brand) && brand.toLowerCase().includes(query),
-    );
-  }, [chips, extraBrands, brandSearch]);
+    return wcBrands
+      .map((b) => b.name)
+      .filter(
+        (brand) => !currentBrands.has(brand) && brand.toLowerCase().includes(query),
+      );
+  }, [wcBrands, chips, extraBrands, brandSearch]);
 
   const toggleBrand = (brand: string) => {
     const ids = catalogBrands.get(brand);
@@ -150,9 +166,18 @@ export function SupplierFormDialog({
     });
   };
 
-  const addCustomBrand = () => {
+  const addCustomBrand = async () => {
     const brand = brandInput.trim();
     if (!brand) return;
+    const wcBrandExists = wcBrands.some(
+      (b) => b.name.toLowerCase() === brand.toLowerCase(),
+    );
+    if (!wcBrandExists) {
+      const created = await createBrand(brand);
+      if (created) {
+        toast.success(`Brand "${created.name}" added to WooCommerce.`);
+      }
+    }
     const ids = catalogBrands.get(brand);
     if (ids && ids.length > 0) {
       setProductIds((current) => Array.from(new Set([...current, ...ids])));
@@ -412,7 +437,7 @@ export function SupplierFormDialog({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        addCustomBrand();
+                        void addCustomBrand();
                       }
                     }}
                     onFocus={() => setShowBrandPicker(true)}
@@ -421,7 +446,7 @@ export function SupplierFormDialog({
                     type="button"
                     size="sm"
                     variant={brandInput.trim() ? "default" : "ghost"}
-                    onClick={addCustomBrand}
+                    onClick={() => void addCustomBrand()}
                     disabled={!brandInput.trim()}
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
                     aria-label="Add brand"
@@ -448,12 +473,12 @@ export function SupplierFormDialog({
                         />
                       </div>
                       <div className="space-y-0.5" style={{ scrollbarWidth: 'thin' }}>
-                        {availableRosterBrands.length > 0 ? (
+                        {availableWcBrands.length > 0 ? (
                           <>
                             <p className="px-2 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                              Available brands
+                              WooCommerce brands
                             </p>
-                            {availableRosterBrands.map((brand) => {
+                            {availableWcBrands.map((brand) => {
                               const ids = catalogBrands.get(brand);
                               const count = ids?.length ?? 0;
                               return (
@@ -478,7 +503,7 @@ export function SupplierFormDialog({
                           </>
                         ) : (
                           <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                            All roster brands already added
+                            All WooCommerce brands already added
                           </p>
                         )}
                       </div>

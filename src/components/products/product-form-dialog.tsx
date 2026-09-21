@@ -94,14 +94,13 @@ export function ProductFormDialog({
   );
 
   const brands = useMemo(() => {
-    const productBrands = store.products.map((p) => p.brand).filter(Boolean);
     const wcBrands = store.brands.map((b) => b.name);
-    const merged = [...wcBrands, ...productBrands];
+    const merged = [...wcBrands];
     if (product?.brand) merged.push(product.brand);
     return Array.from(new Set(merged.map((b) => b.trim()).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b),
     );
-  }, [store.brands, store.products, product?.brand]);
+  }, [store.brands, product?.brand]);
 
   const CUSTOM_BRAND_SENTINEL = "__custom__";
   const [brandMode, setBrandMode] = useState<"select" | "custom">("select");
@@ -117,10 +116,7 @@ export function ProductFormDialog({
 
     const inv = product ? store.invFor(product.id) : undefined;
     const initialBrand = product?.brand ?? "";
-    const brandsList = [
-      ...store.brands.map((b) => b.name),
-      ...store.products.map((p) => p.brand).filter(Boolean),
-    ].map((b) => b.trim());
+    const brandsList = [...store.brands.map((b) => b.name)].map((b) => b.trim());
     const hasBrandInList = initialBrand && brandsList.includes(initialBrand.trim());
     setName(product?.name ?? "");
     setImageUrl(product?.imageUrl ?? "");
@@ -147,7 +143,7 @@ export function ProductFormDialog({
     initializedFor.current = formKey;
   }, [open, product, store]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!name.trim() || !sku.trim()) {
       toast.error("Name and SKU are required.");
       return;
@@ -155,6 +151,16 @@ export function ProductFormDialog({
     if (!categoryId) {
       toast.error("Select a category.");
       return;
+    }
+    const finalBrandName = effectiveBrand.trim() || "Generic";
+    const wcBrandExists = store.brands.some(
+      (b) => b.name.toLowerCase() === finalBrandName.toLowerCase(),
+    );
+    if (!wcBrandExists) {
+      const created = await store.createBrand(finalBrandName);
+      if (created) {
+        toast.success(`Brand "${created.name}" added to WooCommerce.`);
+      }
     }
     const priceNum = Number(price) || 0;
     const costNum = Number(cost) || 0;
@@ -164,7 +170,7 @@ export function ProductFormDialog({
       name: name.trim(),
       imageUrl: imageUrl.trim() || undefined,
       sku: sku.trim().toUpperCase(),
-      brand: effectiveBrand.trim() || "Generic",
+      brand: finalBrandName,
       categoryId,
       productType,
       isService: productType === "service",
@@ -376,7 +382,7 @@ export function ProductFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit}>{isEdit ? "Save changes" : "Add product"}</Button>
+          <Button onClick={() => void submit()}>{isEdit ? "Save changes" : "Add product"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

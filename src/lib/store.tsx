@@ -411,6 +411,7 @@ interface StoreValue extends Snapshot {
     orders: Order[];
   }) => void;
   syncWithBackend: () => Promise<void>;
+  createBrand: (name: string) => Promise<CatalogTerm | null>;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -807,6 +808,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           console.error("Failed to sync with backend", e);
         }
+      },
+
+      createBrand: async (name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return null;
+        const existing = state.brands.find(
+          (b) => b.name.toLowerCase() === trimmed.toLowerCase(),
+        );
+        if (existing) return existing;
+        try {
+          const created = await brandsApi.create({ name: trimmed });
+          if (created) {
+            patch((s) => ({
+              ...s,
+              brands: [...s.brands, created],
+            }));
+            return created;
+          }
+        } catch (e) {
+          console.error("Failed to create brand in WooCommerce", e);
+        }
+        const fallback: CatalogTerm = {
+          id: `brand-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          name: trimmed,
+          slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          count: 0,
+        };
+        patch((s) => ({
+          ...s,
+          brands: [...s.brands, fallback],
+        }));
+        return fallback;
       },
 
       productById,
