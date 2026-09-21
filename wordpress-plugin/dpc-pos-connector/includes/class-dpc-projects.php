@@ -804,7 +804,7 @@ class DPC_POS_Projects {
 	public static function team_members( $request, $auth ) {
 		global $wpdb;
 		$table = self::table( 'users' );
-		$rows  = $wpdb->get_results( "SELECT id, display_name, email FROM {$table} WHERE status = 'active' ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results( "SELECT id, display_name, email, status FROM {$table} ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$items = array();
 		foreach ( (array) $rows as $row ) {
@@ -823,6 +823,7 @@ class DPC_POS_Projects {
 				'email'    => (string) $row['email'],
 				'role'     => $role,
 				'role_slug'=> $slug,
+				'status'   => (string) $row['status'],
 				'initials' => self::initials( $name ),
 			);
 		}

@@ -16,6 +16,7 @@ import {
   Filter,
   FolderKanban,
   ListChecks,
+  Loader2,
   Mail,
   MapPin,
   Phone,
@@ -299,16 +300,16 @@ function MemberPicker({ selected, onChange }: { selected: string[]; onChange: (m
    ═══════════════════════════════════════════════════════════════════════════════ */
 type CreateForm = { name: string; customer: string; customerType: ClientType; startDate: string; due: string; description: string; scope: string; members: string[]; value: number };
 
-function CreateProjectModal({ open, onOpenChange, customers, onSubmit, onAddCustomer }: {
+function CreateProjectModal({ open, onOpenChange, customers, onSubmit, onAddCustomer, busy }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   customers: { id: string; name: string; type?: string }[];
-  onSubmit: (form: CreateForm) => void; onAddCustomer: () => void;
+  onSubmit: (form: CreateForm) => void; onAddCustomer: () => void; busy?: boolean;
 }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<CreateForm>({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: TEAM_MEMBERS[0] ? [TEAM_MEMBERS[0].name] : [], value: 0 });
   const set = <K extends keyof CreateForm>(key: K, val: CreateForm[K]) => setForm((f) => ({ ...f, [key]: val }));
   const reset = () => { setStep(1); setForm({ name: "", customer: "", customerType: "walk-in", startDate: TODAY, due: "", description: "", scope: "", members: TEAM_MEMBERS[0] ? [TEAM_MEMBERS[0].name] : [], value: 0 }); };
-  const handleClose = (v: boolean) => { if (!v) reset(); onOpenChange(v); };
+  const handleClose = (v: boolean) => { if (busy) return; if (!v) reset(); onOpenChange(v); };
   const handleSubmit = () => { if (!form.name.trim() || !form.due || !form.startDate) { toast.error("Project name and dates are required."); return; } onSubmit(form); reset(); };
   const canNext = step === 1 ? Boolean(form.name.trim() && form.due && form.startDate) : true;
 
@@ -416,9 +417,9 @@ function CreateProjectModal({ open, onOpenChange, customers, onSubmit, onAddCust
 
         <DialogFooter className="gap-2 pt-4 border-t border-border mt-2">
           {step === 1 ? (
-            <><Button variant="outline" onClick={() => handleClose(false)}>Cancel</Button><Button onClick={() => setStep(2)} disabled={!canNext}>Next: Team members</Button></>
+            <><Button variant="outline" onClick={() => handleClose(false)} disabled={busy}>Cancel</Button><Button onClick={() => setStep(2)} disabled={!canNext || busy}>Next: Team members</Button></>
           ) : (
-            <><Button variant="outline" onClick={() => setStep(1)}>Back</Button><Button onClick={handleSubmit} className="gap-2"><FolderKanban className="size-4" />Create project</Button></>
+            <><Button variant="outline" onClick={() => setStep(1)} disabled={busy}>Back</Button><Button onClick={handleSubmit} disabled={busy} className="gap-2">{busy ? <Loader2 className="size-4 animate-spin" /> : <FolderKanban className="size-4" />}{busy ? "Creating…" : "Create project"}</Button></>
           )}
         </DialogFooter>
       </DialogContent>
@@ -429,17 +430,17 @@ function CreateProjectModal({ open, onOpenChange, customers, onSubmit, onAddCust
 /* ═══════════════════════════════════════════════════════════════════════════════
    TASK CARD
    ═══════════════════════════════════════════════════════════════════════════════ */
-function TaskCard({ task, onCycle }: { task: Task; onCycle: () => void }) {
+function TaskCard({ task, onCycle, busy }: { task: Task; onCycle: () => void; busy?: boolean }) {
   const isOverdue = task.status !== "done" && task.due < TODAY;
   const isDueSoon = task.status !== "done" && task.due === TODAY;
   const member = TEAM_MEMBERS.find(m => m.name === task.assignee);
 
   return (
-    <div className="group bg-card border border-border hover:border-info/40 hover:shadow-md transition-all duration-300 rounded-xl p-4 cursor-pointer relative overflow-hidden" onClick={onCycle}>
+    <div className="group bg-card border border-border hover:border-info/40 hover:shadow-md transition-all duration-300 rounded-xl p-4 cursor-pointer relative overflow-hidden" onClick={busy ? undefined : onCycle}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <h4 className={`text-sm font-semibold leading-snug transition-colors ${task.status === "done" ? "text-muted-foreground line-through opacity-70" : "text-foreground group-hover:text-info"}`}>{task.title}</h4>
-        <div className={`mt-0.5 shrink-0 size-5 rounded-full border flex items-center justify-center transition-all duration-300 ${task.status === "done" ? "bg-success border-success text-white" : "border-muted-foreground/30 text-transparent group-hover:border-info group-hover:bg-info/5"}`}>
-          {task.status === "done" && <Check className="size-3.5" />}
+        <div className={`mt-0.5 shrink-0 size-5 rounded-full border flex items-center justify-center transition-all duration-300 ${task.status === "done" ? "bg-success border-success text-white" : "border-muted-foreground/30 text-transparent group-hover:border-info group-hover:bg-info/5"} ${busy ? "border-info/40" : ""}`}>
+          {busy ? <Loader2 className="size-3 animate-spin text-info" /> : task.status === "done" && <Check className="size-3.5" />}
         </div>
       </div>
       <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mb-3"><FolderKanban className="size-3" />{task.project}</p>
@@ -526,6 +527,7 @@ function ProjectsPage() {
   const [taskFilter, setTaskFilter] = useState<string>("all");
   const [taskForm, setTaskForm] = useState({ title: "", project: "", assignee: "", due: TODAY, duration: "" });
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", phone: "", type: "individual" as "individual" | "business", address: "", notes: "" });
+  const [busy, setBusy] = useState<"create" | "task" | "cycle" | "member" | null>(null);
 
   useEffect(() => { if (newProject) setCreateOpen(true); }, [newProject]);
   useEffect(() => { setTab(requestedTab); }, [requestedTab]);
@@ -574,63 +576,85 @@ function ProjectsPage() {
 
   const handleCreateProject = async (form: CreateForm) => {
     if (!canCreateProject) { toast.error("You do not have permission to create projects."); return; }
-    const created = await store.createProject({
-      name: form.name.trim(),
-      customer: form.customer.trim() || "Internal",
-      customerType: form.customerType,
-      status: "planning",
-      startDate: form.startDate,
-      due: form.due,
-      description: form.description.trim() || "No description added.",
-      scope: form.scope.trim() || "Scope to be defined.",
-      value: form.value,
-      members: form.members.map((n) => teamIdByName.get(n) ?? 0).filter((id) => id > 0),
-    });
-    setCreateOpen(false);
-    if (created) toast.success("Project created successfully.");
-    else toast.error("Could not create project. Check your connection and try again.");
+    if (busy) return;
+    setBusy("create");
+    try {
+      const created = await store.createProject({
+        name: form.name.trim(),
+        customer: form.customer.trim() || "Internal",
+        customerType: form.customerType,
+        status: "planning",
+        startDate: form.startDate,
+        due: form.due,
+        description: form.description.trim() || "No description added.",
+        scope: form.scope.trim() || "Scope to be defined.",
+        value: form.value,
+        members: form.members.map((n) => teamIdByName.get(n) ?? 0).filter((id) => id > 0),
+      });
+      if (created) { toast.success("Project created successfully."); setCreateOpen(false); }
+      else toast.error("Could not create project. Check your connection and try again.");
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const cycleTask = (id: string) => {
+  const cycleTask = async (id: string) => {
     if (!canUpdateProject) { toast.error("You do not have permission to update tasks."); return; }
+    if (busy) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     const storeTask = store.projectTasks.find((t) => String(t.id) === id.slice(1));
     if (!storeTask) return;
     const next = task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo";
-    void store.updateProjectTask(storeTask.id, { status: next });
+    setBusy("cycle");
+    try {
+      await store.updateProjectTask(storeTask.id, { status: next });
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const createTask = () => {
+  const createTask = async () => {
     if (!canCreateProject) { toast.error("You do not have permission to add tasks."); return; }
     if (!taskForm.title.trim() || !taskForm.project || !taskForm.due) { toast.error("Task title, project, and due date are required."); return; }
     const project = store.projects.find((p) => p.name === taskForm.project);
     if (!project) { toast.error("Select a valid project."); return; }
     const assigneeId = teamIdByName.get(taskForm.assignee) ?? 0;
-    void store.createProjectTask(project.id, {
-      title: taskForm.title.trim(),
-      due: taskForm.due,
-      duration: taskForm.duration.trim(),
-      ...(assigneeId > 0 ? { assignee: assigneeId } : {}),
-    });
-    setTaskForm({ title: "", project: "", assignee: teamMembers[0]?.name ?? "", due: TODAY, duration: "" });
-    setTaskOpen(false);
-    toast.success("Task created and assigned.");
+    if (busy) return;
+    setBusy("task");
+    try {
+      await store.createProjectTask(project.id, {
+        title: taskForm.title.trim(),
+        due: taskForm.due,
+        duration: taskForm.duration.trim(),
+        ...(assigneeId > 0 ? { assignee: assigneeId } : {}),
+      });
+      setTaskForm({ title: "", project: "", assignee: teamMembers[0]?.name ?? "", due: TODAY, duration: "" });
+      setTaskOpen(false);
+      toast.success("Task created and assigned.");
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const toggleProjectMember = (memberName: string) => {
+  const toggleProjectMember = async (memberName: string) => {
     if (!detailProject) return;
     if (!canUpdateProject) { toast.error("You do not have permission to update the team."); return; }
     const storeProject = store.projects.find((p) => p.code === detailProject.id);
     if (!storeProject) return;
     const id = teamIdByName.get(memberName) ?? 0;
     if (!id) return;
+    if (busy) return;
     const members = storeProject.members.includes(id)
       ? storeProject.members.filter((m) => m !== id)
       : [...storeProject.members, id];
-    void store.updateProject(storeProject.id, { members }).then((updated) => {
+    setBusy("member");
+    try {
+      const updated = await store.updateProject(storeProject.id, { members });
       if (updated) setDetailProject(toProject(updated));
-    });
+    } finally {
+      setBusy(null);
+    }
   };
 
   const addCustomer = () => {
@@ -808,12 +832,14 @@ function ProjectsPage() {
               actions={
                 <Button
                   onClick={() => {
+                    if (busy === "create") return;
                     if (!canCreateProject) { toast.error("You do not have permission to create projects."); return; }
                     setCreateOpen(true);
                   }}
+                  disabled={busy === "create"}
                   className="gap-2 shadow-sm font-semibold h-10 px-5"
                 >
-                   <Plus className="size-4" /> Create Project
+                   {busy === "create" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} {busy === "create" ? "Creating…" : "Create Project"}
                 </Button>
               }
             />
@@ -824,6 +850,11 @@ function ProjectsPage() {
                 <span className="text-subtle">Tracker</span>
                 <span className="text-success">Live</span>
               </span>
+              {store.loadingProjects && (
+                <span className="mono inline-flex items-center gap-2 text-[11px] tracking-wide uppercase text-info">
+                  <Loader2 className="size-3 animate-spin" /> Syncing
+                </span>
+              )}
               <Telemetry label="Active Projects">{activeProjects}</Telemetry>
               <Telemetry label="Open Tasks">{activeTasks}</Telemetry>
               <Telemetry label="Pipeline Value">{money(totalValue)}</Telemetry>
@@ -935,7 +966,7 @@ function ProjectsPage() {
                     <Mono className="text-[10px] font-bold text-muted-foreground bg-elevated px-2.5 py-1 rounded-full border border-border">{statusTasks.length}</Mono>
                   </div>
                   <div className="flex flex-col gap-3">
-                    {statusTasks.map(task => <TaskCard key={task.id} task={task} onCycle={() => cycleTask(task.id)} />)}
+                    {statusTasks.map(task => <TaskCard key={task.id} task={task} onCycle={() => cycleTask(task.id)} busy={busy === "cycle"} />)}
                     {statusTasks.length === 0 && (
                       <div className="border-2 border-dashed border-border rounded-xl p-8 text-center flex flex-col items-center justify-center gap-2 text-muted-foreground opacity-70 bg-card/50">
                         <ListChecks className="size-6" /><span className="text-xs font-semibold">No tasks here</span>
@@ -1444,7 +1475,7 @@ function ProjectsPage() {
       {/* ══════ CREATE PROJECT MODAL ══════ */}
       <CreateProjectModal open={createOpen} onOpenChange={setCreateOpen}
         customers={customers.map((c) => ({ id: c.id, name: c.name, type: c.type }))}
-        onSubmit={handleCreateProject} onAddCustomer={() => { setCreateOpen(false); setCustomerOpen(true); }} />
+        onSubmit={handleCreateProject} onAddCustomer={() => { setCreateOpen(false); setCustomerOpen(true); }} busy={busy === "create"} />
 
       {/* ══════ ADD CLIENT MODAL ══════ */}
       <Dialog open={customerOpen} onOpenChange={setCustomerOpen}>
@@ -1535,8 +1566,8 @@ function ProjectsPage() {
             </div>
           </div>
           <div className="bg-muted/30 p-4 border-t border-border/50 flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setTaskOpen(false)}>Cancel</Button>
-            <Button onClick={createTask} className="gap-2 px-6 rounded-full"><Check className="size-4" /> Save Note</Button>
+            <Button variant="ghost" onClick={() => setTaskOpen(false)} disabled={busy === "task"}>Cancel</Button>
+            <Button onClick={createTask} disabled={busy === "task"} className="gap-2 px-6 rounded-full">{busy === "task" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}{busy === "task" ? "Saving…" : "Save Note"}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1591,7 +1622,7 @@ function ProjectsPage() {
                     {tasks.filter((t) => t.project === detailProject.name).map((task) => (
                       <button key={task.id} type="button" onClick={() => cycleTask(task.id)}
                         className="group flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:border-info/40 hover:shadow-sm transition-all">
-                        <span className={`shrink-0 size-5 rounded-full border flex items-center justify-center transition-colors ${task.status === "done" ? "bg-success border-success text-white" : "border-muted-foreground/30 text-transparent group-hover:border-info"}`}>{task.status === "done" && <Check className="size-3.5" />}</span>
+                        <span className={`shrink-0 size-5 rounded-full border flex items-center justify-center transition-colors ${task.status === "done" ? "bg-success border-success text-white" : "border-muted-foreground/30 text-transparent group-hover:border-info"}`}>{busy === "cycle" ? <Loader2 className="size-3 animate-spin text-info" /> : task.status === "done" && <Check className="size-3.5" />}</span>
                         <span className={`flex-1 text-sm font-medium transition-colors ${task.status === "done" ? "text-muted-foreground line-through opacity-70" : "text-foreground"}`}>{task.title}</span>
                         {task.duration && <span className="text-[10px] text-muted-foreground font-medium bg-elevated px-2 py-0.5 rounded-md border border-border">{task.duration}</span>}
                       </button>
@@ -1603,8 +1634,8 @@ function ProjectsPage() {
                   <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3 border-b border-border pb-1">Assigned Team Members</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {TEAM_MEMBERS.map((member) => (
-                      <label key={member.name} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-all ${detailProject.members.includes(member.name) ? "border-info/50 bg-info/5 shadow-sm ring-1 ring-info/20" : "border-border bg-card hover:bg-elevated"}`}>
-                        <input type="checkbox" checked={detailProject.members.includes(member.name)} onChange={() => toggleProjectMember(member.name)} className="rounded border-border size-4 text-info focus:ring-info/30" />
+                      <label key={member.name} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-all ${detailProject.members.includes(member.name) ? "border-info/50 bg-info/5 shadow-sm ring-1 ring-info/20" : "border-border bg-card hover:bg-elevated"} ${busy === "member" ? "opacity-60 pointer-events-none" : ""}`}>
+                        <input type="checkbox" checked={detailProject.members.includes(member.name)} onChange={() => toggleProjectMember(member.name)} disabled={busy === "member"} className="rounded border-border size-4 text-info focus:ring-info/30" />
                         <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${detailProject.members.includes(member.name) ? "bg-info text-white" : "bg-elevated text-muted-foreground"}`}>{member.initials}</span>
                         <span className="flex-1 min-w-0"><span className="block text-sm font-bold truncate">{member.name}</span><span className="text-[10px] uppercase tracking-wider text-muted-foreground block truncate">{member.role}</span></span>
                       </label>
@@ -1726,7 +1757,7 @@ function ProjectsPage() {
                     <div className="space-y-2.5">
                       {memberTasks.filter(t => t.status !== "done").map(t => (
                         <div key={t.id} className="p-3 border border-border rounded-xl bg-card flex gap-3 items-start shadow-sm hover:border-warning/30 transition-colors">
-                          <button type="button" onClick={() => cycleTask(t.id)} className="mt-0.5 shrink-0 size-5 rounded-full border-2 border-muted-foreground/30 hover:border-success flex items-center justify-center transition-colors" />
+                          <button type="button" onClick={() => cycleTask(t.id)} disabled={busy === "cycle"} className="mt-0.5 shrink-0 size-5 rounded-full border-2 border-muted-foreground/30 hover:border-success flex items-center justify-center transition-colors">{busy === "cycle" && <Loader2 className="size-3 animate-spin text-info" />}</button>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold leading-snug">{t.title}</p>
                             <div className="flex items-center gap-2 mt-1">
