@@ -1060,7 +1060,7 @@ export async function createAdminUser(input: AdminUserInput): Promise<AdminUser 
 
 export async function updateAdminUser(
   id: number,
-  patch: Partial<Pick<AdminUser, "email" | "display_name">>,
+  patch: Partial<Pick<AdminUser, "email" | "display_name" | "avatar_url">>,
 ): Promise<AdminUser | null> {
   const res = await apiRequest<AdminUser>(`/api/v1/users/${id}`, "PUT", patch);
   return res.ok ? res.data || null : null;

@@ -259,6 +259,11 @@ class DPC_POS_Users {
 			$data['display_name'] = sanitize_text_field( (string) $display );
 		}
 
+		$avatar = $request->get_param( 'avatar_url' );
+		if ( null !== $avatar ) {
+			$data['avatar_url'] = '' === (string) $avatar ? '' : esc_url_raw( (string) $avatar );
+		}
+
 		$linked = $request->get_param( 'wordpress_user_id' );
 		if ( null !== $linked ) {
 			$wp_user_id = $linked ? (int) $linked : null;

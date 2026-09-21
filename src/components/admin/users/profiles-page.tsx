@@ -17,7 +17,8 @@ import {
 import { useAdminUserData } from "./use-admin-user-data";
 import { ProfilePanel } from "./profile-panel";
 import { ConfirmDialog } from "./confirm-dialog";
-import { isLocked } from "./user-bits";
+import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { isLocked, UserAvatar } from "./user-bits";
 
 /** Confirm-dialog + action wiring shared by the profiles and per-user pages. */
 export function ProfileWorkspace({
@@ -76,53 +77,54 @@ export function ProfileWorkspace({
         onDelete={() => setConfirm({ type: "delete" })}
       />
 
-      <ConfirmDialog
-        open={confirm !== null}
-        onOpenChange={(v) => !v && setConfirm(null)}
-        title={
-          confirm?.type === "delete"
-            ? `Delete ${user.display_name}?`
-            : confirm?.type === "suspend"
+      {confirm?.type === "delete" ? (
+        <DeleteConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          displayName={user.display_name}
+          username={user.username}
+          busy={busy}
+          onConfirm={() => {
+            void run(() => deleteAdminUser(user.id), `User ${user.display_name} deleted.`);
+            setConfirm(null);
+          }}
+        />
+      ) : (
+        <ConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          title={
+            confirm?.type === "suspend"
               ? `Suspend ${user.display_name}?`
               : `Revoke sessions for ${user.display_name}?`
-        }
-        description={
-          confirm?.type === "delete"
-            ? "The account and its assignments will be permanently removed. Login and activity history is retained."
-            : confirm?.type === "suspend"
+          }
+          description={
+            confirm?.type === "suspend"
               ? "The account is blocked from signing in immediately and all sessions are revoked. History is preserved."
               : "Every active session is signed out immediately. The user will need to sign in again."
-        }
-        confirmLabel={
-          confirm?.type === "delete"
-            ? "Delete user"
-            : confirm?.type === "suspend"
-              ? "Suspend"
-              : "Revoke sessions"
-        }
-        destructive={confirm?.type === "delete"}
-        busy={busy}
-        onConfirm={() => {
-          const kind = confirm?.type;
-          if (!kind) return;
-          const done = (u: AdminUser) => onChanged(u);
-          if (kind === "delete") {
-            void run(() => deleteAdminUser(user.id), `User ${user.display_name} deleted.`);
-          } else if (kind === "revoke") {
-            void run(
-              () => revokeAdminUserSessions(user.id),
-              `${user.display_name}: all sessions revoked.`,
-            );
-          } else {
-            void run(
-              () => setAdminUserStatus(user.id, "suspended").then((r) => Boolean(r)),
-              `${user.display_name} suspended.`,
-              done,
-            );
           }
-          setConfirm(null);
-        }}
-      />
+          confirmLabel={confirm?.type === "suspend" ? "Suspend" : "Revoke sessions"}
+          destructive={false}
+          busy={busy}
+          onConfirm={() => {
+            const kind = confirm?.type;
+            if (!kind) return;
+            if (kind === "revoke") {
+              void run(
+                () => revokeAdminUserSessions(user.id),
+                `${user.display_name}: all sessions revoked.`,
+              );
+            } else {
+              void run(
+                () => setAdminUserStatus(user.id, "suspended").then((r) => Boolean(r)),
+                `${user.display_name} suspended.`,
+                (u) => onChanged(u),
+              );
+            }
+            setConfirm(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -192,16 +194,15 @@ export function ProfilesPage() {
                           active && "bg-elevated",
                         )}
                       >
-                        <span
+                        <UserAvatar
+                          user={u}
+                          size="sm"
                           className={cn(
-                            "mono flex size-7 shrink-0 items-center justify-center rounded-md border text-[11px]",
                             active
                               ? "border-info/40 bg-info/10 text-info"
                               : "border-border bg-elevated text-foreground",
                           )}
-                        >
-                          {u.initials}
-                        </span>
+                        />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[13px] text-foreground">
                             {u.display_name}

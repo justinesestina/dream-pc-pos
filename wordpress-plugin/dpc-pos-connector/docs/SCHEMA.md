@@ -28,6 +28,7 @@ hashes; `wordpress_user_id` optionally links to a WordPress user for SSO.
 | `username`          | varchar(60), UNIQUE  | Login username                                    |
 | `email`             | varchar(100), UNIQUE | Login email / reset target                        |
 | `display_name`      | varchar(150)         | Shown in the app                                  |
+| `avatar_url`        | varchar(255)         | Profile photo URL (empty = initials)              |
 | `password_hash`     | varchar(255)         | Argon2id/bcrypt; empty until set                  |
 | `status`            | varchar(20)          | `active`, `inactive`, `suspended`, `locked`       |
 | `failed_attempts`   | int                  | Consecutive failures                              |

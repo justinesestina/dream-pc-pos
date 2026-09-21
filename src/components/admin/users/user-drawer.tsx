@@ -30,7 +30,7 @@ import {
 import { serverDateTime } from "@/lib/format";
 import { SidePanel } from "./side-panel";
 import { ProfilePanel } from "./profile-panel";
-import { statusLabel, statusTone } from "./user-bits";
+import { statusLabel, statusTone, UserAvatar } from "./user-bits";
 
 export type UserDrawerSection =
   "overview" | "roles" | "branches" | "password" | "history" | "activity";
@@ -80,9 +80,7 @@ export function UserDrawer({
       {user && (
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
-            <span className="mono flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-xs text-foreground">
-              {user.initials}
-            </span>
+            <UserAvatar user={user} size="md" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-foreground">
                 {user.display_name}

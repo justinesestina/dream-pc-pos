@@ -58,8 +58,9 @@ export function DeleteConfirmDialog({
                 Delete {displayName}?
               </AlertDialogTitle>
               <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                This action <strong className="text-destructive font-bold">cannot be undone</strong>. The account and all
-                its role assignments will be permanently removed. Login and activity history is retained for audit purposes.
+                This action <strong className="text-destructive font-bold">cannot be undone</strong>
+                . The account and all its role assignments will be permanently removed. Login and
+                activity history is retained for audit purposes.
               </AlertDialogDescription>
             </AlertDialogHeader>
           </div>

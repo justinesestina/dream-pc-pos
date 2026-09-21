@@ -42,6 +42,7 @@ Base URL: `https://YOUR-SITE/wp-json/dpc/v1`
   "username": "owner",
   "email": "owner@example.com",
   "display_name": "Site Owner",
+  "avatar_url": "",
   "status": "active",
   "wordpress_user_id": 1,
   "wordpress_connected": true,
@@ -227,8 +228,9 @@ Returns the created [`User`](#user-object). Errors: `dpc_invalid_username`,
 
 ### `PATCH /users/{id}`
 
-Any of `email`, `display_name`, `wordpress_user_id`, `roles` (replaces the
-set), `branch_ids` (replaces the set).
+Any of `email`, `display_name`, `avatar_url` (a media URL; pass `""` to clear),
+`wordpress_user_id`, `roles` (replaces the set), `branch_ids` (replaces the
+set).
 
 ### `POST /users/{id}/status`
 

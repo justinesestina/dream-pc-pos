@@ -36,8 +36,9 @@ import {
 } from "@/lib/api-client";
 import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData, filterUsers } from "./use-admin-user-data";
-import { BranchCell, RoleBadges, StatusCell, isLocked } from "./user-bits";
+import { BranchCell, RoleBadges, StatusCell, UserAvatar, isLocked } from "./user-bits";
 import { ConfirmDialog } from "./confirm-dialog";
+import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { UserDrawer, type UserDrawerSection } from "./user-drawer";
 
 interface Row {
@@ -106,9 +107,7 @@ export function AllUsersPage() {
       header: "User",
       cell: (r) => (
         <div className="flex items-center gap-2.5">
-          <span className="mono flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[11px] text-foreground">
-            {r.user.initials}
-          </span>
+          <UserAvatar user={r.user} size="sm" />
           <div className="min-w-0">
             <p className="truncate text-[13px] text-foreground">{r.user.display_name}</p>
             <p className="mono truncate text-[10.5px] text-subtle">{r.user.email}</p>
@@ -321,38 +320,40 @@ export function AllUsersPage() {
         onDelete={(u) => setConfirm({ type: "delete", user: u })}
       />
 
-      <ConfirmDialog
-        open={confirm !== null}
-        onOpenChange={(v) => !v && setConfirm(null)}
-        title={
-          confirm?.type === "delete"
-            ? `Delete ${confirm.user.display_name}?`
-            : `Revoke sessions for ${confirm?.user.display_name}?`
-        }
-        description={
-          confirm?.type === "delete"
-            ? "The account and its assignments will be permanently removed. Login and activity history is retained."
-            : "Every active session is signed out immediately. The user will need to sign in again."
-        }
-        confirmLabel={confirm?.type === "delete" ? "Delete user" : "Revoke sessions"}
-        destructive={confirm?.type === "delete"}
-        busy={busy}
-        onConfirm={() => {
-          if (!confirm) return;
-          if (confirm.type === "delete") {
+      {confirm?.type === "delete" ? (
+        <DeleteConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          displayName={confirm.user.display_name}
+          username={confirm.user.username}
+          busy={busy}
+          onConfirm={() => {
             void runAction(
               () => deleteAdminUser(confirm.user.id),
               `User ${confirm.user.display_name} deleted.`,
             );
-          } else {
+            setConfirm(null);
+          }}
+        />
+      ) : (
+        <ConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          title={confirm ? `Revoke sessions for ${confirm.user.display_name}?` : ""}
+          description="Every active session is signed out immediately. The user will need to sign in again."
+          confirmLabel="Revoke sessions"
+          destructive={false}
+          busy={busy}
+          onConfirm={() => {
+            if (!confirm) return;
             void runAction(
               () => revokeAdminUserSessions(confirm.user.id),
               `${confirm.user.display_name}: all sessions revoked.`,
             );
-          }
-          setConfirm(null);
-        }}
-      />
+            setConfirm(null);
+          }}
+        />
+      )}
     </div>
   );
 }

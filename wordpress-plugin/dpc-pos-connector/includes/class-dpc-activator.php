@@ -18,7 +18,7 @@ class DPC_POS_Activator {
 	/**
 	 * Database schema version. Bump when the schema changes.
 	 */
-	const DB_VERSION = '0.3.0';
+	const DB_VERSION = '0.3.1';
 
 	/**
 	 * Option holding the installed schema version.
@@ -98,6 +98,7 @@ class DPC_POS_Activator {
 			username varchar(60) NOT NULL,
 			email varchar(100) NOT NULL,
 			display_name varchar(150) NOT NULL DEFAULT '',
+			avatar_url varchar(255) NOT NULL DEFAULT '',
 			password_hash varchar(255) NOT NULL DEFAULT '',
 			status varchar(20) NOT NULL DEFAULT 'active',
 			failed_attempts int(11) NOT NULL DEFAULT 0,

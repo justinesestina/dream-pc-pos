@@ -16,8 +16,9 @@ import {
 } from "@/lib/api-client";
 import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData } from "./use-admin-user-data";
-import { StatusCell, isLocked } from "./user-bits";
+import { StatusCell, UserAvatar, isLocked } from "./user-bits";
 import { ConfirmDialog } from "./confirm-dialog";
+import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 
 interface Row {
   id: string;
@@ -95,9 +96,7 @@ export function AccountStatusPage() {
       header: "User",
       cell: (r) => (
         <div className="flex items-center gap-2.5">
-          <span className="mono flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-elevated text-[11px] text-foreground">
-            {r.user.initials}
-          </span>
+          <UserAvatar user={r.user} size="sm" />
           <div className="min-w-0">
             <p className="truncate text-[13px] text-foreground">{r.user.display_name}</p>
             <p className="mono truncate text-[10.5px] text-subtle">{r.user.username}</p>
@@ -226,39 +225,42 @@ export function AccountStatusPage() {
         />
       </Panel>
 
-      <ConfirmDialog
-        open={confirm !== null}
-        onOpenChange={(v) => !v && setConfirm(null)}
-        title={
-          confirm?.kind === "reactivate"
-            ? `Re-activate ${target?.display_name}?`
-            : confirm?.kind === "delete"
-              ? `Delete ${target?.display_name}?`
+      {confirm?.kind === "delete" ? (
+        <DeleteConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          displayName={confirm.user.display_name}
+          username={confirm.user.username}
+          busy={busy}
+          onConfirm={() => {
+            void runDelete(confirm.user);
+            setConfirm(null);
+          }}
+        />
+      ) : (
+        <ConfirmDialog
+          open={confirm !== null}
+          onOpenChange={(v) => !v && setConfirm(null)}
+          title={
+            confirm?.kind === "reactivate"
+              ? `Re-activate ${target?.display_name}?`
               : `Suspend ${target?.display_name}?`
-        }
-        description={
-          confirm?.kind === "reactivate"
-            ? "The account can sign in again immediately. All sessions remain revoked."
-            : confirm?.kind === "delete"
-              ? "The account and its assignments are permanently removed. Login and activity history is retained."
+          }
+          description={
+            confirm?.kind === "reactivate"
+              ? "The account can sign in again immediately. All sessions remain revoked."
               : "The account is blocked from signing in immediately and all sessions are revoked."
-        }
-        confirmLabel={
-          confirm?.kind === "reactivate"
-            ? "Re-activate"
-            : confirm?.kind === "delete"
-              ? "Delete user"
-              : "Suspend"
-        }
-        destructive={confirm?.kind === "delete"}
-        busy={busy}
-        onConfirm={() => {
-          if (!confirm) return;
-          if (confirm.kind === "delete") void runDelete(confirm.user);
-          else void runStatus(confirm.user, confirm.kind === "reactivate" ? "active" : "suspended");
-          setConfirm(null);
-        }}
-      />
+          }
+          confirmLabel={confirm?.kind === "reactivate" ? "Re-activate" : "Suspend"}
+          destructive={false}
+          busy={busy}
+          onConfirm={() => {
+            if (!confirm) return;
+            void runStatus(confirm.user, confirm.kind === "reactivate" ? "active" : "suspended");
+            setConfirm(null);
+          }}
+        />
+      )}
     </div>
   );
 }

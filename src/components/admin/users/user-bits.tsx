@@ -1,5 +1,6 @@
 import { StatusBadge } from "@/components/nexus/status-badge";
 import type { AdminUser, AdminUserStatus } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { parseServerDate } from "@/lib/format";
 
 export function statusLabel(status: string): string {
@@ -30,6 +31,52 @@ export function roleTone(slug: string): "danger" | "info" | "neutral" {
 /** True while the account is temporarily locked after failed attempts. */
 export function isLocked(u: AdminUser): boolean {
   return Boolean(u.locked_until && parseServerDate(u.locked_until).getTime() > Date.now());
+}
+
+const AVATAR_SIZES = {
+  sm: "size-7 text-[11px]",
+  md: "size-9 text-xs",
+  lg: "size-12 text-sm",
+  xl: "size-16 text-lg",
+} as const;
+
+/** Profile photo with the initials chip as a fallback. */
+export function UserAvatar({
+  user,
+  size = "md",
+  rounded = "md",
+  className,
+}: {
+  user: Pick<AdminUser, "avatar_url" | "initials" | "display_name">;
+  size?: keyof typeof AVATAR_SIZES;
+  rounded?: "md" | "full";
+  className?: string;
+}) {
+  const url = user.avatar_url?.trim();
+  const theme = rounded === "full" ? "rounded-full" : "rounded-md";
+  const base = `${AVATAR_SIZES[size]} shrink-0 border object-cover border-border bg-elevated`;
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={user.display_name || "User"}
+        referrerPolicy="no-referrer"
+        className={cn(base, theme, className)}
+      />
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "mono flex items-center justify-center text-foreground",
+        base,
+        theme,
+        className,
+      )}
+    >
+      {user.initials || "?"}
+    </span>
+  );
 }
 
 export function StatusCell({ status, locked }: { status: string; locked?: boolean }) {

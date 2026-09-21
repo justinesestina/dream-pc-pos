@@ -111,6 +111,7 @@ class DPC_POS_Auth {
 			'username'            => (string) $row['username'],
 			'email'               => (string) $row['email'],
 			'display_name'        => (string) $row['display_name'],
+			'avatar_url'          => isset( $row['avatar_url'] ) ? (string) $row['avatar_url'] : '',
 			'status'              => (string) $row['status'],
 			'wordpress_user_id'   => $row['wordpress_user_id'] ? (int) $row['wordpress_user_id'] : null,
 			'wordpress_connected' => (bool) $wp_user,
