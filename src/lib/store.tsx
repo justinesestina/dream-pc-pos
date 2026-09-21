@@ -50,7 +50,7 @@ import {
   restoreDpcSession,
   logoutBackend,
 } from "./api-client";
-import { isDpcConnectorEnabled } from "./dpc-connector";
+import { dpcCurrentUser, isDpcConnectorEnabled, onSessionExpired } from "./dpc-connector";
 import { VAT_RATE } from "./format";
 import type {
   AppNotification,
@@ -418,6 +418,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const skipWrite = useRef(true);
+  const stateRef = useRef(state);
 
   useEffect(() => {
     async function initializeStore() {
@@ -774,7 +775,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void logoutBackend().catch(() => undefined);
         patch((s) => ({ ...s, user: null }));
       },
-
       syncWithBackend: async () => {
         try {
           if (!(await canReachBackend())) return;
@@ -2152,6 +2152,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })),
     };
   }, [state, hydrated, projects, projectTasks, team, loadingProjects, refreshProjects, createProject, updateProject, deleteProject, createProjectTask, updateProjectTask, deleteProjectTask]);
+
+  // Keep `stateRef` in sync for use inside long-lived effects.
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // When the connector session expires (HTTP 401), sign out cleanly instead of
+  // staying half-logged-in with every request failing. Guards on a present user
+  // so a burst of 401s (many pages failing at once) only triggers one logout.
+  const signOutRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    signOutRef.current = () => value.signOut();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.signOut]);
+  useEffect(
+    () =>
+      onSessionExpired(() => {
+        if (stateRef.current.user && isDpcConnectorEnabled()) signOutRef.current();
+      }),
+    [],
+  );
+
+  // Keep the connector session alive while the app is open. The server slides
+  // the idle expiry on every authenticated request, so pinging `/auth/me` every
+  // few minutes stops the session from expiring during active use. Ping again
+  // when the tab becomes visible so returning from idle never 401s.
+  useEffect(() => {
+    if (!hydrated || !isDpcConnectorEnabled() || !state.user?.id) return;
+    const ping = () => {
+      void dpcCurrentUser();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") ping();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const id = window.setInterval(ping, 4 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(id);
+    };
+  }, [hydrated, state.user?.id]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -82,6 +82,31 @@ function clearCsrf(): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Session expiry
+// ---------------------------------------------------------------------------
+
+/**
+ * Fired when the connector reports the session is no longer valid (HTTP 401).
+ * The store listens for this to sign out and bounce to the login screen —
+ * without it the app would stay "logged in" while every request 401s.
+ *
+ * `/auth/login` and the password reset flow are excluded because a 401 there
+ * just means "wrong credentials", not "session expired".
+ */
+const SESSION_EXPIRED_EVENT = "dpc:session-expired";
+
+export function dispatchSessionExpired(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+}
+
+export function onSessionExpired(listener: () => void): () => void {
+  const handle = () => listener();
+  window.addEventListener(SESSION_EXPIRED_EVENT, handle);
+  return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handle);
+}
+
 // Guard that keeps the app from auto-restoring a session right after a logout,
 // while the server-side revoke is still in flight. Cleared by the next login.
 const LOGGED_OUT_KEY = "dpc-nexus-logged-out";
@@ -269,6 +294,9 @@ async function dpcFetch<T>(
 
   if (!res.ok) {
     const errBody = json as DpcErrorBody | null;
+    if (res.status === 401 && path !== "/auth/login" && !path.startsWith("/auth/password")) {
+      dispatchSessionExpired();
+    }
     return {
       ok: false,
       error: errBody?.message ?? `HTTP ${res.status}`,
