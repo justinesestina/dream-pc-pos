@@ -40,6 +40,7 @@ class DPC_POS_Search {
 			array( 'id' => 'quotes', 'type' => 'page', 'label' => 'Quotes', 'subtitle' => 'Customer quotes and approvals', 'route' => '/quotes' ),
 			array( 'id' => 'pos', 'type' => 'page', 'label' => 'Point of Sale', 'subtitle' => 'New sale checkout', 'route' => '/pos' ),
 			array( 'id' => 'users', 'type' => 'page', 'label' => 'Users', 'subtitle' => 'User management and roles', 'route' => '/administration/users' ),
+			array( 'id' => 'projects', 'type' => 'page', 'label' => 'Projects', 'subtitle' => 'Project management and tasks', 'route' => '/projects' ),
 		);
 		foreach ( $nav_pages as $page ) {
 			$haystack = strtolower( $page['label'] . ' ' . $page['subtitle'] . ' ' . $page['type'] . ' ' . $page['route'] );
@@ -163,6 +164,30 @@ class DPC_POS_Search {
 					$entry['imageUrl'] = $user_row['avatar_url'];
 				}
 				$result[] = $entry;
+			}
+		}
+
+		// Search DPC projects
+		$projects_table = DPC_POS_RBAC::table( 'projects' );
+		$project_rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, name, status, client_name FROM {$projects_table} WHERE name LIKE %s OR client_name LIKE %s LIMIT 10",
+				$like,
+				$like
+			),
+			ARRAY_A
+		);
+		foreach ( (array) $project_rows as $project_row ) {
+			$client_name = isset( $project_row['client_name'] ) ? $project_row['client_name'] : '';
+			$haystack = strtolower( $project_row['name'] . ' ' . $client_name . ' ' . $project_row['status'] );
+			if ( false !== strpos( $haystack, $query ) ) {
+				$result[] = array(
+					'id'       => 'project-' . $project_row['id'],
+					'type'     => 'projects',
+					'label'    => $project_row['name'],
+					'subtitle' => $client_name ? $client_name . ' | ' . $project_row['status'] : $project_row['status'],
+					'route'    => '/projects/' . $project_row['id'],
+				);
 			}
 		}
 

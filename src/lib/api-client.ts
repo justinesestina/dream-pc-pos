@@ -656,7 +656,7 @@ export async function fetchBackendQuotes(): Promise<Quote[]> {
 
 export interface GlobalSearchResult {
   id: string;
-  type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "users" | "page";
+  type: "dashboard" | "products" | "orders" | "quotes" | "customers" | "users" | "projects" | "page";
   label: string;
   subtitle: string;
   route: string;

@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   User,
   Users,
+  FolderKanban,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -72,9 +73,11 @@ function ResultIcon({ item }: { item: GlobalSearchResult }) {
         ? Users
         : item.type === "users"
           ? User
-          : item.type === "dashboard"
-            ? LayoutDashboard
-            : SearchIcon;
+          : item.type === "projects"
+            ? FolderKanban
+            : item.type === "dashboard"
+              ? LayoutDashboard
+              : SearchIcon;
   if (item.imageUrl) {
     return (
       <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted/40">
