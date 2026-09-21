@@ -14,9 +14,9 @@ import {
   updateBackendProduct,
   createBackendOrder,
   canReachBackend,
-  // updateBackendOrder, // Add this if needed in the future
+  brandsApi,
 } from "./api-client";
-import type { Product, Category, Customer, Order } from "./types";
+import type { Product, Category, Customer, Order, CatalogTerm } from "./types";
 
 /* ------------------------------------------------------------- Sync Functions */
 
@@ -43,6 +43,16 @@ export async function syncCategoriesFromWooCommerce(): Promise<Category[]> {
     return categories;
   } catch (error) {
     console.error("Error syncing categories from backend:", error);
+    throw error;
+  }
+}
+
+export async function syncBrandsFromWooCommerce(): Promise<CatalogTerm[]> {
+  try {
+    const brands = await brandsApi.fetchList();
+    return brands;
+  } catch (error) {
+    console.error("Error syncing brands from backend:", error);
     throw error;
   }
 }
@@ -129,27 +139,32 @@ export async function testConnection(): Promise<{ connected: boolean; error?: st
 export async function fullSyncFromWooCommerce(
   onProgress?: (stage: string, current: number, total: number) => void,
 ): Promise<{
+  brands: CatalogTerm[];
   categories: Category[];
   products: Product[];
   customers: Customer[];
   orders: Order[];
 }> {
   try {
-    onProgress?.("categories", 0, 4);
+    const stages = 5;
+    onProgress?.("brands", 0, stages);
+    const brands = await syncBrandsFromWooCommerce();
+
+    onProgress?.("categories", 1, stages);
     const categories = await syncCategoriesFromWooCommerce();
 
-    onProgress?.("products", 1, 4);
+    onProgress?.("products", 2, stages);
     const products = await syncProductsFromWooCommerce();
 
-    onProgress?.("customers", 2, 4);
+    onProgress?.("customers", 3, stages);
     const customers = await syncCustomersFromWooCommerce();
 
-    onProgress?.("orders", 3, 4);
+    onProgress?.("orders", 4, stages);
     const orders = await syncOrdersFromWooCommerce();
 
-    onProgress?.("complete", 4, 4);
+    onProgress?.("complete", 5, stages);
 
-    return { categories, products, customers, orders };
+    return { brands, categories, products, customers, orders };
   } catch (error) {
     console.error("Error during full sync from WooCommerce:", error);
     throw error;

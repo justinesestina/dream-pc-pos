@@ -27,6 +27,7 @@ import {
   fetchBackendCustomers,
   fetchBackendQuotes,
   fetchBackendCategories,
+  brandsApi,
   getAuthToken,
   createBackendProduct,
   updateBackendProduct,
@@ -59,6 +60,7 @@ import type {
   BuildSlot,
   BuildStatus,
   CartLine,
+  CatalogTerm,
   Category,
   ClaimEvent,
   ClientType,
@@ -99,6 +101,7 @@ const SCHEMA_VERSION = 5;
 interface Snapshot {
   schemaVersion: number;
   user: User | null;
+  brands: CatalogTerm[];
   categories: Category[];
   products: Product[];
   inventory: InventoryItem[];
@@ -133,6 +136,7 @@ function seed(): Snapshot {
   return {
     schemaVersion: SCHEMA_VERSION,
     user: null,
+    brands: [],
     categories: structuredClone(demo.categories),
     products: structuredClone(demo.products),
     inventory: structuredClone(demo.inventory),
@@ -188,6 +192,7 @@ function emptyState(): Snapshot {
   return {
     schemaVersion: SCHEMA_VERSION,
     user: null,
+    brands: [],
     categories: [],
     products: [],
     inventory: [],
@@ -399,6 +404,7 @@ interface StoreValue extends Snapshot {
   resetDemoData: () => void;
   clearDemoData: () => void;
   loadWooCommerceData: (data: {
+    brands: CatalogTerm[];
     categories: Category[];
     products: Product[];
     customers: Customer[];
@@ -511,6 +517,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           setState((prev) => ({
             ...prev,
+            brands: result.brands.length > 0 ? result.brands : prev.brands,
             categories: result.categories.length > 0 ? result.categories : prev.categories,
             products: result.products,
             customers: result.customers.length > 0 ? result.customers : prev.customers,
@@ -778,12 +785,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       syncWithBackend: async () => {
         try {
           if (!(await canReachBackend())) return;
-          const [products, orders, customers, quotes, categories] = await Promise.all([
+          const [products, orders, customers, quotes, categories, brands] = await Promise.all([
             fetchBackendProducts(),
             fetchBackendOrders(),
             fetchBackendCustomers(),
             fetchBackendQuotes(),
             fetchBackendCategories(),
+            brandsApi.fetchList(),
           ]);
           patch((s) => ({
             ...s,
@@ -794,6 +802,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             customers: customers.length > 0 ? customers : s.customers,
             quotes: quotes.length > 0 ? quotes : s.quotes,
             categories: categories.length > 0 ? categories : s.categories,
+            brands: brands.length > 0 ? brands : s.brands,
           }));
         } catch (e) {
           console.error("Failed to sync with backend", e);
@@ -2134,6 +2143,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loadWooCommerceData: (data) =>
         patch((s) => ({
           ...s,
+          brands: data.brands,
           categories: data.categories,
           products: data.products,
           customers: data.customers,

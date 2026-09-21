@@ -23,7 +23,6 @@ import { TechLabel } from "@/components/nexus/primitives";
 import { ImageDropzone } from "@/components/products/image-dropzone";
 import { useStore } from "@/lib/store";
 import { useOps } from "@/lib/ops-store";
-import { BRAND_ROSTER } from "@/lib/brands";
 import type { Product, ProductType } from "@/lib/types";
 
 function parseSpecs(raw: string): Product["specs"] {
@@ -96,12 +95,13 @@ export function ProductFormDialog({
 
   const brands = useMemo(() => {
     const productBrands = store.products.map((p) => p.brand).filter(Boolean);
-    const merged = [...BRAND_ROSTER, ...productBrands];
+    const wcBrands = store.brands.map((b) => b.name);
+    const merged = [...wcBrands, ...productBrands];
     if (product?.brand) merged.push(product.brand);
     return Array.from(new Set(merged.map((b) => b.trim()).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b),
     );
-  }, [store.products, product?.brand]);
+  }, [store.brands, store.products, product?.brand]);
 
   const CUSTOM_BRAND_SENTINEL = "__custom__";
   const [brandMode, setBrandMode] = useState<"select" | "custom">("select");
@@ -118,7 +118,7 @@ export function ProductFormDialog({
     const inv = product ? store.invFor(product.id) : undefined;
     const initialBrand = product?.brand ?? "";
     const brandsList = [
-      ...BRAND_ROSTER,
+      ...store.brands.map((b) => b.name),
       ...store.products.map((p) => p.brand).filter(Boolean),
     ].map((b) => b.trim());
     const hasBrandInList = initialBrand && brandsList.includes(initialBrand.trim());
