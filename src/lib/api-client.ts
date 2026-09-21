@@ -1045,6 +1045,7 @@ export interface AdminUserInput {
   username: string;
   email: string;
   display_name: string;
+  phone?: string | undefined;
   password?: string | undefined;
   roles?: string[];
   branch_ids?: number[];
@@ -1060,7 +1061,7 @@ export async function createAdminUser(input: AdminUserInput): Promise<AdminUser 
 
 export async function updateAdminUser(
   id: number,
-  patch: Partial<Pick<AdminUser, "email" | "display_name" | "avatar_url">>,
+  patch: Partial<Pick<AdminUser, "email" | "display_name" | "avatar_url" | "phone">>,
 ): Promise<AdminUser | null> {
   const res = await apiRequest<AdminUser>(`/api/v1/users/${id}`, "PUT", patch);
   return res.ok ? res.data || null : null;

@@ -33,6 +33,23 @@ export function isLocked(u: AdminUser): boolean {
   return Boolean(u.locked_until && parseServerDate(u.locked_until).getTime() > Date.now());
 }
 
+/** Check if user has the owner role. */
+export function isOwner(u: AdminUser): boolean {
+  return (u.roles ?? []).some((r) => r.slug === "owner");
+}
+
+/** Check if the current user is an owner (from localStorage/session). */
+export function isCurrentUserOwner(): boolean {
+  try {
+    const userRaw = localStorage.getItem("dpc-nexus-user");
+    if (!userRaw) return false;
+    const user = JSON.parse(userRaw);
+    return user?.role === "owner" || (user?.roles ?? []).some((r: { slug: string }) => r.slug === "owner");
+  } catch {
+    return false;
+  }
+}
+
 const AVATAR_SIZES = {
   sm: "size-7 text-[11px]",
   md: "size-9 text-xs",

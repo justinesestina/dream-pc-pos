@@ -157,6 +157,7 @@ export interface DpcUser {
   email: string;
   display_name: string;
   avatar_url: string;
+  phone: string;
   status: string;
   wordpress_user_id: number | null;
   wordpress_connected: boolean;

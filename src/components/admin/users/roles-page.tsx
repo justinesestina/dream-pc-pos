@@ -26,7 +26,7 @@ import {
   type AdminUser,
 } from "@/lib/api-client";
 import { useAdminUserData } from "./use-admin-user-data";
-import { RoleBadges, StatusCell, UserAvatar, isLocked } from "./user-bits";
+import { RoleBadges, StatusCell, UserAvatar, isLocked, isCurrentUserOwner } from "./user-bits";
 
 interface Row {
   id: string;
@@ -42,6 +42,7 @@ export function RolesPage() {
   const [primary, setPrimary] = useState("");
   const [additional, setAdditional] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const currentUserIsOwner = isCurrentUserOwner();
 
   const openFor = (u: Row["user"]) => {
     setTarget(u);
@@ -203,26 +204,34 @@ export function RolesPage() {
               <div className="grid gap-1.5">
                 <Label>Primary role</Label>
                 <div className="grid gap-1.5">
-                  {roles.map((r: AdminRole) => (
-                    <label
-                      key={r.slug}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60"
-                      style={{ outline: primary === r.slug ? "1px solid var(--info)" : undefined }}
-                    >
-                      <input
-                        type="radio"
-                        name="primary-role"
-                        value={r.slug}
-                        checked={primary === r.slug}
-                        onChange={() => setPrimary(r.slug)}
-                        className="size-3.5 accent-[var(--info)]"
-                      />
-                      <span className="min-w-0">
-                        <span className="label-tech">{r.slug}</span>
-                        <span className="block text-[12px] text-subtle">{r.name}</span>
-                      </span>
-                    </label>
-                  ))}
+                  {roles.map((r: AdminRole) => {
+                    const isOwnerRole = r.slug === "owner";
+                    const disabled = isOwnerRole && !currentUserIsOwner;
+                    return (
+                      <label
+                        key={r.slug}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60 ${
+                          disabled ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        style={{ outline: primary === r.slug ? "1px solid var(--info)" : undefined }}
+                      >
+                        <input
+                          type="radio"
+                          name="primary-role"
+                          value={r.slug}
+                          checked={primary === r.slug}
+                          onChange={() => !disabled && setPrimary(r.slug)}
+                          disabled={disabled}
+                          className="size-3.5 accent-[var(--info)]"
+                        />
+                        <span className="min-w-0">
+                          <span className="label-tech">{r.slug}</span>
+                          <span className="block text-[12px] text-subtle">{r.name}</span>
+                        </span>
+                        {disabled && <span className="ml-auto text-[10px] text-muted-foreground">Owner only</span>}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -232,21 +241,29 @@ export function RolesPage() {
               <div className="grid grid-cols-1 gap-1.5">
                 {roles
                   .filter((r) => r.slug !== primary)
-                  .map((r) => (
-                    <label
-                      key={r.slug}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60"
-                    >
-                      <Checkbox
-                        checked={additional.includes(r.slug)}
-                        onCheckedChange={() => toggleAdditional(r.slug)}
-                      />
-                      <span className="label-tech">{r.slug}</span>
-                      <span className="ml-auto truncate text-[12px] text-subtle">
-                        {r.description}
-                      </span>
-                    </label>
-                  ))}
+                  .map((r) => {
+                    const isOwnerRole = r.slug === "owner";
+                    const disabled = isOwnerRole && !currentUserIsOwner;
+                    return (
+                      <label
+                        key={r.slug}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60 ${
+                          disabled ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <Checkbox
+                          checked={additional.includes(r.slug)}
+                          onCheckedChange={() => !disabled && toggleAdditional(r.slug)}
+                          disabled={disabled}
+                        />
+                        <span className="label-tech">{r.slug}</span>
+                        <span className="ml-auto truncate text-[12px] text-subtle">
+                          {r.description}
+                        </span>
+                        {disabled && <span className="ml-2 text-[10px] text-muted-foreground">Owner only</span>}
+                      </label>
+                    );
+                  })}
               </div>
             </SidePanelBody>
             <SidePanelFooter>

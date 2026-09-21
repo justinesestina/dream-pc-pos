@@ -34,11 +34,13 @@ export function useAdminUserData(): AdminUserData {
     ])
       .then(([u, r, b]) => {
         if (!active) return;
+        console.log("Loaded users:", u.length, "roles:", r.length, "branches:", b.length);
         setUsers(u.map(normalizeUser));
         setRoles(r);
         setBranches(b);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load admin data:", err);
         if (!active) return;
         setUsers([]);
         setRoles([]);
@@ -67,6 +69,7 @@ function normalizeUser(u: AdminUser): AdminUser {
     failed_attempts: u.failed_attempts ?? 0,
     locked_until: u.locked_until ?? null,
     primary_branch_id: u.primary_branch_id ?? null,
+    phone: u.phone ?? "",
   };
 }
 
@@ -79,15 +82,22 @@ export function filterUsers(
   branch: string,
 ): AdminUser[] {
   const needle = query.trim().toLowerCase();
-  return users.filter((u) => {
+  console.log("Filtering users:", { totalUsers: users.length, query, status, role, branch, needle });
+  const filtered = users.filter((u) => {
     if (status !== "all" && u.status !== status) return false;
     if (role !== "all" && !(u.roles ?? []).some((r) => r.slug === role)) return false;
     if (branch !== "all" && !(u.branches ?? []).some((b) => String(b.id) === branch)) return false;
     if (!needle) return true;
-    return (
+    const matches = 
       u.username.toLowerCase().includes(needle) ||
       u.email.toLowerCase().includes(needle) ||
-      u.display_name.toLowerCase().includes(needle)
-    );
+      u.display_name.toLowerCase().includes(needle) ||
+      (u.phone && u.phone.toLowerCase().includes(needle));
+    if (matches) {
+      console.log("Match found:", u.username, u.email, u.display_name, u.phone);
+    }
+    return matches;
   });
+  console.log("Filtered result:", filtered.length, "users");
+  return filtered;
 }

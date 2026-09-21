@@ -30,7 +30,7 @@ import {
 import { serverDateTime } from "@/lib/format";
 import { SidePanel } from "./side-panel";
 import { ProfilePanel } from "./profile-panel";
-import { statusLabel, statusTone, UserAvatar } from "./user-bits";
+import { statusLabel, statusTone, UserAvatar, isCurrentUserOwner } from "./user-bits";
 
 export type UserDrawerSection =
   "overview" | "roles" | "branches" | "password" | "history" | "activity";
@@ -156,6 +156,7 @@ function RolesSection({
   const [primary, setPrimary] = useState(user.role);
   const [additional, setAdditional] = useState<string[]>((user.roles ?? []).map((r) => r.slug));
   const [busy, setBusy] = useState(false);
+  const currentUserIsOwner = isCurrentUserOwner();
 
   useEffect(() => {
     setPrimary(user.role);
@@ -191,26 +192,34 @@ function RolesSection({
     <div className="space-y-4">
       <div className="grid gap-1.5">
         <Label>Primary role</Label>
-        {roles.map((r) => (
-          <label
-            key={r.slug}
-            className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60"
-            style={{ outline: primary === r.slug ? "1px solid var(--info)" : undefined }}
-          >
-            <input
-              type="radio"
-              name="drawer-primary-role"
-              value={r.slug}
-              checked={primary === r.slug}
-              onChange={() => setPrimary(r.slug)}
-              className="size-3.5 accent-[var(--info)]"
-            />
-            <span className="min-w-0">
-              <span className="label-tech">{r.slug}</span>
-              <span className="block text-[12px] text-subtle">{r.name}</span>
-            </span>
-          </label>
-        ))}
+        {roles.map((r) => {
+          const isOwnerRole = r.slug === "owner";
+          const disabled = isOwnerRole && !currentUserIsOwner;
+          return (
+            <label
+              key={r.slug}
+              className={`flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60 ${
+                disabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              style={{ outline: primary === r.slug ? "1px solid var(--info)" : undefined }}
+            >
+              <input
+                type="radio"
+                name="drawer-primary-role"
+                value={r.slug}
+                checked={primary === r.slug}
+                onChange={() => !disabled && setPrimary(r.slug)}
+                disabled={disabled}
+                className="size-3.5 accent-[var(--info)]"
+              />
+              <span className="min-w-0">
+                <span className="label-tech">{r.slug}</span>
+                <span className="block text-[12px] text-subtle">{r.name}</span>
+              </span>
+              {disabled && <span className="ml-auto text-[10px] text-muted-foreground">Owner only</span>}
+            </label>
+          );
+        })}
       </div>
 
       <Separator />
@@ -219,19 +228,27 @@ function RolesSection({
         <p className="text-[13px] text-foreground">Additional roles</p>
         {roles
           .filter((r) => r.slug !== primary)
-          .map((r) => (
-            <label
-              key={r.slug}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60"
-            >
-              <Checkbox
-                checked={additional.includes(r.slug)}
-                onCheckedChange={() => toggle(r.slug)}
-              />
-              <span className="label-tech">{r.slug}</span>
-              <span className="ml-auto truncate text-[12px] text-subtle">{r.description}</span>
-            </label>
-          ))}
+          .map((r) => {
+            const isOwnerRole = r.slug === "owner";
+            const disabled = isOwnerRole && !currentUserIsOwner;
+            return (
+              <label
+                key={r.slug}
+                className={`flex cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-2 transition-colors hover:bg-elevated/60 ${
+                  disabled ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                <Checkbox
+                  checked={additional.includes(r.slug)}
+                  onCheckedChange={() => !disabled && toggle(r.slug)}
+                  disabled={disabled}
+                />
+                <span className="label-tech">{r.slug}</span>
+                <span className="ml-auto truncate text-[12px] text-subtle">{r.description}</span>
+                {disabled && <span className="ml-2 text-[10px] text-muted-foreground">Owner only</span>}
+              </label>
+            );
+          })}
       </div>
 
       <Button size="sm" className="ml-auto gap-1" onClick={() => void save()} disabled={busy}>

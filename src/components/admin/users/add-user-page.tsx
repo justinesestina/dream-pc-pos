@@ -58,6 +58,7 @@ export function AddUserPage() {
     username: "",
     display_name: "",
     email: "",
+    phone: "",
     password: "",
     generate: true,
     show: false,
@@ -102,6 +103,7 @@ export function AddUserPage() {
       username,
       display_name: displayName,
       email,
+      phone: form.phone || undefined,
       password,
       roles: chosenRoles,
       status,
@@ -171,6 +173,16 @@ export function AddUserPage() {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="user@dreampc.ph"
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="au-phone">Phone (optional)</Label>
+                <Input
+                  id="au-phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+63 912 345 6789"
                 />
               </div>
 

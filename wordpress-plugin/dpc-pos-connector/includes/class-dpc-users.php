@@ -65,7 +65,8 @@ class DPC_POS_Users {
 		$search = (string) $request->get_param( 'search' );
 		if ( '' !== $search ) {
 			$like     = '%' . $wpdb->esc_like( $search ) . '%';
-			$where[]  = '(u.username LIKE %s OR u.email LIKE %s OR u.display_name LIKE %s)';
+			$where[]  = '(u.username LIKE %s OR u.email LIKE %s OR u.display_name LIKE %s OR u.phone LIKE %s)';
+			$params[] = $like;
 			$params[] = $like;
 			$params[] = $like;
 			$params[] = $like;
@@ -124,6 +125,7 @@ class DPC_POS_Users {
 		$email    = sanitize_email( (string) $request->get_param( 'email' ) );
 		$display  = sanitize_text_field( (string) $request->get_param( 'display_name' ) );
 		$password = (string) $request->get_param( 'password' );
+		$phone    = sanitize_text_field( (string) $request->get_param( 'phone' ) );
 		$roles    = (array) $request->get_param( 'roles' );
 
 		if ( '' === $username ) {
@@ -166,10 +168,11 @@ class DPC_POS_Users {
 				'username'          => $username,
 				'email'             => $email,
 				'display_name'      => $display ? $display : $username,
+				'phone'             => $phone,
 				'password_hash'     => '' !== $password ? DPC_POS_Security::hash_password( $password ) : '',
 				'status'            => in_array( (string) $request->get_param( 'status' ), self::statuses(), true ) ? (string) $request->get_param( 'status' ) : 'active',
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 		$user_id = (int) $wpdb->insert_id;
 		if ( ! $user_id ) {
@@ -257,6 +260,11 @@ class DPC_POS_Users {
 		$display = $request->get_param( 'display_name' );
 		if ( null !== $display ) {
 			$data['display_name'] = sanitize_text_field( (string) $display );
+		}
+
+		$phone = $request->get_param( 'phone' );
+		if ( null !== $phone ) {
+			$data['phone'] = sanitize_text_field( (string) $phone );
 		}
 
 		$avatar = $request->get_param( 'avatar_url' );

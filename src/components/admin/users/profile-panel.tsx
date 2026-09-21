@@ -12,7 +12,7 @@ import {
   type AdminUser,
 } from "@/lib/api-client";
 import { serverDateTime } from "@/lib/format";
-import { BranchCell, RoleBadges, StatusCell, UserAvatar, isLocked, statusLabel } from "./user-bits";
+import { BranchCell, RoleBadges, StatusCell, UserAvatar, isLocked, statusLabel, isOwner } from "./user-bits";
 import { SectionCard } from "./panels";
 
 export function ProfilePanel({
@@ -37,14 +37,17 @@ export function ProfilePanel({
   onDelete: (user: AdminUser) => void;
 }) {
   const isLockedNow = isLocked(user);
+  const isOwnerUser = isOwner(user);
   const [name, setName] = useState(user.display_name);
   const [email, setEmail] = useState(user.email);
+  const [phone, setPhone] = useState(user.phone || "");
   const [avatarBusy, setAvatarBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setName(user.display_name);
     setEmail(user.email);
+    setPhone(user.phone || "");
   }, [user.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
@@ -52,6 +55,7 @@ export function ProfilePanel({
     const updated = await updateAdminUser(user.id, {
       email: email.trim(),
       display_name: name.trim(),
+      phone: phone.trim(),
     });
     if (!updated) {
       toast.error("Could not save profile", { description: getLastApiError() ?? undefined });
@@ -162,6 +166,16 @@ export function ProfilePanel({
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor={`p-phone-${user.id}`}>Phone</Label>
+            <Input
+              id={`p-phone-${user.id}`}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+63 912 345 6789"
+            />
+          </div>
           <div>
             <p className="label-tech">Username</p>
             <p className="mono mt-1 text-[13px] text-foreground">{user.username}</p>
@@ -236,16 +250,24 @@ export function ProfilePanel({
           <Button size="sm" variant="outline" onClick={() => onRevokeSessions(user)}>
             <Unlock className="size-3.5" /> Revoke sessions
           </Button>
-          <Button size="sm" variant="outline" onClick={() => onToggleStatus(user)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onToggleStatus(user)}
+            disabled={isOwnerUser}
+          >
             <Activity className="size-3.5" /> {user.status !== "active" ? "Re-activate" : "Suspend"}
+            {isOwnerUser && <span className="ml-2 text-[10px] text-muted-foreground">Owner</span>}
           </Button>
           <Button
             size="sm"
             variant="destructive"
             className="ml-auto"
             onClick={() => onDelete(user)}
+            disabled={isOwnerUser}
           >
             <Trash2 className="size-3.5" /> Delete
+            {isOwnerUser && <span className="ml-2 text-[10px] text-muted-foreground">Owner</span>}
           </Button>
         </div>
       </SectionCard>

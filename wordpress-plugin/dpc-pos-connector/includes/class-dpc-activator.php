@@ -99,6 +99,7 @@ class DPC_POS_Activator {
 			email varchar(100) NOT NULL,
 			display_name varchar(150) NOT NULL DEFAULT '',
 			avatar_url varchar(255) NOT NULL DEFAULT '',
+			phone varchar(20) NOT NULL DEFAULT '',
 			password_hash varchar(255) NOT NULL DEFAULT '',
 			status varchar(20) NOT NULL DEFAULT 'active',
 			failed_attempts int(11) NOT NULL DEFAULT 0,

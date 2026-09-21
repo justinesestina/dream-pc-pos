@@ -36,7 +36,7 @@ import {
 } from "@/lib/api-client";
 import { serverDateTimeShort } from "@/lib/format";
 import { useAdminUserData, filterUsers } from "./use-admin-user-data";
-import { BranchCell, RoleBadges, StatusCell, UserAvatar, isLocked } from "./user-bits";
+import { BranchCell, RoleBadges, StatusCell, UserAvatar, isLocked, isOwner, isCurrentUserOwner } from "./user-bits";
 import { ConfirmDialog } from "./confirm-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { UserDrawer, type UserDrawerSection } from "./user-drawer";
@@ -111,6 +111,7 @@ export function AllUsersPage() {
           <div className="min-w-0">
             <p className="truncate text-[13px] text-foreground">{r.user.display_name}</p>
             <p className="mono truncate text-[10.5px] text-subtle">{r.user.email}</p>
+            {r.user.phone && <p className="mono truncate text-[10.5px] text-muted-foreground">{r.user.phone}</p>}
           </div>
         </div>
       ),
@@ -191,8 +192,12 @@ export function AllUsersPage() {
               <Activity className="size-4" /> Activity
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => void toggleStatus(r.user)}>
+            <DropdownMenuItem
+              onClick={() => void toggleStatus(r.user)}
+              disabled={isOwner(r.user)}
+            >
               <Flag className="size-4" /> {r.user.status !== "active" ? "Re-activate" : "Suspend"}
+              {isOwner(r.user) && <span className="ml-auto text-[10px] text-muted-foreground">Owner</span>}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setConfirm({ type: "revoke", user: r.user })}>
               <Unlock className="size-4" /> Revoke sessions
@@ -200,8 +205,10 @@ export function AllUsersPage() {
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => setConfirm({ type: "delete", user: r.user })}
+              disabled={isOwner(r.user)}
             >
               <Trash2 className="size-4" /> Delete user
+              {isOwner(r.user) && <span className="ml-auto text-[10px] text-muted-foreground">Owner</span>}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -258,7 +265,7 @@ export function AllUsersPage() {
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder="Search name, email, username…"
+            placeholder="Search name, email, username, phone…"
           />
           <FilterSelect
             value={statusFilter}
