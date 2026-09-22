@@ -451,6 +451,61 @@ export interface Quote {
   preparedBy: string;
 }
 
+export type BillingCustomerType = ClientType;
+
+export type BillingStatementStatus =
+  "draft" | "pending" | "unpaid" | "partially_paid" | "paid" | "overdue" | "cancelled" | "voided";
+
+/** A named additional charge on a billing statement (shipping, labor, etc.). */
+export interface BillingCharge {
+  label: string;
+  amount: number;
+}
+
+export interface BillingStatementItem {
+  productId: string;
+  name: string;
+  sku: string;
+  qty: number;
+  unitPrice: number;
+}
+
+export interface BillingPaymentEntry {
+  id: string;
+  method: PaymentMethod;
+  amount: number;
+  at: string;
+  reference?: string | undefined;
+}
+
+export interface BillingStatement {
+  id: string;
+  customerId: string | null;
+  customerName: string;
+  customerType: BillingCustomerType;
+  status: BillingStatementStatus;
+  items: BillingStatementItem[];
+  additionalCharges: BillingCharge[];
+  discountType?: "amount" | "percentage";
+  discountPercentage: number;
+  discount: number;
+  taxSetting: "vat" | "non-vat" | "tax-exempt";
+  subtotal: number;
+  tax: number;
+  previousBalance: number;
+  total: number;
+  amountPaid: number;
+  balance: number;
+  payments: BillingPaymentEntry[];
+  referenceNumber: string;
+  salesRep: string;
+  issuedAt: string;
+  dueAt: string;
+  notes?: string | undefined;
+  createdAt: string;
+  preparedBy: string;
+}
+
 export type BuildStatus =
   | "draft"
   | "quoted"

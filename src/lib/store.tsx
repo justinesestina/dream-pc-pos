@@ -19,6 +19,7 @@ import {
   type ReactNode,
 } from "react";
 import * as demo from "./demo-data";
+import { billingTotals, nextBillingNumber } from "./billing";
 import { emitBuildStatus } from "./build-sync";
 import { clearLoggedOutFlag, setLoggedOutFlag } from "./dpc-connector";
 import {
@@ -56,6 +57,12 @@ import { VAT_RATE } from "./format";
 import type {
   AppNotification,
   AuditLog,
+  BillingCharge,
+  BillingCustomerType,
+  BillingPaymentEntry,
+  BillingStatement,
+  BillingStatementItem,
+  BillingStatementStatus,
   Build,
   BuildSlot,
   BuildStatus,
@@ -96,7 +103,7 @@ const STORAGE_KEY = "dpc-nexus-demo-v1";
  * localStorage from an older app version is discarded and re-seeded instead
  * of crashing the UI.
  */
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 interface Snapshot {
   schemaVersion: number;
@@ -109,6 +116,7 @@ interface Snapshot {
   customers: Customer[];
   orders: Order[];
   quotes: Quote[];
+  billingStatements: BillingStatement[];
   builds: Build[];
   services: ServiceTicket[];
   warranties: Warranty[];
@@ -144,6 +152,7 @@ function seed(): Snapshot {
     customers: structuredClone(demo.customers),
     orders: structuredClone(demo.orders),
     quotes: structuredClone(demo.quotes),
+    billingStatements: structuredClone(demo.billingStatements),
     builds: structuredClone(demo.builds),
     services: structuredClone(demo.services),
     warranties: structuredClone(demo.warranties),
@@ -200,6 +209,7 @@ function emptyState(): Snapshot {
     customers: [],
     orders: [],
     quotes: [],
+    billingStatements: [],
     builds: [],
     services: [],
     warranties: [],
@@ -361,6 +371,48 @@ interface StoreValue extends Snapshot {
     quoteId: string,
     downpayment?: { amount: number; method: PaymentMethod },
   ) => Order | null;
+  /* billing statements */
+  createBillingStatement: (data: {
+    customerId: string | null;
+    customerType: BillingCustomerType;
+    items: BillingStatementItem[];
+    additionalCharges: BillingCharge[];
+    discountType?: "amount" | "percentage";
+    discountPercentage?: number;
+    discount: number;
+    taxSetting: BillingStatement["taxSetting"];
+    previousBalance: number;
+    referenceNumber: string;
+    salesRep: string;
+    issuedAt: string;
+    dueAt: string;
+    notes?: string;
+  }) => BillingStatement;
+  updateBillingStatement: (
+    id: string,
+    edits: {
+      customerId?: string | null;
+      customerType?: BillingCustomerType;
+      items?: BillingStatementItem[];
+      additionalCharges?: BillingCharge[];
+      discountType?: "amount" | "percentage";
+      discountPercentage?: number;
+      discount?: number;
+      taxSetting?: BillingStatement["taxSetting"];
+      previousBalance?: number;
+      referenceNumber?: string;
+      salesRep?: string;
+      issuedAt?: string;
+      dueAt?: string;
+      notes?: string;
+    },
+  ) => void;
+  setBillingStatementStatus: (id: string, status: BillingStatementStatus) => void;
+  deleteBillingStatement: (id: string) => void;
+  recordBillingPayment: (
+    id: string,
+    payment: { method: PaymentMethod; amount: number; reference?: string },
+  ) => void;
   createBuild: (data: {
     customerId: string | null;
     purpose: string;
@@ -1770,6 +1822,174 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
         if (quote.buildId) emitBuildStatus(quote.buildId, "parts_reserved");
         return newOrder;
+      },
+
+      createBillingStatement: ({
+        customerId,
+        customerType,
+        items,
+        additionalCharges,
+        discountType = "amount",
+        discountPercentage = 0,
+        discount,
+        taxSetting,
+        previousBalance,
+        referenceNumber,
+        salesRep,
+        issuedAt,
+        dueAt,
+        notes,
+      }) => {
+        const id = nextBillingNumber(customerType, state.billingStatements);
+        const customer = customerById(customerId);
+        const t = billingTotals(items, additionalCharges, discount, taxSetting, previousBalance);
+        const at = new Date().toISOString();
+        const statement: BillingStatement = {
+          id,
+          customerId,
+          customerName: customer?.name ?? "Walk-in Customer",
+          customerType,
+          status: "draft",
+          items,
+          additionalCharges,
+          discountType,
+          discountPercentage,
+          discount,
+          taxSetting,
+          subtotal: t.itemsSubtotal,
+          tax: t.tax,
+          previousBalance,
+          total: t.total,
+          amountPaid: 0,
+          balance: t.total,
+          payments: [],
+          referenceNumber,
+          salesRep,
+          issuedAt,
+          dueAt,
+          notes,
+          createdAt: at,
+          preparedBy: state.user?.name ?? "System",
+        };
+        patch((s) => ({
+          ...s,
+          billingStatements: [statement, ...s.billingStatements],
+          auditLogs: log(s, `created billing statement ${id}`, id),
+        }));
+        return statement;
+      },
+
+      updateBillingStatement: (id, edits) => {
+        const existing = state.billingStatements.find((b) => b.id === id);
+        if (!existing) return;
+        const items = edits.items ?? existing.items;
+        const additionalCharges = edits.additionalCharges ?? existing.additionalCharges;
+        const discountType = edits.discountType ?? existing.discountType ?? "amount";
+        const discountPercentage = edits.discountPercentage ?? existing.discountPercentage ?? 0;
+        const discount = edits.discount ?? existing.discount;
+        const taxSetting = edits.taxSetting ?? existing.taxSetting;
+        const previousBalance = edits.previousBalance ?? existing.previousBalance;
+        const customerId = edits.customerId !== undefined ? edits.customerId : existing.customerId;
+        const customerName =
+          customerId == null
+            ? existing.customerName
+            : (customerById(customerId)?.name ?? existing.customerName);
+        const customerType = edits.customerType ?? existing.customerType;
+        const t = billingTotals(items, additionalCharges, discount, taxSetting, previousBalance);
+        patch((s) => ({
+          ...s,
+          billingStatements: s.billingStatements.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  customerId,
+                  customerName,
+                  customerType,
+                  items,
+                  additionalCharges,
+                  discountType,
+                  discountPercentage,
+                  discount,
+                  taxSetting,
+                  previousBalance,
+                  subtotal: t.itemsSubtotal,
+                  tax: t.tax,
+                  total: t.total,
+                  balance: Math.round((t.total - b.amountPaid) * 100) / 100,
+                  referenceNumber: edits.referenceNumber ?? b.referenceNumber,
+                  salesRep: edits.salesRep ?? b.salesRep,
+                  issuedAt: edits.issuedAt ?? b.issuedAt,
+                  dueAt: edits.dueAt ?? b.dueAt,
+                  notes: edits.notes !== undefined ? edits.notes : b.notes,
+                }
+              : b,
+          ),
+          auditLogs: log(s, `updated billing statement ${id}`, id),
+        }));
+      },
+
+      setBillingStatementStatus: (id, status) => {
+        patch((s) => ({
+          ...s,
+          billingStatements: s.billingStatements.map((b) => (b.id === id ? { ...b, status } : b)),
+          auditLogs: log(s, `set billing statement ${id} to ${status}`, id),
+          notifications:
+            status === "paid"
+              ? notify(s, {
+                  title: "Billing statement settled",
+                  body: `${id} was marked fully paid.`,
+                  priority: "high",
+                  kind: "quote",
+                })
+              : s.notifications,
+        }));
+      },
+
+      deleteBillingStatement: (id) => {
+        patch((s) => ({
+          ...s,
+          billingStatements: s.billingStatements.filter((b) => b.id !== id),
+          auditLogs: log(s, `deleted billing statement ${id}`, id),
+        }));
+      },
+
+      recordBillingPayment: (id, payment) => {
+        const existing = state.billingStatements.find((b) => b.id === id);
+        if (!existing) return;
+        const payId = `pay-${id}-${Date.now().toString(36)}`;
+        const entry: BillingPaymentEntry = {
+          id: payId,
+          method: payment.method,
+          amount: payment.amount,
+          at: new Date().toISOString(),
+          reference: payment.reference,
+        };
+        const amountPaid = existing.amountPaid + payment.amount;
+        const balance = Math.max(0, Math.round((existing.total - amountPaid) * 100) / 100);
+        patch((s) => ({
+          ...s,
+          billingStatements: s.billingStatements.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  payments: [...b.payments, entry],
+                  amountPaid,
+                  balance,
+                  status: balance <= 0 ? ("paid" as const) : ("partially_paid" as const),
+                }
+              : b,
+          ),
+          auditLogs: log(s, `recorded ₱${payment.amount.toLocaleString()} payment on ${id}`, id),
+          notifications:
+            balance <= 0
+              ? notify(s, {
+                  title: "Billing statement paid",
+                  body: `${id} settled with ₱${payment.amount.toLocaleString()}.`,
+                  priority: "high",
+                  kind: "quote",
+                })
+              : s.notifications,
+        }));
       },
 
       createBuild: ({ customerId, purpose, budget, notes }) => {

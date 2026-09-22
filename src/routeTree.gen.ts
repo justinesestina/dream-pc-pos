@@ -25,6 +25,8 @@ import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
 import { Route as AppAdminRolesRouteImport } from './routes/_app.admin.roles'
 import { Route as AppAdministrationBranchesRouteImport } from './routes/_app.administration.branches'
 import { Route as AppAttributesIndexRouteImport } from './routes/_app.attributes.index'
+import { Route as AppBillingStatementsIndexRouteImport } from './routes/_app.billing-statements.index'
+import { Route as AppBillingStatementsStatementIdRouteImport } from './routes/_app.billing-statements.$statementId'
 import { Route as AppBrandsIndexRouteImport } from './routes/_app.brands.index'
 import { Route as AppBuildsIndexRouteImport } from './routes/_app.builds.index'
 import { Route as AppBuildsBuildIdRouteImport } from './routes/_app.builds.$buildId'
@@ -154,6 +156,18 @@ const AppAttributesIndexRoute = AppAttributesIndexRouteImport.update({
   path: '/attributes/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBillingStatementsIndexRoute =
+  AppBillingStatementsIndexRouteImport.update({
+    id: '/billing-statements/',
+    path: '/billing-statements/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppBillingStatementsStatementIdRoute =
+  AppBillingStatementsStatementIdRouteImport.update({
+    id: '/billing-statements/$statementId',
+    path: '/billing-statements/$statementId',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppBrandsIndexRoute = AppBrandsIndexRouteImport.update({
   id: '/brands/',
   path: '/brands/',
@@ -424,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
   '/administration/branches': typeof AppAdministrationBranchesRoute
+  '/billing-statements/$statementId': typeof AppBillingStatementsStatementIdRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -440,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/warehouses/$warehouseId': typeof AppWarehousesWarehouseIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/attributes/': typeof AppAttributesIndexRoute
+  '/billing-statements/': typeof AppBillingStatementsIndexRoute
   '/brands/': typeof AppBrandsIndexRoute
   '/builds/': typeof AppBuildsIndexRoute
   '/categories/': typeof AppCategoriesIndexRoute
@@ -489,6 +505,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/roles': typeof AppAdminRolesRoute
   '/administration/branches': typeof AppAdministrationBranchesRoute
+  '/billing-statements/$statementId': typeof AppBillingStatementsStatementIdRoute
   '/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -505,6 +522,7 @@ export interface FileRoutesByTo {
   '/warehouses/$warehouseId': typeof AppWarehousesWarehouseIdRoute
   '/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/attributes': typeof AppAttributesIndexRoute
+  '/billing-statements': typeof AppBillingStatementsIndexRoute
   '/brands': typeof AppBrandsIndexRoute
   '/builds': typeof AppBuildsIndexRoute
   '/categories': typeof AppCategoriesIndexRoute
@@ -556,6 +574,7 @@ export interface FileRoutesById {
   '/_app/admin/audit': typeof AppAdminAuditRoute
   '/_app/admin/roles': typeof AppAdminRolesRoute
   '/_app/administration/branches': typeof AppAdministrationBranchesRoute
+  '/_app/billing-statements/$statementId': typeof AppBillingStatementsStatementIdRoute
   '/_app/builds/$buildId': typeof AppBuildsBuildIdRoute
   '/_app/customers/$customerId': typeof AppCustomersCustomerIdRoute
   '/_app/inventory/$productId': typeof AppInventoryProductIdRoute
@@ -572,6 +591,7 @@ export interface FileRoutesById {
   '/_app/warehouses/$warehouseId': typeof AppWarehousesWarehouseIdRoute
   '/_app/warranty/$warrantyId': typeof AppWarrantyWarrantyIdRoute
   '/_app/attributes/': typeof AppAttributesIndexRoute
+  '/_app/billing-statements/': typeof AppBillingStatementsIndexRoute
   '/_app/brands/': typeof AppBrandsIndexRoute
   '/_app/builds/': typeof AppBuildsIndexRoute
   '/_app/categories/': typeof AppCategoriesIndexRoute
@@ -623,6 +643,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/roles'
     | '/administration/branches'
+    | '/billing-statements/$statementId'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -639,6 +660,7 @@ export interface FileRouteTypes {
     | '/warehouses/$warehouseId'
     | '/warranty/$warrantyId'
     | '/attributes/'
+    | '/billing-statements/'
     | '/brands/'
     | '/builds/'
     | '/categories/'
@@ -688,6 +710,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/roles'
     | '/administration/branches'
+    | '/billing-statements/$statementId'
     | '/builds/$buildId'
     | '/customers/$customerId'
     | '/inventory/$productId'
@@ -704,6 +727,7 @@ export interface FileRouteTypes {
     | '/warehouses/$warehouseId'
     | '/warranty/$warrantyId'
     | '/attributes'
+    | '/billing-statements'
     | '/brands'
     | '/builds'
     | '/categories'
@@ -754,6 +778,7 @@ export interface FileRouteTypes {
     | '/_app/admin/audit'
     | '/_app/admin/roles'
     | '/_app/administration/branches'
+    | '/_app/billing-statements/$statementId'
     | '/_app/builds/$buildId'
     | '/_app/customers/$customerId'
     | '/_app/inventory/$productId'
@@ -770,6 +795,7 @@ export interface FileRouteTypes {
     | '/_app/warehouses/$warehouseId'
     | '/_app/warranty/$warrantyId'
     | '/_app/attributes/'
+    | '/_app/billing-statements/'
     | '/_app/brands/'
     | '/_app/builds/'
     | '/_app/categories/'
@@ -923,6 +949,20 @@ declare module '@tanstack/react-router' {
       path: '/attributes'
       fullPath: '/attributes/'
       preLoaderRoute: typeof AppAttributesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/billing-statements/': {
+      id: '/_app/billing-statements/'
+      path: '/billing-statements'
+      fullPath: '/billing-statements/'
+      preLoaderRoute: typeof AppBillingStatementsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/billing-statements/$statementId': {
+      id: '/_app/billing-statements/$statementId'
+      path: '/billing-statements/$statementId'
+      fullPath: '/billing-statements/$statementId'
+      preLoaderRoute: typeof AppBillingStatementsStatementIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/brands/': {
@@ -1277,6 +1317,7 @@ interface AppRouteChildren {
   AppAdminAuditRoute: typeof AppAdminAuditRoute
   AppAdminRolesRoute: typeof AppAdminRolesRoute
   AppAdministrationBranchesRoute: typeof AppAdministrationBranchesRoute
+  AppBillingStatementsStatementIdRoute: typeof AppBillingStatementsStatementIdRoute
   AppBuildsBuildIdRoute: typeof AppBuildsBuildIdRoute
   AppCustomersCustomerIdRoute: typeof AppCustomersCustomerIdRoute
   AppInventoryProductIdRoute: typeof AppInventoryProductIdRoute
@@ -1293,6 +1334,7 @@ interface AppRouteChildren {
   AppWarehousesWarehouseIdRoute: typeof AppWarehousesWarehouseIdRoute
   AppWarrantyWarrantyIdRoute: typeof AppWarrantyWarrantyIdRoute
   AppAttributesIndexRoute: typeof AppAttributesIndexRoute
+  AppBillingStatementsIndexRoute: typeof AppBillingStatementsIndexRoute
   AppBrandsIndexRoute: typeof AppBrandsIndexRoute
   AppBuildsIndexRoute: typeof AppBuildsIndexRoute
   AppCategoriesIndexRoute: typeof AppCategoriesIndexRoute
@@ -1341,6 +1383,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminAuditRoute: AppAdminAuditRoute,
   AppAdminRolesRoute: AppAdminRolesRoute,
   AppAdministrationBranchesRoute: AppAdministrationBranchesRoute,
+  AppBillingStatementsStatementIdRoute: AppBillingStatementsStatementIdRoute,
   AppBuildsBuildIdRoute: AppBuildsBuildIdRoute,
   AppCustomersCustomerIdRoute: AppCustomersCustomerIdRoute,
   AppInventoryProductIdRoute: AppInventoryProductIdRoute,
@@ -1357,6 +1400,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWarehousesWarehouseIdRoute: AppWarehousesWarehouseIdRoute,
   AppWarrantyWarrantyIdRoute: AppWarrantyWarrantyIdRoute,
   AppAttributesIndexRoute: AppAttributesIndexRoute,
+  AppBillingStatementsIndexRoute: AppBillingStatementsIndexRoute,
   AppBrandsIndexRoute: AppBrandsIndexRoute,
   AppBuildsIndexRoute: AppBuildsIndexRoute,
   AppCategoriesIndexRoute: AppCategoriesIndexRoute,

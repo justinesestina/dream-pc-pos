@@ -9,6 +9,7 @@ export type Capability =
   | "pos"
   | "orders"
   | "quotes"
+  | "billing"
   | "customers"
   | "products"
   | "inventory"
@@ -35,6 +36,7 @@ const matrix: Record<Role, Capability[]> = {
     "pos",
     "orders",
     "quotes",
+    "billing",
     "customers",
     "products",
     "inventory",
@@ -60,6 +62,7 @@ const matrix: Record<Role, Capability[]> = {
     "pos",
     "orders",
     "quotes",
+    "billing",
     "customers",
     "products",
     "inventory",
@@ -84,6 +87,7 @@ const matrix: Record<Role, Capability[]> = {
     "pos",
     "orders",
     "quotes",
+    "billing",
     "customers",
     "products",
     "returns",
@@ -158,6 +162,7 @@ const PATH_CAPS: Array<[RegExp, Capability]> = [
   [/^\/pos/, "pos"],
   [/^\/orders/, "orders"],
   [/^\/quotes/, "quotes"],
+  [/^\/billing-statements/, "billing"],
   [/^\/returns/, "returns"],
   [/^\/shifts/, "shifts"],
   [/^\/products/, "products"],

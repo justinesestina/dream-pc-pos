@@ -9,6 +9,7 @@ export type DocKind =
   | "Sales Receipt"
   | "Invoice"
   | "Quotation"
+  | "Billing Statement"
   | "Purchase Order"
   | "Delivery / Release"
   | "Service Receipt";

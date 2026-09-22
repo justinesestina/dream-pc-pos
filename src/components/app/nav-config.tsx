@@ -18,6 +18,7 @@ import {
   Percent,
   Receipt,
   RotateCcw,
+  ScrollText,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -63,6 +64,7 @@ export const navGroups: NavGroup[] = [
       { label: "Point of Sale", to: "/pos", icon: ShoppingCart, cap: "pos" },
       { label: "Orders", to: "/orders", icon: Receipt, cap: "orders" },
       { label: "Quotations", to: "/quotes", icon: FileText, cap: "quotes" },
+      { label: "Billing Statements", to: "/billing-statements", icon: ScrollText, cap: "billing" },
     ],
   },
   {

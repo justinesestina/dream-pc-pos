@@ -70,6 +70,11 @@ const map: Record<string, Tone> = {
   discrepancy: "danger",
   // releases
   scheduled: "info",
+  // billing statements
+  unpaid: "warning",
+  partially_paid: "warning",
+  overdue: "danger",
+  voided: "danger",
 };
 
 export function StatusBadge({

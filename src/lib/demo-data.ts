@@ -5,6 +5,8 @@
 import type {
   AppNotification,
   AuditLog,
+  BillingCustomerType,
+  BillingStatement,
   Build,
   Category,
   Customer,
@@ -1074,6 +1076,195 @@ for (const q of quotes) {
   q.tax = t.tax;
   q.total = t.total;
 }
+
+// ----------------------------------------------------------------- billings
+
+function billingTotals(
+  items: { qty: number; unitPrice: number }[],
+  additionalCharges: { label: string; amount: number }[],
+  discount = 0,
+  previousBalance = 0,
+) {
+  const gross = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
+  const additional = additionalCharges.reduce((s, c) => s + c.amount, 0);
+  const net = gross + additional - discount;
+  const subtotal = Math.round((net / 1.12) * 100) / 100;
+  const tax = Math.round((net - subtotal) * 100) / 100;
+  return { subtotal, tax, total: Math.round((net + tax + previousBalance) * 100) / 100 };
+}
+
+export const billingStatements: BillingStatement[] = [];
+
+function bill(
+  id: string,
+  customerId: string | null,
+  customerName: string,
+  customerType: BillingCustomerType,
+  status: BillingStatement["status"],
+  items: ReturnType<typeof item>[],
+  issuedAt: string,
+  dueAt: string,
+  opts: Partial<BillingStatement> = {},
+): BillingStatement {
+  const extra = opts.additionalCharges ?? [];
+  const discount = opts.discount ?? 0;
+  const previousBalance = opts.previousBalance ?? 0;
+  const t = billingTotals(items, extra, discount, previousBalance);
+  const payments = opts.payments ?? [];
+  const amountPaid = payments.reduce((s, p) => s + p.amount, 0);
+  return {
+    id,
+    customerId,
+    customerName,
+    customerType,
+    status,
+    items,
+    additionalCharges: extra,
+    discountType: opts.discountType ?? "amount",
+    discountPercentage: opts.discountPercentage ?? 0,
+    discount,
+    taxSetting: opts.taxSetting ?? "vat",
+    subtotal: t.subtotal,
+    tax: t.tax,
+    previousBalance,
+    total: t.total,
+    amountPaid,
+    balance: Math.round((t.total - amountPaid) * 100) / 100,
+    payments,
+    referenceNumber: opts.referenceNumber ?? "",
+    salesRep: opts.salesRep ?? "Mika Santos",
+    issuedAt,
+    dueAt,
+    notes: opts.notes,
+    createdAt: issuedAt,
+    preparedBy: opts.preparedBy ?? "Justine Ramos",
+  };
+}
+
+billingStatements.push(
+  bill(
+    "BCBS-CS26-80001",
+    "c-2",
+    "Northline Creatives Inc.",
+    "business",
+    "partially_paid",
+    [item("p-cpu-7600", 4), item("p-mb-b650m", 4), item("p-ram-vengeance16", 8)],
+    daysAgo(4, 9),
+    daysAhead(8),
+    {
+      discount: 3000,
+      additionalCharges: [
+        { label: "Shipping Fee", amount: 500 },
+        { label: "Installation Fee", amount: 2000 },
+      ],
+      referenceNumber: "PO-88123",
+      salesRep: "Justine Ramos",
+      notes: "Phase 2 workstation fleet — balance due on delivery.",
+      payments: [
+        {
+          id: "pay-bs-80001",
+          method: "bank",
+          amount: 60000,
+          at: daysAgo(2, 14),
+          reference: "BTR-5582910",
+        },
+      ],
+    },
+  ),
+  bill(
+    "WIBS-CS26-80001",
+    null,
+    "Walk-in Customer",
+    "walk-in",
+    "unpaid",
+    [item("p-cpu-14600kf"), item("p-gpu-5060ti"), item("p-ssd-990pro")],
+    daysAgo(2, 10),
+    daysAhead(12),
+    {
+      discount: 0,
+      additionalCharges: [{ label: "Labor Fee", amount: 2500 }],
+      referenceNumber: "WALK-1140",
+      salesRep: "Paolo Cruz",
+    },
+  ),
+  bill(
+    "HHBS-CS26-80001",
+    "c-4",
+    "Rafael Ong",
+    "household",
+    "paid",
+    [item("p-cpu-7800x3d"), item("p-gpu-5070"), item("p-mb-b650m"), item("p-ram-fury32")],
+    daysAgo(10, 11),
+    daysAgo(2),
+    {
+      discount: 1500,
+      additionalCharges: [
+        { label: "Service Fee", amount: 2000 },
+        { label: "Installation Fee", amount: 1500 },
+      ],
+      referenceNumber: "RTB-2216",
+      salesRep: "Mika Santos",
+      payments: [
+        {
+          id: "pay-bs-80002",
+          method: "gcash",
+          amount: 98500,
+          at: daysAgo(6, 15),
+          reference: "GC-88217",
+        },
+      ],
+    },
+  ),
+  bill(
+    "BCBS-CS26-80002",
+    "c-5",
+    "Bluewave Internet Cafe",
+    "business",
+    "pending",
+    [item("p-cpu-7600", 6), item("p-mb-b650m", 6)],
+    daysAgo(1, 15),
+    daysAhead(20),
+    {
+      discount: 2000,
+      additionalCharges: [{ label: "Shipping Fee", amount: 800 }],
+      referenceNumber: "PO-88144",
+      salesRep: "Justine Ramos",
+    },
+  ),
+  bill(
+    "WIBS-CS26-80002",
+    "c-3",
+    "Maria Santiago",
+    "walk-in",
+    "overdue",
+    [item("p-kb-k70"), item("p-mouse-g502"), item("p-mon-odyssey")],
+    daysAgo(18, 12),
+    daysAgo(3),
+    {
+      discount: 0,
+      additionalCharges: [],
+      referenceNumber: "WALK-1132",
+      salesRep: "Paolo Cruz",
+      notes: "Follow-up call needed.",
+    },
+  ),
+  bill(
+    "HHBS-CS26-80002",
+    "c-6",
+    "Ellaine Bautista",
+    "household",
+    "draft",
+    [item("p-kb-k70", 2)],
+    daysAgo(0, 8),
+    daysAhead(15),
+    {
+      discount: 0,
+      additionalCharges: [{ label: "Other Charges", amount: 200 }],
+      referenceNumber: "",
+      salesRep: "Mika Santos",
+    },
+  ),
+);
 
 const standardQa = (passedCount: number) => {
   const hw = [

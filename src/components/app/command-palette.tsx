@@ -63,6 +63,12 @@ function collectNav(role: Role): PaletteEntry[] {
 
 const ACTIONS: PaletteEntry[] = [
   { group: "Actions", label: "New Quotation", route: "/quotes?new=1", icon: FileText },
+  {
+    group: "Actions",
+    label: "New Billing Statement",
+    route: "/billing-statements?new=1",
+    icon: FileText,
+  },
 ];
 
 function ResultIcon({ item }: { item: GlobalSearchResult }) {
